@@ -15,6 +15,13 @@
       "when": 1793956707615,
       "tag": "0001_seed_standard_markup_price_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793957188123,
+      "tag": "0002_purchase_price_full_precision",
+      "breakpoints": true
     }
   ]
 }

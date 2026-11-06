@@ -26,6 +26,12 @@ const money = (name: string) => numeric(name, { precision: 12, scale: 2, mode: "
 /** Percentage such as markup, discount or GST rate. */
 const percent = (name: string) => numeric(name, { precision: 6, scale: 2, mode: "number" });
 
+/**
+ * Purchase cost, stored exactly as received. Supplier sheets often carry
+ * 7+ decimals (e.g. 21.7442199); rounding them would lose information.
+ */
+const cost = (name: string) => numeric(name, { precision: 20, scale: 10, mode: "number" });
+
 /** Quantity; allows fractions for items sold by length or weight. */
 const quantity = (name: string) => numeric(name, { precision: 14, scale: 3, mode: "number" });
 
@@ -101,7 +107,7 @@ export const purchasePrices = pgTable(
     productId: integer("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "restrict" }),
-    price: money("price").notNull(),
+    price: cost("price").notNull(),
     date: date("date", { mode: "string" }).notNull(),
     supplier: text("supplier"),
     billRef: text("bill_ref"),
