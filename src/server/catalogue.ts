@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
@@ -13,23 +13,14 @@ import {
   products,
   purchasePrices,
 } from "@/db/schema";
+import { folderPathResolver } from "@/lib/price-lists/folders";
 import { computePrice, type ComputedPrice } from "@/lib/pricing";
 
-const MAX_WORDS = 8;
+import { productSearch, purchasePriceAt } from "./product-search";
+
 export const SEARCH_LIMIT = 50;
 
 const group = alias(categories, "category_group");
-
-/** Escapes LIKE wildcards so user input is matched literally. */
-const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
-
-/** Newest purchase price of the product in the outer query. */
-const currentPurchasePrice = sql<number | null>`(
-  SELECT ${purchasePrices.price} FROM ${purchasePrices}
-  WHERE ${purchasePrices.productId} = ${products.id}
-  ORDER BY ${purchasePrices.date} DESC, ${purchasePrices.id} DESC
-  LIMIT 1
-)`.mapWith(Number);
 
 export interface ProductSearchResult {
   total: number;
@@ -44,29 +35,10 @@ export interface ProductSearchResult {
   }[];
 }
 
-/**
- * Every word must appear in the part number, description or category name.
- * Group names are not searched: they are too broad and flood the results.
- * Exact part-number matches come first, then part numbers starting with the query.
- */
+/** Products matching the search box; see `productSearch` for the rules. */
 export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promise<ProductSearchResult> {
-  const q = query.trim().slice(0, 200);
-  const words = q.split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
-
-  const conditions: SQL[] = [eq(products.active, true)];
-  for (const word of words) {
-    const like = `%${escapeLike(word)}%`;
-    conditions.push(
-      or(ilike(products.partNo, like), ilike(products.description, like), ilike(categories.name, like))!,
-    );
-  }
-  const where = and(...conditions);
+  const { where, rank } = productSearch(query);
   const db = getDb();
-
-  const rank = sql`CASE
-    WHEN ${products.partNo} ILIKE ${escapeLike(q)} THEN 0
-    WHEN ${products.partNo} ILIKE ${`${escapeLike(q)}%`} THEN 1
-    ELSE 2 END`;
 
   const [countRows, items] = await db.batch([
     db
@@ -82,7 +54,7 @@ export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promi
         category: categories.name,
         categoryGroup: group.name,
         stockQty: products.stockQty,
-        purchasePrice: currentPurchasePrice,
+        purchasePrice: purchasePriceAt(0),
       })
       .from(products)
       .leftJoin(categories, eq(categories.id, products.categoryId))
@@ -169,15 +141,7 @@ export async function getProduct(id: number) {
   const purchasePrice = history[0]?.price ?? null;
   const previousPurchasePrice = history[1]?.price ?? null;
 
-  const folderById = new Map(folders.map((f) => [f.id, f]));
-  const folderPath = (folderId: number | null) => {
-    const parts: string[] = [];
-    for (let f = folderId != null ? folderById.get(folderId) : undefined, guard = 0; f && guard < 50; guard++) {
-      parts.unshift(f.name);
-      f = f.parentId != null ? folderById.get(f.parentId) : undefined;
-    }
-    return parts.join(" › ");
-  };
+  const folderPath = folderPathResolver(folders);
 
   const bases = { purchase: purchasePrice, previous_purchase: previousPurchasePrice, list: product.listPrice };
   const sellingPrices: SellingPrice[] = lists.map((l) => ({
