@@ -11,7 +11,10 @@
     "db:check": "node --env-file=.env.local scripts/db-check.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "import:price-list": "tsx --env-file=.env.local scripts/import-price-list.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -19,6 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "drizzle-orm": "^0.45.4",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.69.0",
     "next": "16.4.5",
     "react": "19.3.0",
@@ -38,7 +42,8 @@
     "husky": "^9.1.7",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   },
   "packageManager": "pnpm@11.27.1"
 }
