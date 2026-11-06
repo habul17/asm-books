@@ -1,0 +1,138 @@
+"use client";
+
+import {
+  createField,
+  createGroup,
+  deleteGroup,
+  updateField,
+  updateGroup,
+} from "@/app/(app)/customers/actions";
+import { ConfirmDeleteButton } from "@/components/forms/confirm-button";
+import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { FIELD_LABEL_MAX, GROUP_NAME_MAX, type CustomFieldType } from "@/lib/customers/validation";
+
+type PriceListOption = { id: number; name: string; enabled: boolean };
+
+function PriceListSelect({
+  id,
+  lists,
+  defaultValue,
+}: {
+  id: string;
+  lists: PriceListOption[];
+  defaultValue?: number | null;
+}) {
+  return (
+    <NativeSelect id={id} name="priceListId" defaultValue={defaultValue ?? ""} className="w-full">
+      <NativeSelectOption value="">— No price list —</NativeSelectOption>
+      {lists.map((l) => (
+        <NativeSelectOption key={l.id} value={l.id}>
+          {l.name}
+          {l.enabled ? "" : " (off)"}
+        </NativeSelectOption>
+      ))}
+    </NativeSelect>
+  );
+}
+
+export function NewGroupForm({ lists }: { lists: PriceListOption[] }) {
+  const { state, pending, onSubmit, onChange, dirty, formRef } = useSaveForm(createGroup, { resetOnSuccess: true });
+  return (
+    <form ref={formRef} onSubmit={onSubmit} onChange={onChange} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <Field label="New group name" htmlFor="g-new-name">
+        <Input id="g-new-name" name="name" required maxLength={GROUP_NAME_MAX} placeholder="e.g. Garages" />
+      </Field>
+      <Field label="Default price list" htmlFor="g-new-list">
+        <PriceListSelect id="g-new-list" lists={lists} />
+      </Field>
+      <SaveRow state={state} pending={pending} dirty={dirty} label="Add group" />
+    </form>
+  );
+}
+
+export function GroupRow({
+  group,
+  lists,
+}: {
+  group: { id: number; name: string; priceListId: number | null; customerCount: number };
+  lists: PriceListOption[];
+}) {
+  const { state, pending, onSubmit, onChange, dirty } = useSaveForm(updateGroup.bind(null, group.id));
+  return (
+    <form onSubmit={onSubmit} onChange={onChange} className="grid items-end gap-3 py-4 sm:grid-cols-[1fr_1fr_auto]">
+      <Field label="Group name" htmlFor={`g-${group.id}-name`}>
+        <Input id={`g-${group.id}-name`} name="name" defaultValue={group.name} required maxLength={GROUP_NAME_MAX} />
+      </Field>
+      <Field label="Default price list" htmlFor={`g-${group.id}-list`}>
+        <PriceListSelect id={`g-${group.id}-list`} lists={lists} defaultValue={group.priceListId} />
+      </Field>
+      <div className="flex flex-col gap-1">
+        <SaveRow state={state} pending={pending} dirty={dirty}>
+          {group.customerCount === 0 && (
+            <ConfirmDeleteButton label="Delete" action={deleteGroup.bind(null, group.id)} />
+          )}
+        </SaveRow>
+      </div>
+      <p className="text-xs text-muted-foreground sm:col-span-3">
+        {group.customerCount} customer{group.customerCount === 1 ? "" : "s"}
+        {group.customerCount > 0 && " · move them to another group before deleting"}
+      </p>
+    </form>
+  );
+}
+
+const TYPE_LABELS: Record<CustomFieldType, string> = { text: "Text", number: "Number", date: "Date" };
+
+export function NewFieldForm() {
+  const { state, pending, onSubmit, onChange, dirty, formRef } = useSaveForm(createField, { resetOnSuccess: true });
+  return (
+    <form ref={formRef} onSubmit={onSubmit} onChange={onChange} className="grid items-end gap-3 sm:grid-cols-[1fr_10rem_auto]">
+      <Field label="New field name" htmlFor="f-new-label">
+        <Input id="f-new-label" name="label" required maxLength={FIELD_LABEL_MAX} placeholder="e.g. Vehicle type" />
+      </Field>
+      <Field label="Type" htmlFor="f-new-type">
+        <NativeSelect id="f-new-type" name="type" defaultValue="text" className="w-full">
+          {Object.entries(TYPE_LABELS).map(([value, label]) => (
+            <NativeSelectOption key={value} value={value}>
+              {label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Field>
+      <SaveRow state={state} pending={pending} dirty={dirty} label="Add field" />
+    </form>
+  );
+}
+
+export function FieldRow({
+  field,
+}: {
+  field: { id: number; label: string; type: CustomFieldType; active: boolean };
+}) {
+  const { state, pending, onSubmit, onChange, dirty } = useSaveForm(updateField.bind(null, field.id));
+  return (
+    <form onSubmit={onSubmit} onChange={onChange} className="grid items-end gap-3 py-4 sm:grid-cols-[1fr_10rem_auto]">
+      <Field label="Field name" htmlFor={`f-${field.id}-label`}>
+        <Input
+          id={`f-${field.id}-label`}
+          name="label"
+          defaultValue={field.label}
+          required
+          maxLength={FIELD_LABEL_MAX}
+        />
+      </Field>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <span className="font-medium">Type</span>
+        <span className="flex h-8 items-center text-muted-foreground">{TYPE_LABELS[field.type]}</span>
+      </div>
+      <SaveRow state={state} pending={pending} dirty={dirty}>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="active" defaultChecked={field.active} className="size-4 accent-primary" />
+          Shown
+        </label>
+      </SaveRow>
+    </form>
+  );
+}
