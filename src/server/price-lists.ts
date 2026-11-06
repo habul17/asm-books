@@ -1,5 +1,7 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import { and, asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
@@ -27,6 +29,7 @@ const listColumns = {
 
 /** All folders and (not deleted) price lists, with how many manual prices each list has. */
 export async function getPriceListTree() {
+  await connection(); // Always read live data; never prerender at build time.
   const db = getDb();
   const [folders, lists] = await db.batch([
     db
@@ -70,6 +73,7 @@ export async function getListPrices(
   list: PriceRule & { id: number },
   options: { query: string; manualOnly: boolean; limit: number },
 ): Promise<{ total: number; items: ListPriceRow[] }> {
+  await connection(); // Always read live data; never prerender at build time.
   const db = getDb();
   const join = and(eq(priceListItems.productId, products.id), eq(priceListItems.priceListId, list.id));
   const { where, rank } = productSearch(options.query, [
