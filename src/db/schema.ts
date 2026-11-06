@@ -14,6 +14,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // ---------------------------------------------------------------------------
@@ -200,4 +201,76 @@ export const priceListItems = pgTable(
     primaryKey({ columns: [t.priceListId, t.productId] }),
     check("price_list_items_manual_price_check", sql`${t.manualPrice} >= 0`),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Customers
+// ---------------------------------------------------------------------------
+
+/** Groups such as "Garages" or "Retail". A group can have a default price list. */
+export const customerGroups = pgTable(
+  "customer_groups",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("customer_groups_name_unique").on(sql`lower(${t.name})`)],
+);
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    contactPerson: text("contact_person"),
+    /** Digits only, optionally with a leading +. */
+    mobile: text("mobile"),
+    email: text("email"),
+    address: text("address"),
+    city: text("city"),
+    /** Two-digit GST state code, e.g. "33" for Tamil Nadu. */
+    stateCode: text("state_code"),
+    pincode: text("pincode"),
+    gstin: text("gstin"),
+    groupId: integer("group_id").references(() => customerGroups.id, { onDelete: "restrict" }),
+    /** Overrides the group's price list when set. */
+    priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
+    /** Positive: the customer owes us. Negative: we owe the customer. */
+    openingBalance: money("opening_balance").notNull().default(0),
+    creditLimit: money("credit_limit"),
+    paymentTermsDays: integer("payment_terms_days"),
+    notes: text("notes"),
+    /** Custom field values keyed by custom_fields.id. */
+    extra: jsonb("extra").$type<Record<string, string | number>>().notNull().default({}),
+    /** Customers are never deleted (history must stay); they are switched off instead. */
+    active: boolean("active").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index("customers_name_idx").on(sql`lower(${t.name})`),
+    index("customers_group_idx").on(t.groupId),
+    check("customers_state_code_check", sql`${t.stateCode} IS NULL OR ${t.stateCode} ~ '^[0-9]{2}$'`),
+    check("customers_credit_limit_check", sql`${t.creditLimit} IS NULL OR ${t.creditLimit} >= 0`),
+    check("customers_payment_terms_check", sql`${t.paymentTermsDays} IS NULL OR ${t.paymentTermsDays} >= 0`),
+  ],
+);
+
+export const customFieldType = pgEnum("custom_field_type", ["text", "number", "date"]);
+
+/** Extra fields the owner adds to customers (and later to other records). */
+export const customFields = pgTable(
+  "custom_fields",
+  {
+    id: id(),
+    entity: text("entity").notNull(),
+    label: text("label").notNull(),
+    type: customFieldType("type").notNull().default("text"),
+    sort: integer("sort").notNull().default(0),
+    /** Switched-off fields are hidden but their saved values are kept. */
+    active: boolean("active").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [check("custom_fields_entity_check", sql`${t.entity} IN ('customer')`)],
 );
