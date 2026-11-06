@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, startTransition } from "react";
+import { useState } from "react";
 
-import { updateFolder, updatePriceList, type ActionState } from "@/app/(app)/price-lists/actions";
-import { Button } from "@/components/ui/button";
+import { updateFolder, updatePriceList } from "@/app/(app)/price-lists/actions";
+import { Field, SaveRow, useSaveForm, useSelectOnMount } from "@/components/forms/save-form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { flattenFolders, type FolderNode } from "@/lib/price-lists/folders";
@@ -17,50 +16,6 @@ import {
   ROUNDING_OPTIONS,
 } from "@/lib/price-lists/validation";
 import { PRICE_BASES, type AdjustType, type PriceBase } from "@/lib/pricing";
-
-type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
-
-/**
- * Submits through a server action without React's automatic form reset, so
- * the user's typing is kept when the server rejects a value.
- */
-function useSaveForm(action: FormAction) {
-  const [state, formAction, pending] = useActionState(action, {});
-  const [dirty, setDirty] = useState(false);
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const data = new FormData(e.currentTarget);
-    setDirty(false);
-    startTransition(() => formAction(data));
-  };
-  return { state, pending, onSubmit, onChange: () => setDirty(true), dirty };
-}
-
-function SaveRow({ state, pending, dirty }: { state: ActionState; pending: boolean; dirty: boolean }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save"}
-      </Button>
-      <span aria-live="polite" className="text-sm">
-        {state.error ? (
-          <span className="text-destructive">{state.error}</span>
-        ) : state.ok && !dirty && !pending ? (
-          <span className="text-emerald-600 dark:text-emerald-400">Saved ✓</span>
-        ) : null}
-      </span>
-    </div>
-  );
-}
-
-/** Puts the cursor in the name box with the text selected, right after creating something. */
-function useSelectOnMount(enabled: boolean) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (enabled) ref.current?.select();
-  }, [enabled]);
-  return ref;
-}
 
 function FolderOptions({ folders, excludeId }: { folders: FolderNode[]; excludeId?: number }) {
   // A folder cannot be moved into itself or its own subfolders.
@@ -80,20 +35,6 @@ function FolderOptions({ folders, excludeId }: { folders: FolderNode[]; excludeI
         );
       })}
     </>
-  );
-}
-
-function Field({ label, htmlFor, children, className }: {
-  label: string;
-  htmlFor: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-    </div>
   );
 }
 
