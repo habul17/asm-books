@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
 
-const NAV_ITEMS = [{ href: "/catalogue", label: "Catalogue" }] as const;
+const NAV_ITEMS = [
+  { href: "/catalogue", label: "Catalogue" },
+  { href: "/price-lists", label: "Price lists" },
+] as const;
 
 export function AppNav() {
   const pathname = usePathname();
