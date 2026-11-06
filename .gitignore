@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files: never commit secrets. Only the template is tracked.
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,40 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Business data: never commit (prices, customers, backups) ---
+*.xlsx
+*.xls
+*.xlsm
+*.ods
+*.csv
+*.pdf
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+*.backup
+/data/
+/backups/
+/uploads/
+/private/
+
+# --- Keys and credentials ---
+*.key
+*.p12
+*.pfx
+*.crt
+*.jks
+id_rsa*
+id_ed25519*
+.npmrc
+credentials*.json
+service-account*.json
+
+# --- Editor / OS ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
