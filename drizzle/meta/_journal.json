@@ -29,6 +29,13 @@
       "when": 1793958992502,
       "tag": "0003_customers_groups_and_custom_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794023855291,
+      "tag": "0004_users_and_sessions",
+      "breakpoints": true
     }
   ]
 }

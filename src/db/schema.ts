@@ -274,3 +274,48 @@ export const customFields = pgTable(
   },
   (t) => [check("custom_fields_entity_check", sql`${t.entity} IN ('customer')`)],
 );
+
+// ---------------------------------------------------------------------------
+// Users and sessions
+// ---------------------------------------------------------------------------
+
+export const userRole = pgEnum("user_role", ["owner", "staff"]);
+
+export const users = pgTable(
+  "users",
+  {
+    id: id(),
+    /** Sign-in name; unique regardless of case. */
+    username: text("username").notNull(),
+    name: text("name").notNull(),
+    /** scrypt hash with its parameters and salt; never the password itself. */
+    passwordHash: text("password_hash").notNull(),
+    role: userRole("role").notNull().default("staff"),
+    /** Switched-off users cannot sign in; their history stays. */
+    active: boolean("active").notNull().default(true),
+    /** Wrong passwords in a row; reset on success or when the lock is applied. */
+    failedLogins: integer("failed_logins").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("users_username_unique").on(sql`lower(${t.username})`),
+    check("users_failed_logins_check", sql`${t.failedLogins} >= 0`),
+  ],
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    /** SHA-256 of the cookie token, so a database leak cannot be replayed as a cookie. */
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
+);
