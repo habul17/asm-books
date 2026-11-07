@@ -319,3 +319,127 @@ export const sessions = pgTable(
   },
   (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
 );
+
+// ---------------------------------------------------------------------------
+// Sales invoices and stock
+// ---------------------------------------------------------------------------
+
+export const taxType = pgEnum("tax_type", ["intra", "inter"]);
+export const paymentType = pgEnum("payment_type", ["credit", "cash"]);
+export const invoiceStatus = pgEnum("invoice_status", ["final", "cancelled"]);
+
+/**
+ * Sales invoices. Customer details are copied in, so an old invoice never
+ * changes when the customer is edited later. Invoices are never deleted;
+ * they are cancelled instead, which keeps the numbering without gaps.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: id(),
+    /** e.g. INV/26-27/0001 */
+    number: text("number").notNull().unique(),
+    /** Indian financial year, e.g. "26-27". Numbering restarts each April. */
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    dueDate: date("due_date", { mode: "string" }),
+    customerId: integer("customer_id").references(() => customers.id, { onDelete: "restrict" }),
+    customerName: text("customer_name").notNull(),
+    customerGstin: text("customer_gstin"),
+    customerMobile: text("customer_mobile"),
+    billingAddress: text("billing_address"),
+    /** State code of the buyer; with the seller's state it decides the tax type. */
+    placeOfSupply: text("place_of_supply"),
+    taxType: taxType("tax_type").notNull(),
+    priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
+    paymentType: paymentType("payment_type").notNull().default("credit"),
+    taxableTotal: money("taxable_total").notNull(),
+    cgstTotal: money("cgst_total").notNull(),
+    sgstTotal: money("sgst_total").notNull(),
+    igstTotal: money("igst_total").notNull(),
+    roundOff: money("round_off").notNull(),
+    grandTotal: money("grand_total").notNull(),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("invoices_fy_seq_unique").on(t.fy, t.seq),
+    index("invoices_date_idx").on(t.date.desc(), t.id.desc()),
+    index("invoices_customer_idx").on(t.customerId),
+    check("invoices_grand_total_check", sql`${t.grandTotal} >= 0`),
+    check("invoices_walk_in_cash_check", sql`${t.customerId} IS NOT NULL OR ${t.paymentType} = 'cash'`),
+  ],
+);
+
+export const invoiceLines = pgTable(
+  "invoice_lines",
+  {
+    id: id(),
+    invoiceId: integer("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    hsn: text("hsn"),
+    unit: text("unit").notNull().default("Nos"),
+    qty: quantity("qty").notNull(),
+    rate: money("rate").notNull(),
+    discountPct: percent("discount_pct").notNull().default(0),
+    gstRate: percent("gst_rate").notNull(),
+    taxable: money("taxable").notNull(),
+    cgst: money("cgst").notNull(),
+    sgst: money("sgst").notNull(),
+    igst: money("igst").notNull(),
+    total: money("total").notNull(),
+    /** Purchase price at the time of sale, for profit reports. */
+    cost: cost("cost"),
+  },
+  (t) => [
+    unique("invoice_lines_invoice_line_unique").on(t.invoiceId, t.lineNo),
+    index("invoice_lines_product_idx").on(t.productId),
+    check("invoice_lines_qty_check", sql`${t.qty} > 0`),
+    check("invoice_lines_rate_check", sql`${t.rate} >= 0`),
+    check("invoice_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
+    check("invoice_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
+  ],
+);
+
+export const stockMovementKind = pgEnum("stock_movement_kind", [
+  "opening",
+  "adjust",
+  "sale",
+  "sale_edit",
+  "sale_cancel",
+  "purchase",
+]);
+
+/** Every stock change, so stock can always be explained. products.stock_qty is their running total. */
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: id(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    /** Positive: stock in. Negative: stock out. */
+    qty: quantity("qty").notNull(),
+    kind: stockMovementKind("kind").notNull(),
+    invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "restrict" }),
+    date: date("date", { mode: "string" }).notNull(),
+    note: text("note"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    index("stock_movements_product_idx").on(t.productId, t.date),
+    index("stock_movements_invoice_idx").on(t.invoiceId),
+    check("stock_movements_qty_check", sql`${t.qty} <> 0`),
+  ],
+);
