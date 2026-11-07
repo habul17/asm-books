@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
 import { categories, products, purchasePrices } from "@/db/schema";
+import { col } from "@/db/sql";
 
 const MAX_WORDS = 8;
 
@@ -12,9 +13,9 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 /** The newest (offset 0) or previous (offset 1) purchase price of the product in the outer query. */
 export const purchasePriceAt = (offset: 0 | 1) =>
   sql<number | null>`(
-    SELECT ${purchasePrices.price} FROM ${purchasePrices}
-    WHERE ${purchasePrices.productId} = ${products.id}
-    ORDER BY ${purchasePrices.date} DESC, ${purchasePrices.id} DESC
+    SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
+    WHERE ${col(purchasePrices.productId)} = ${col(products.id)}
+    ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC
     LIMIT 1 OFFSET ${sql.raw(String(offset))}
   )`.mapWith(Number);
 

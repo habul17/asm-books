@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { and, asc, count, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { customerGroups, customers, customFields, priceLists } from "@/db/schema";
 import type { CustomFieldDef } from "@/lib/customers/validation";
@@ -131,7 +132,7 @@ export async function getCustomerOptions() {
         name: customerGroups.name,
         priceListId: customerGroups.priceListId,
         customerCount: sql<number>`(
-          SELECT count(*) FROM ${customers} WHERE ${customers.groupId} = ${customerGroups.id}
+          SELECT count(*) FROM ${customers} WHERE ${col(customers.groupId)} = ${col(customerGroups.id)}
         )`.mapWith(Number),
       })
       .from(customerGroups)

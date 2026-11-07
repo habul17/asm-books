@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { and, asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { categories, priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
 import { computePrice, round2, type PriceRule } from "@/lib/pricing";
@@ -41,7 +42,7 @@ export async function getPriceListTree() {
       .select({
         ...listColumns,
         manualCount: sql<number>`(
-          SELECT count(*) FROM ${priceListItems} WHERE ${priceListItems.priceListId} = ${priceLists.id}
+          SELECT count(*) FROM ${priceListItems} WHERE ${col(priceListItems.priceListId)} = ${col(priceLists.id)}
         )`.mapWith(Number),
       })
       .from(priceLists)
