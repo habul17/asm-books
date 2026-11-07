@@ -4,26 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { saveCustomer } from "@/app/(app)/customers/actions";
+import { GstinHint } from "@/components/forms/gstin-hint";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { CUSTOMER_NAME_MAX } from "@/lib/customers/validation";
-import { checkGstin, GST_STATE_OPTIONS, GST_STATES } from "@/lib/gst";
+import { checkGstin, GST_STATE_OPTIONS } from "@/lib/gst";
 import type { CustomerDetail, CustomerOptions } from "@/server/customers";
-
-function GstinHint({ value }: { value: string }) {
-  const v = value.trim();
-  if (!v) return <p className="text-xs text-muted-foreground">Leave empty if the customer has no GSTIN.</p>;
-  if (v.replace(/\s/g, "").length < 15) return <p className="text-xs text-muted-foreground">15 characters</p>;
-  const g = checkGstin(v);
-  return g.ok ? (
-    <p className="text-xs text-emerald-700 dark:text-emerald-400">Valid · {GST_STATES[g.stateCode]}</p>
-  ) : (
-    <p className="text-xs text-destructive">{g.error}</p>
-  );
-}
 
 export function CustomerForm({
   customer,
@@ -82,7 +71,7 @@ export function CustomerForm({
               className="font-mono uppercase"
             />
           </Field>
-          <GstinHint value={gstin} />
+          <GstinHint value={gstin} emptyText="Leave empty if the customer has no GSTIN." />
         </div>
         <Field label="State" htmlFor="c-state" hint={gstinState?.ok ? "Taken from the GSTIN" : undefined}>
           <NativeSelect
