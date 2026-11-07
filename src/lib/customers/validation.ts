@@ -7,7 +7,7 @@ import { checkGstin, GST_STATES } from "@/lib/gst";
 export const CUSTOMER_NAME_MAX = 200;
 export const GROUP_NAME_MAX = 120;
 export const FIELD_LABEL_MAX = 80;
-const MONEY_MAX = 1_000_000_000;
+export const MONEY_MAX = 1_000_000_000;
 
 export const CUSTOM_FIELD_TYPES = ["text", "number", "date"] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
@@ -20,7 +20,7 @@ export interface CustomFieldDef {
 }
 
 /** Trimmed text; empty becomes null. */
-const optionalText = (max: number, label: string) =>
+export const optionalText = (max: number, label: string) =>
   z.preprocess(
     (v) => (typeof v === "string" ? v.trim() || null : (v ?? null)),
     z.string().max(max, `${label} can be at most ${max} characters`).nullable(),
@@ -32,7 +32,7 @@ const optionalId = z.preprocess(
 );
 
 /** Empty → null; otherwise a number in range, rounded to paise. */
-const optionalMoney = (label: string, min: number) =>
+export const optionalMoney = (label: string, min: number) =>
   z.unknown().transform((v, ctx) => {
     const text = v == null ? "" : String(v).replace(/[₹,\s]/g, "");
     if (text === "") return null;
@@ -47,7 +47,7 @@ const optionalMoney = (label: string, min: number) =>
     return Math.round(n * 100) / 100;
   });
 
-const mobile = z.preprocess(
+export const mobile = z.preprocess(
   (v) => (typeof v === "string" ? v.replace(/[\s\-()]/g, "") || null : (v ?? null)),
   z
     .string()
@@ -55,12 +55,12 @@ const mobile = z.preprocess(
     .nullable(),
 );
 
-const email = z.preprocess(
+export const email = z.preprocess(
   (v) => (typeof v === "string" ? v.trim().toLowerCase() || null : (v ?? null)),
   z.email("Email does not look right").max(200).nullable(),
 );
 
-const pincode = z.preprocess(
+export const pincode = z.preprocess(
   (v) => (typeof v === "string" ? v.replace(/\s+/g, "") || null : (v ?? null)),
   z
     .string()
@@ -68,7 +68,25 @@ const pincode = z.preprocess(
     .nullable(),
 );
 
-const checkbox = z.preprocess((v) => v === "on" || v === true || v === "true", z.boolean());
+export const checkbox = z.preprocess((v) => v === "on" || v === true || v === "true", z.boolean());
+
+export const stateCode = z.preprocess(
+  (v) => (v === "" || v == null ? null : v),
+  z
+    .string()
+    .refine((c) => c in GST_STATES, "Unknown state")
+    .nullable(),
+);
+
+export const paymentTermsDays = z.preprocess(
+  (v) => (v === "" || v == null ? null : v),
+  z.coerce
+    .number({ error: "Payment terms must be whole days" })
+    .int("Payment terms must be whole days")
+    .min(0, "Payment terms cannot be negative")
+    .max(3650, "Payment terms can be at most 3650 days")
+    .nullable(),
+);
 
 const customerBase = z.object({
   name: z
@@ -81,13 +99,7 @@ const customerBase = z.object({
   email,
   address: optionalText(1000, "Address"),
   city: optionalText(100, "City"),
-  stateCode: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z
-      .string()
-      .refine((c) => c in GST_STATES, "Unknown state")
-      .nullable(),
-  ),
+  stateCode,
   pincode,
   gstin: optionalText(20, "GSTIN"),
   groupId: optionalId,
@@ -96,15 +108,7 @@ const customerBase = z.object({
   /** "owes-us" (default) or "we-owe": the direction of the opening balance. */
   balanceSide: z.enum(["owes-us", "we-owe"]).default("owes-us"),
   creditLimit: optionalMoney("Credit limit", 0),
-  paymentTermsDays: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce
-      .number({ error: "Payment terms must be whole days" })
-      .int("Payment terms must be whole days")
-      .min(0, "Payment terms cannot be negative")
-      .max(3650, "Payment terms can be at most 3650 days")
-      .nullable(),
-  ),
+  paymentTermsDays,
   notes: optionalText(5000, "Notes"),
   active: checkbox,
 });
