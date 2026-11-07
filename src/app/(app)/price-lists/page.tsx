@@ -78,7 +78,7 @@ async function PriceListsScreen({ searchParams }: { searchParams: Promise<Params
 
   return (
     <div className="grid items-start gap-4 md:grid-cols-[18rem_minmax(0,1fr)]">
-      <Card className={selection ? "hidden md:flex md:sticky md:top-18" : "md:sticky md:top-18"} size="sm">
+      <Card className={selection ? "hidden md:flex md:sticky md:top-6" : "md:sticky md:top-6"} size="sm">
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             <NewFolderButton parentId={currentFolder} />

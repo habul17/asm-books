@@ -47,7 +47,7 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
   }
 
   return (
-    <Card className="md:sticky md:top-18">
+    <Card className="md:sticky md:top-6">
       <CardHeader className="gap-2">
         <Link
           href={catalogueHref(query)}

@@ -5,7 +5,7 @@ import { ProductDetailPanel, ProductDetailSkeleton } from "@/components/catalogu
 import { ProductResults, ProductResultsSkeleton } from "@/components/catalogue/product-results";
 import { SearchBox } from "@/components/catalogue/search-box";
 
-export const metadata: Metadata = { title: "Catalogue" };
+export const metadata: Metadata = { title: "Items" };
 
 type Params = { q?: string | string[]; id?: string | string[] };
 

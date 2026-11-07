@@ -86,7 +86,7 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
     });
 
   return (
-    <Card className="md:sticky md:top-18">
+    <Card className="md:sticky md:top-6">
       <CardHeader className="gap-2">
         <BackLink href={backHref} label="Back to customers" />
         <div className="flex flex-wrap items-start justify-between gap-3">
