@@ -443,3 +443,45 @@ export const stockMovements = pgTable(
     check("stock_movements_qty_check", sql`${t.qty} <> 0`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Payments received
+// ---------------------------------------------------------------------------
+
+export const paymentMode = pgEnum("payment_mode", ["cash", "upi", "bank", "cheque", "card"]);
+
+/**
+ * Money received from a customer. It lowers what they owe as a whole
+ * (a running account), not one particular invoice. Never deleted; a wrong
+ * entry is cancelled, which keeps the receipt numbering without gaps.
+ */
+export const payments = pgTable(
+  "payments",
+  {
+    id: id(),
+    /** e.g. RCPT/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    customerId: integer("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    amount: money("amount").notNull(),
+    mode: paymentMode("mode").notNull(),
+    /** UPI reference, cheque number and so on. */
+    reference: text("reference"),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("payments_fy_seq_unique").on(t.fy, t.seq),
+    index("payments_date_idx").on(t.date.desc(), t.id.desc()),
+    index("payments_customer_idx").on(t.customerId),
+    check("payments_amount_check", sql`${t.amount} > 0`),
+  ],
+);

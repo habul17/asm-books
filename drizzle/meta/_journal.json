@@ -43,6 +43,13 @@
       "when": 1794024575072,
       "tag": "0005_invoices_and_stock_movements",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794028560471,
+      "tag": "0006_payments_received",
+      "breakpoints": true
     }
   ]
 }
