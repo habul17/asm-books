@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   poweredByHeader: false,
   async redirects() {
-    return [{ source: "/", destination: "/catalogue", permanent: false }];
+    return [{ source: "/", destination: "/invoices", permanent: false }];
   },
   async headers() {
     return [
