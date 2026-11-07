@@ -1,10 +1,11 @@
-import { ArrowLeftIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowUpIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { BillList, BillListSkeleton } from "@/components/bills/bill-list";
+import { VendorPaymentList, VendorPaymentListSkeleton } from "@/components/payments-made/vendor-payment-list";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +54,9 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
           <span className="text-xs text-muted-foreground">Payment terms</span>
           <span className="text-sm">{v.paymentTermsDays == null ? "—" : `${v.paymentTermsDays} days`}</span>
         </div>
+        <Link href={`/payments-made/new?vendor=${v.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <CircleArrowUpIcon /> Pay vendor
+        </Link>
         {(v.mobile || v.email) && (
           <div className="flex flex-wrap gap-2">
             {v.mobile && (
@@ -94,6 +98,13 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
         <h2 className="font-medium">Bills</h2>
         <Suspense fallback={<BillListSkeleton />}>
           <BillList filters={{ query: "", status: "all", vendorId: v.id }} limit={50} />
+        </Suspense>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Payments made</h2>
+        <Suspense fallback={<VendorPaymentListSkeleton />}>
+          <VendorPaymentList filters={{ query: "", status: "all", vendorId: v.id }} limit={50} />
         </Suspense>
       </section>
     </>

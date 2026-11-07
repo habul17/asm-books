@@ -51,6 +51,7 @@ export const PAYMENTS_RECEIVED: AppModule = { label: "Payments Received", icon: 
 export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusIcon, href: "/credit-notes" };
 export const VENDORS: AppModule = { label: "Vendors", icon: StoreIcon, href: "/vendors" };
 export const BILLS: AppModule = { label: "Bills", icon: ReceiptTextIcon, href: "/bills" };
+export const PAYMENTS_MADE: AppModule = { label: "Payments Made", icon: CircleArrowUpIcon, href: "/payments-made" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
 
@@ -79,7 +80,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       VENDORS,
       soon("Purchase Orders", ShoppingCartIcon),
       BILLS,
-      soon("Payments Made", CircleArrowUpIcon),
+      PAYMENTS_MADE,
       soon("Vendor Credits", TagIcon),
       soon("Expenses", WalletIcon),
     ],
