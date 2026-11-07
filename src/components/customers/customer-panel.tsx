@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, MailIcon, PencilIcon, PhoneIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
+import { searchInvoices } from "@/server/invoices";
 
 import { Balance } from "./balance";
 import { CustomerForm } from "./customer-form";
@@ -168,13 +169,67 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
         </dl>
 
         <section className="flex flex-col gap-2">
-          <h3 className="font-medium">Transactions</h3>
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            No transactions yet. Invoices and payments for this customer will show here.
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-medium">Invoices</h3>
+            {c.active && (
+              <Link href={`/invoices/new?customer=${c.id}`} className={buttonVariants({ size: "sm" })}>
+                <PlusIcon /> New invoice
+              </Link>
+            )}
+          </div>
+          <CustomerInvoices customerId={c.id} />
         </section>
       </CardContent>
     </Card>
+  );
+}
+
+const RECENT_INVOICES = 20;
+
+async function CustomerInvoices({ customerId }: { customerId: number }) {
+  const { count, items } = await searchInvoices({ query: "", status: "all", customerId }, RECENT_INVOICES);
+  if (items.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        No invoices yet. Payments will show here too once they are built.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <ul className="flex flex-col divide-y rounded-lg border text-sm">
+        {items.map((inv) => (
+          <li key={inv.id}>
+            <Link
+              href={`/invoices/${inv.id}`}
+              className={`flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/60 ${inv.status === "cancelled" ? "opacity-60" : ""}`}
+            >
+              <span className="min-w-0 truncate">
+                <span className="font-mono text-xs">{inv.number}</span>
+                <span className="text-muted-foreground"> · {formatDate(inv.date)}</span>
+                {inv.status === "cancelled" ? (
+                  <Badge variant="destructive" className="ml-2">
+                    cancelled
+                  </Badge>
+                ) : (
+                  inv.paymentType === "cash" && (
+                    <Badge variant="secondary" className="ml-2">
+                      cash
+                    </Badge>
+                  )
+                )}
+              </span>
+              <span className={`tabular-nums ${inv.status === "cancelled" ? "line-through" : ""}`}>
+                {formatMoney(inv.grandTotal)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {count > items.length && (
+        <p className="text-xs text-muted-foreground">Showing the latest {items.length} of {count}.</p>
+      )}
+    </div>
   );
 }
 
