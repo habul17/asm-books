@@ -8,7 +8,7 @@ import { cn } from "cn";
 import { isActive, isFormPage, MODULE_GROUPS, TAB_MODULES } from "./modules";
 
 /** Pages reached from the "More" tab, so that tab lights up on them. */
-const MORE_PATHS = ["/more", "/reports", "/settings", "/price-lists", "/payments", "/credit-notes"];
+const MORE_PATHS = ["/more", "/reports", "/settings", "/price-lists", "/payments", "/credit-notes", "/vendors", "/bills"];
 
 const sideLink =
   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground";

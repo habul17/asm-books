@@ -10,13 +10,18 @@ import type { PickedItem } from "@/server/invoices";
 
 import { useLookup } from "./use-lookup";
 
-/** Search box that adds a part to the invoice. Enter adds the highlighted part. */
+/**
+ * Search box that adds a part to the invoice. Enter adds the highlighted part.
+ * `search` replaces the default lookup (selling prices from the price list).
+ */
 export function ItemPicker({
-  priceListId,
+  priceListId = null,
+  search,
   onPick,
   inputRef,
 }: {
-  priceListId: number | null;
+  priceListId?: number | null;
+  search?: (query: string) => Promise<PickedItem[]>;
   onPick: (item: PickedItem) => void;
   inputRef: RefObject<HTMLInputElement | null>;
 }) {
@@ -24,7 +29,7 @@ export function ItemPicker({
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const { results, loading } = useLookup(query, (q) => findItems(q, priceListId));
+  const { results, loading } = useLookup(query, search ?? ((q) => findItems(q, priceListId)));
   const shown = open && query.trim() !== "";
 
   const pick = (item: PickedItem | undefined) => {
