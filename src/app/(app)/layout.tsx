@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+
+import { UserMenu } from "@/components/auth/user-menu";
 import { AppNav } from "@/components/layout/app-nav";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
@@ -7,6 +10,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:gap-6">
           <span className="shrink-0 font-semibold tracking-tight whitespace-nowrap">ASM Books</span>
           <AppNav />
+          <Suspense fallback={null}>
+            <UserMenu />
+          </Suspense>
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-4">{children}</main>
