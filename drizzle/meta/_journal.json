@@ -64,6 +64,13 @@
       "when": 1794030976150,
       "tag": "0008_vendors_and_bills",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794033302100,
+      "tag": "0009_vendor_payments",
+      "breakpoints": true
     }
   ]
 }

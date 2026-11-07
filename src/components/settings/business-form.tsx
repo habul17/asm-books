@@ -114,6 +114,16 @@ export function BusinessForm({
             className="uppercase"
           />
         </Field>
+        <Field label="Payment made prefix" htmlFor="b-pprefix" hint="For payments to vendors: PAY gives PAY/26-27/0001">
+          <Input
+            id="b-pprefix"
+            name="vendorPaymentPrefix"
+            defaultValue={b.vendorPaymentPrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
         <Field label="Invoice title" htmlFor="b-title">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>

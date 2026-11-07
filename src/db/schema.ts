@@ -692,3 +692,39 @@ export const billLines = pgTable(
     check("bill_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
   ],
 );
+
+/**
+ * Money paid to a vendor. It lowers what we owe them as a whole (a running
+ * account), not one particular bill. Never deleted; a wrong entry is
+ * cancelled, which keeps the numbering without gaps.
+ */
+export const vendorPayments = pgTable(
+  "vendor_payments",
+  {
+    id: id(),
+    /** e.g. PAY/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    vendorId: integer("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "restrict" }),
+    amount: money("amount").notNull(),
+    mode: paymentMode("mode").notNull(),
+    /** UTR, cheque number and so on. */
+    reference: text("reference"),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("vendor_payments_fy_seq_unique").on(t.fy, t.seq),
+    index("vendor_payments_date_idx").on(t.date.desc(), t.id.desc()),
+    index("vendor_payments_vendor_idx").on(t.vendorId),
+    check("vendor_payments_amount_check", sql`${t.amount} > 0`),
+  ],
+);

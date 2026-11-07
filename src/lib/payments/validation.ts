@@ -1,4 +1,4 @@
-// Checks a "payment received" form before it reaches the database.
+// Checks "payment received" and "payment made" forms before they reach the database.
 
 import { z } from "zod";
 
@@ -22,11 +22,14 @@ const trimmed = (max: number, label: string) =>
     z.string().max(max, `${label} can be at most ${max} characters`),
   );
 
-const paymentSchema = z.object({
-  customerId: z.preprocess(
+const partyId = (error: string) =>
+  z.preprocess(
     (v) => (v === "" || v == null ? Number.NaN : Number(v)),
-    z.number({ error: "Choose a customer" }).int("Choose a customer").positive("Choose a customer"),
-  ),
+    z.number({ error }).int(error).positive(error),
+  );
+
+/** Fields shared by money received from customers and money paid to vendors. */
+const moneyFields = (amountLabel: string) => ({
   date: z.preprocess(
     (v) => (typeof v === "string" ? v : ""),
     z.iso.date("Enter a valid date"),
@@ -34,7 +37,7 @@ const paymentSchema = z.object({
   amount: z.preprocess(
     (v) => (typeof v === "string" ? Number(v.replace(/[,\s₹]/g, "") || Number.NaN) : v),
     z
-      .number({ error: "Enter the amount received" })
+      .number({ error: `Enter the amount ${amountLabel}` })
       .positive("Amount must be more than 0")
       .max(PAYMENT_MAX, "Amount is too large; please check it")
       .refine((n) => Math.abs(Math.round(n * 100) - n * 100) < 1e-6, "Amount can have at most 2 decimals"),
@@ -44,13 +47,25 @@ const paymentSchema = z.object({
   notes: trimmed(1000, "Notes"),
 });
 
+const paymentSchema = z.object({ customerId: partyId("Choose a customer"), ...moneyFields("received") });
+const vendorPaymentSchema = z.object({ vendorId: partyId("Choose a vendor"), ...moneyFields("paid") });
+
 export type PaymentInput = z.infer<typeof paymentSchema>;
 
-export function parsePaymentInput(
-  form: FormData | Record<string, unknown>,
-): { value: PaymentInput; error?: never } | { error: string; value?: never } {
+export type VendorPaymentInput = z.infer<typeof vendorPaymentSchema>;
+
+type Parsed<T> = { value: T; error?: never } | { error: string; value?: never };
+
+function parseWith<T extends { amount: number }>(schema: z.ZodType<T>, form: FormData | Record<string, unknown>): Parsed<T> {
   const raw = form instanceof FormData ? Object.fromEntries(form) : form;
-  const parsed = paymentSchema.safeParse(raw);
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
   return { value: { ...parsed.data, amount: Math.round(parsed.data.amount * 100) / 100 } };
 }
+
+/** Money received from a customer. */
+export const parsePaymentInput = (form: FormData | Record<string, unknown>) => parseWith(paymentSchema, form);
+
+/** Money paid to a vendor. */
+export const parseVendorPaymentInput = (form: FormData | Record<string, unknown>) =>
+  parseWith(vendorPaymentSchema, form);

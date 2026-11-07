@@ -29,6 +29,8 @@ export interface BusinessSettings {
   receiptPrefix: string;
   /** Start of every credit note number, e.g. CN → CN/26-27/0001. */
   creditNotePrefix: string;
+  /** Start of every payment made to a vendor, e.g. PAY → PAY/26-27/0001. */
+  vendorPaymentPrefix: string;
   /** Printed at the bottom of every invoice. */
   terms: string;
   /** Used for products without their own GST rate. */
@@ -54,6 +56,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   invoiceTitle: "Tax Invoice",
   receiptPrefix: "RCPT",
   creditNotePrefix: "CN",
+  vendorPaymentPrefix: "PAY",
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
@@ -128,6 +131,10 @@ const businessSchema = z.object({
   creditNotePrefix: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || "CN" : "CN"),
     z.string().regex(/^[A-Z0-9]{1,6}$/, "Credit note prefix: 1 to 6 letters or numbers"),
+  ),
+  vendorPaymentPrefix: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toUpperCase() || "PAY" : "PAY"),
+    z.string().regex(/^[A-Z0-9]{1,6}$/, "Payment made prefix: 1 to 6 letters or numbers"),
   ),
   terms: text(3000, "Terms"),
   defaultGstRate: z.preprocess(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePaymentInput } from "./validation";
+import { parsePaymentInput, parseVendorPaymentInput } from "./validation";
 
 const ok = { customerId: "7", date: "2026-11-07", amount: "1,500.50", mode: "upi", reference: " UTR123 ", notes: "" };
 
@@ -30,5 +30,25 @@ describe("parsePaymentInput", () => {
     [{ reference: "x".repeat(101) }, "Reference can be at most 100 characters"],
   ])("rejects %j", (change, error) => {
     expect(parsePaymentInput({ ...ok, ...change })).toEqual({ error });
+  });
+});
+
+describe("parseVendorPaymentInput", () => {
+  const made = { vendorId: "3", date: "2026-11-07", amount: "25,000", mode: "bank", reference: "NEFT 77", notes: "" };
+
+  it("accepts a payment to a vendor", () => {
+    expect(parseVendorPaymentInput(made).value).toEqual({
+      vendorId: 3,
+      date: "2026-11-07",
+      amount: 25000,
+      mode: "bank",
+      reference: "NEFT 77",
+      notes: "",
+    });
+  });
+
+  it("needs a vendor and an amount", () => {
+    expect(parseVendorPaymentInput({ ...made, vendorId: "" }).error).toBe("Choose a vendor");
+    expect(parseVendorPaymentInput({ ...made, amount: "" }).error).toBe("Enter the amount paid");
   });
 });
