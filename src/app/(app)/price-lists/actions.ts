@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
 import { priceListsHref } from "@/lib/price-lists/href";
+import { requireUser } from "@/server/auth";
 import {
   createsFolderCycle,
   firstError,
@@ -15,8 +16,6 @@ import {
   manualPriceSchema,
   priceListSchema,
 } from "@/lib/price-lists/validation";
-
-// TODO(auth): every action must check the signed-in user once logins exist.
 
 export interface ActionState {
   ok?: boolean;
@@ -54,6 +53,7 @@ function logError(action: string, err: unknown) {
 // ---------------------------------------------------------------------------
 
 export async function createFolder(parentId: number | null): Promise<ActionState> {
+  await requireUser();
   if (!nullableIdSchema.safeParse(parentId).success) return { error: "Invalid folder" };
   if (!(await folderExists(parentId))) return { error: "Parent folder not found" };
 
@@ -72,6 +72,7 @@ export async function createFolder(parentId: number | null): Promise<ActionState
 }
 
 export async function updateFolder(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid folder" };
   const parsed = folderSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
@@ -100,6 +101,7 @@ export async function updateFolder(id: number, _prev: ActionState, formData: For
 
 /** Only empty folders can be deleted, so nothing is lost by accident. */
 export async function deleteFolder(id: number): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid folder" };
   const db = getDb();
 
@@ -136,6 +138,7 @@ export async function deleteFolder(id: number): Promise<ActionState> {
 // ---------------------------------------------------------------------------
 
 export async function createPriceList(folderId: number | null): Promise<ActionState> {
+  await requireUser();
   if (!nullableIdSchema.safeParse(folderId).success) return { error: "Invalid folder" };
   if (!(await folderExists(folderId))) return { error: "Folder not found" };
 
@@ -154,6 +157,7 @@ export async function createPriceList(folderId: number | null): Promise<ActionSt
 }
 
 export async function updatePriceList(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid price list" };
   const parsed = priceListSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
@@ -176,6 +180,7 @@ export async function updatePriceList(id: number, _prev: ActionState, formData: 
 
 /** Soft delete: the list is hidden but kept, because old invoices refer to it. */
 export async function deletePriceList(id: number): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid price list" };
   try {
     const deleted = await getDb()
@@ -197,6 +202,7 @@ export async function deletePriceList(id: number): Promise<ActionState> {
 
 /** Sets a fixed price for one product in one list; an empty value removes it. */
 export async function setManualPrice(listId: number, productId: number, value: string): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(listId).success || !idSchema.safeParse(productId).success) {
     return { error: "Invalid product" };
   }

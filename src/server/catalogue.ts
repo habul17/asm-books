@@ -6,6 +6,7 @@ import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
+import { requireUser } from "@/server/auth";
 import {
   brands,
   categories,
@@ -40,6 +41,7 @@ export interface ProductSearchResult {
 /** Products matching the search box; see `productSearch` for the rules. */
 export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promise<ProductSearchResult> {
   await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
   const { where, rank } = productSearch(query);
   const db = getDb();
 
@@ -78,6 +80,7 @@ export interface SellingPrice extends ComputedPrice {
 
 export async function getProduct(id: number) {
   await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   const db = getDb();
 

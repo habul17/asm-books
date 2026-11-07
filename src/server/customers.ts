@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { and, asc, count, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { requireUser } from "@/server/auth";
 import { customerGroups, customers, customFields, priceLists } from "@/db/schema";
 import type { CustomFieldDef } from "@/lib/customers/validation";
 import { GST_STATES } from "@/lib/gst";
@@ -29,6 +30,7 @@ export interface CustomerFilters {
 /** Every word must appear in the name, mobile, GSTIN, city or contact person. */
 export async function searchCustomers(filters: CustomerFilters, limit = CUSTOMER_LIMIT) {
   await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
   const words = filters.query.trim().slice(0, 200).split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
   const conditions: (SQL | undefined)[] = [
     filters.showInactive ? undefined : eq(customers.active, true),
@@ -77,6 +79,7 @@ export type CustomerListItem = Awaited<ReturnType<typeof searchCustomers>>["item
 
 export async function getCustomer(id: number) {
   await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   const db = getDb();
 
@@ -119,6 +122,7 @@ export type CustomerDetail = NonNullable<Awaited<ReturnType<typeof getCustomer>>
 /** Groups, live price lists and custom fields: everything the customer form needs. */
 export async function getCustomerOptions() {
   await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
   const db = getDb();
   const [groups, lists, fields] = await db.batch([
     db

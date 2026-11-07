@@ -9,8 +9,7 @@ import { getDb } from "@/db";
 import { customerGroups, customers, customFields, priceLists } from "@/db/schema";
 import { customersHref } from "@/lib/customers/href";
 import { editFieldSchema, groupSchema, newFieldSchema, parseCustomer } from "@/lib/customers/validation";
-
-// TODO(auth): every action must check the signed-in user once logins exist.
+import { requireUser } from "@/server/auth";
 
 export interface ActionState {
   ok?: boolean;
@@ -58,6 +57,7 @@ async function groupNameTaken(name: string, exceptId: number | null) {
 
 /** Creates a customer (id null) or updates one. Customers are never deleted. */
 export async function saveCustomer(id: number | null, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   if (id != null && !idSchema.safeParse(id).success) return { error: "Invalid customer" };
   const db = getDb();
   let savedId: number;
@@ -105,6 +105,7 @@ export async function saveCustomer(id: number | null, _prev: ActionState, formDa
 // ---------------------------------------------------------------------------
 
 export async function createGroup(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   const parsed = groupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   try {
@@ -120,6 +121,7 @@ export async function createGroup(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function updateGroup(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid group" };
   const parsed = groupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
@@ -142,6 +144,7 @@ export async function updateGroup(id: number, _prev: ActionState, formData: Form
 
 /** Only groups without customers can be deleted. */
 export async function deleteGroup(id: number): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid group" };
   const db = getDb();
   try {
@@ -165,6 +168,7 @@ export async function deleteGroup(id: number): Promise<ActionState> {
 // ---------------------------------------------------------------------------
 
 export async function createField(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   const parsed = newFieldSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   const db = getDb();
@@ -184,6 +188,7 @@ export async function createField(_prev: ActionState, formData: FormData): Promi
 
 /** Rename a field or switch it off/on. Saved values are kept either way. */
 export async function updateField(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Invalid field" };
   const parsed = editFieldSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
