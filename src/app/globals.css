@@ -128,3 +128,14 @@
     @apply font-sans;
   }
 }
+/* Printing: A4 pages with a small margin; the app's own chrome is hidden with print:hidden. */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  html,
+  body {
+    background: white !important;
+  }
+}
