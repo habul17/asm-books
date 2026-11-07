@@ -1,4 +1,4 @@
-import { PlusIcon, UserPlusIcon } from "lucide-react";
+import { CircleArrowDownIcon, PlusIcon, UserPlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -25,11 +25,17 @@ function Stat({ label, value, note, href }: { label: string; value: string; note
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 async function Summary() {
-  const { sales, owed, recent } = await getHomeSummary();
+  const { sales, received, owed, recent } = await getHomeSummary();
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Sales today" value={formatMoney(sales.today)} note={plural(sales.todayCount, "invoice")} href="/invoices" />
+        <Stat
+          label="Received today"
+          value={formatMoney(received.today)}
+          note={plural(received.todayCount, "payment")}
+          href="/payments"
+        />
         <Stat
           label="Sales this month"
           value={formatMoney(sales.month)}
@@ -88,8 +94,8 @@ async function Summary() {
 function SummarySkeleton() {
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-28 rounded-2xl" />
         ))}
       </div>
@@ -103,9 +109,12 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Home</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={customersHref({ id: "new" })} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <UserPlusIcon /> New customer
+          </Link>
+          <Link href="/payments/new" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <CircleArrowDownIcon /> Receive payment
           </Link>
           <Link href="/invoices/new" className={buttonVariants({ size: "sm" })}>
             <PlusIcon /> New invoice

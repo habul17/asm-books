@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowDownIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
+import { searchPayments } from "@/server/payments";
+import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 
 import { Balance } from "./balance";
 import { CustomerForm } from "./customer-form";
@@ -135,6 +137,12 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
               <TriangleAlertIcon className="size-4" /> Over credit limit
             </p>
           )}
+          <Link
+            href={`/payments/new?customer=${c.id}`}
+            className={buttonVariants({ variant: "outline", size: "sm", className: "ml-auto" })}
+          >
+            <CircleArrowDownIcon /> Receive payment
+          </Link>
         </div>
 
         <dl className="grid gap-4 sm:grid-cols-2">
@@ -179,6 +187,11 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
           </div>
           <CustomerInvoices customerId={c.id} />
         </section>
+
+        <section className="flex flex-col gap-2">
+          <h3 className="font-medium">Payments received</h3>
+          <CustomerPayments customerId={c.id} />
+        </section>
       </CardContent>
     </Card>
   );
@@ -191,7 +204,7 @@ async function CustomerInvoices({ customerId }: { customerId: number }) {
   if (items.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-        No invoices yet. Payments will show here too once they are built.
+        No invoices yet.
       </p>
     );
   }
@@ -221,6 +234,47 @@ async function CustomerInvoices({ customerId }: { customerId: number }) {
               </span>
               <span className={`tabular-nums ${inv.status === "cancelled" ? "line-through" : ""}`}>
                 {formatMoney(inv.grandTotal)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {count > items.length && (
+        <p className="text-xs text-muted-foreground">Showing the latest {items.length} of {count}.</p>
+      )}
+    </div>
+  );
+}
+
+async function CustomerPayments({ customerId }: { customerId: number }) {
+  const { count, items } = await searchPayments({ query: "", status: "all", customerId }, RECENT_INVOICES);
+  if (items.length === 0) {
+    return <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No payments yet.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <ul className="flex flex-col divide-y rounded-lg border text-sm">
+        {items.map((p) => (
+          <li key={p.id}>
+            <Link
+              href={`/payments/${p.id}`}
+              className={`flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/60 ${p.status === "cancelled" ? "opacity-60" : ""}`}
+            >
+              <span className="min-w-0 truncate">
+                <span className="font-mono text-xs">{p.number}</span>
+                <span className="text-muted-foreground"> · {formatDate(p.date)}</span>
+                {p.status === "cancelled" ? (
+                  <Badge variant="destructive" className="ml-2">
+                    cancelled
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2">
+                    {PAYMENT_MODE_LABELS[p.mode]}
+                  </Badge>
+                )}
+              </span>
+              <span className={`tabular-nums ${p.status === "cancelled" ? "line-through" : ""}`}>
+                {formatMoney(p.amount)}
               </span>
             </Link>
           </li>

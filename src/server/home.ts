@@ -4,13 +4,13 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { customers, invoices } from "@/db/schema";
+import { customers, invoices, payments } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
 import { todayInIndia } from "./invoice-writes";
 
-/** Numbers for the Home screen: sales today and this month, money owed to us, latest bills. */
+/** Numbers for the Home screen: sales and money received, money owed to us, latest bills. */
 export async function getHomeSummary() {
   await connection(); // Always read live data; never prerender at build time.
   await requireUser();
@@ -19,7 +19,7 @@ export async function getHomeSummary() {
   const final = eq(invoices.status, "final");
   const db = getDb();
 
-  const [salesRows, owedRows, recent] = await db.batch([
+  const [salesRows, receivedRows, owedRows, recent] = await db.batch([
     db
       .select({
         today: sql<number>`coalesce(sum(${invoices.grandTotal}) FILTER (WHERE ${invoices.date} = ${today}), 0)`.mapWith(
@@ -31,6 +31,13 @@ export async function getHomeSummary() {
       })
       .from(invoices)
       .where(and(final, gte(invoices.date, monthStart))),
+    db
+      .select({
+        today: sql<number>`coalesce(sum(${payments.amount}), 0)`.mapWith(Number),
+        todayCount: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(payments)
+      .where(and(eq(payments.status, "final"), eq(payments.date, today))),
     db
       .select({
         receivable: sql<number>`coalesce(sum(greatest(${customerBalance}, 0)), 0)`.mapWith(Number),
@@ -56,6 +63,7 @@ export async function getHomeSummary() {
 
   return {
     sales: salesRows[0] ?? { today: 0, todayCount: 0, month: 0, monthCount: 0 },
+    received: receivedRows[0] ?? { today: 0, todayCount: 0 },
     owed: owedRows[0] ?? { receivable: 0, owingCount: 0, overLimit: 0 },
     recent,
   };
