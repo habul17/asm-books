@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
-  async redirects() {
-    return [{ source: "/", destination: "/invoices", permanent: false }];
-  },
   async headers() {
     return [
       {
