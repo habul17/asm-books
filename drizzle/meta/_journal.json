@@ -57,6 +57,13 @@
       "when": 1794030153494,
       "tag": "0007_credit_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794030976150,
+      "tag": "0008_vendors_and_bills",
+      "breakpoints": true
     }
   ]
 }

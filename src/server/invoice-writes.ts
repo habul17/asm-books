@@ -144,8 +144,9 @@ export async function moveStock(
   changes: Map<number, number>,
   info: {
     kind: (typeof stockMovements.$inferInsert)["kind"];
-    invoiceId: number;
+    invoiceId?: number;
     creditNoteId?: number;
+    billId?: number;
     date: string;
     note: string;
     userId: number;
@@ -158,8 +159,9 @@ export async function moveStock(
       productId: r.productId,
       qty: r.qty,
       kind: info.kind,
-      invoiceId: info.invoiceId,
+      invoiceId: info.invoiceId ?? null,
       creditNoteId: info.creditNoteId ?? null,
+      billId: info.billId ?? null,
       date: info.date,
       note: info.note,
       createdBy: info.userId,

@@ -421,6 +421,8 @@ export const stockMovementKind = pgEnum("stock_movement_kind", [
   "purchase",
   "sale_return",
   "sale_return_cancel",
+  "purchase_edit",
+  "purchase_cancel",
 ]);
 
 /** Every stock change, so stock can always be explained. products.stock_qty is their running total. */
@@ -436,6 +438,7 @@ export const stockMovements = pgTable(
     kind: stockMovementKind("kind").notNull(),
     invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "restrict" }),
     creditNoteId: integer("credit_note_id").references((): AnyPgColumn => creditNotes.id, { onDelete: "restrict" }),
+    billId: integer("bill_id").references((): AnyPgColumn => bills.id, { onDelete: "restrict" }),
     date: date("date", { mode: "string" }).notNull(),
     note: text("note"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -445,6 +448,7 @@ export const stockMovements = pgTable(
     index("stock_movements_product_idx").on(t.productId, t.date),
     index("stock_movements_invoice_idx").on(t.invoiceId),
     index("stock_movements_credit_note_idx").on(t.creditNoteId),
+    index("stock_movements_bill_idx").on(t.billId),
     check("stock_movements_qty_check", sql`${t.qty} <> 0`),
   ],
 );
@@ -577,5 +581,114 @@ export const creditNoteLines = pgTable(
     unique("credit_note_lines_note_line_unique").on(t.creditNoteId, t.lineNo),
     index("credit_note_lines_invoice_line_idx").on(t.invoiceLineId),
     check("credit_note_lines_qty_check", sql`${t.qty} > 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Vendors and purchase bills
+// ---------------------------------------------------------------------------
+
+/** Suppliers we buy parts from. Never deleted (history must stay); switched off instead. */
+export const vendors = pgTable(
+  "vendors",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    contactPerson: text("contact_person"),
+    mobile: text("mobile"),
+    email: text("email"),
+    address: text("address"),
+    city: text("city"),
+    stateCode: text("state_code"),
+    pincode: text("pincode"),
+    gstin: text("gstin"),
+    /** Positive: we owe the vendor. Negative: the vendor owes us (advance paid). */
+    openingBalance: money("opening_balance").notNull().default(0),
+    paymentTermsDays: integer("payment_terms_days"),
+    notes: text("notes"),
+    active: boolean("active").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index("vendors_name_idx").on(sql`lower(${t.name})`),
+    check("vendors_state_code_check", sql`${t.stateCode} IS NULL OR ${t.stateCode} ~ '^[0-9]{2}$'`),
+    check("vendors_payment_terms_check", sql`${t.paymentTermsDays} IS NULL OR ${t.paymentTermsDays} >= 0`),
+  ],
+);
+
+/**
+ * A purchase bill as received from a vendor. It adds the parts to stock and,
+ * when asked, records their new purchase prices (which price lists follow).
+ * Never deleted; a wrong bill is cancelled, which takes the stock back out.
+ */
+export const bills = pgTable(
+  "bills",
+  {
+    id: id(),
+    vendorId: integer("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "restrict" }),
+    /** The vendor's own bill number, as printed on their bill. */
+    billNo: text("bill_no").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    dueDate: date("due_date", { mode: "string" }),
+    taxType: taxType("tax_type").notNull(),
+    taxableTotal: money("taxable_total").notNull(),
+    cgstTotal: money("cgst_total").notNull(),
+    sgstTotal: money("sgst_total").notNull(),
+    igstTotal: money("igst_total").notNull(),
+    roundOff: money("round_off").notNull(),
+    grandTotal: money("grand_total").notNull(),
+    /** Whether this bill's rates became the parts' current purchase prices. */
+    updatePrices: boolean("update_prices").notNull().default(true),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    // The same vendor bill cannot be entered twice (cancelled ones do not count).
+    uniqueIndex("bills_vendor_bill_no_unique")
+      .on(t.vendorId, sql`lower(${t.billNo})`)
+      .where(sql`${t.status} = 'final'`),
+    index("bills_date_idx").on(t.date.desc(), t.id.desc()),
+    index("bills_vendor_idx").on(t.vendorId),
+    check("bills_grand_total_check", sql`${t.grandTotal} >= 0`),
+  ],
+);
+
+export const billLines = pgTable(
+  "bill_lines",
+  {
+    id: id(),
+    billId: integer("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    hsn: text("hsn"),
+    unit: text("unit").notNull().default("Nos"),
+    qty: quantity("qty").notNull(),
+    /** Purchase rate before discount, kept exactly as on the vendor's bill. */
+    rate: cost("rate").notNull(),
+    discountPct: percent("discount_pct").notNull().default(0),
+    gstRate: percent("gst_rate").notNull(),
+    taxable: money("taxable").notNull(),
+    cgst: money("cgst").notNull(),
+    sgst: money("sgst").notNull(),
+    igst: money("igst").notNull(),
+    total: money("total").notNull(),
+  },
+  (t) => [
+    unique("bill_lines_bill_line_unique").on(t.billId, t.lineNo),
+    index("bill_lines_product_idx").on(t.productId),
+    check("bill_lines_qty_check", sql`${t.qty} > 0`),
+    check("bill_lines_rate_check", sql`${t.rate} >= 0`),
+    check("bill_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
+    check("bill_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
   ],
 );
