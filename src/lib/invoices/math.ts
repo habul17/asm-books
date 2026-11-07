@@ -117,8 +117,15 @@ function words(n: number): string {
   return parts.join(" ");
 }
 
-/** 123456 → "Rupees One Lakh Twenty Three Thousand Four Hundred Fifty Six Only" */
-export function amountInWords(amount: number): string {
-  const n = Math.round(Math.abs(amount));
-  return n === 0 ? "Rupees Zero Only" : `Rupees ${words(n)} Only`;
+/**
+ * 123456 → "Rupees One Lakh Twenty Three Thousand Four Hundred Fifty Six Only".
+ * Rounds to whole rupees unless `paise` is set: 1500.5 → "Rupees One Thousand Five Hundred and Fifty Paise Only".
+ */
+export function amountInWords(amount: number, { paise = false } = {}): string {
+  const total = Math.round(Math.abs(amount) * (paise ? 100 : 1));
+  const rupees = paise ? Math.floor(total / 100) : total;
+  const p = paise ? total % 100 : 0;
+  if (rupees === 0 && p === 0) return "Rupees Zero Only";
+  const r = rupees ? `Rupees ${words(rupees)}` : "Rupees Zero";
+  return p ? `${r} and ${upTo99(p)} Paise Only` : `${r} Only`;
 }

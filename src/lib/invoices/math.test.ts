@@ -95,4 +95,11 @@ describe("amountInWords", () => {
     expect(amountInWords(10000000)).toBe("Rupees One Crore Only");
     expect(amountInWords(219.6)).toBe("Rupees Two Hundred Twenty Only");
   });
+
+  it("can include paise", () => {
+    expect(amountInWords(1500.5, { paise: true })).toBe("Rupees One Thousand Five Hundred and Fifty Paise Only");
+    expect(amountInWords(0.05, { paise: true })).toBe("Rupees Zero and Five Paise Only");
+    expect(amountInWords(200, { paise: true })).toBe("Rupees Two Hundred Only");
+    expect(amountInWords(19.999, { paise: true })).toBe("Rupees Twenty Only");
+  });
 });
