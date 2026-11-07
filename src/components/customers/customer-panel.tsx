@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
+import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { searchPayments } from "@/server/payments";
 import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 
@@ -192,6 +193,8 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
           <h3 className="font-medium">Payments received</h3>
           <CustomerPayments customerId={c.id} />
         </section>
+
+        <CustomerReturns customerId={c.id} />
       </CardContent>
     </Card>
   );
@@ -284,6 +287,17 @@ async function CustomerPayments({ customerId }: { customerId: number }) {
         <p className="text-xs text-muted-foreground">Showing the latest {items.length} of {count}.</p>
       )}
     </div>
+  );
+}
+
+function CustomerReturns({ customerId }: { customerId: number }) {
+  return (
+    <CreditNoteList
+      filters={{ query: "", status: "all", customerId }}
+      limit={RECENT_INVOICES}
+      compact
+      title="Returns (credit notes)"
+    />
   );
 }
 

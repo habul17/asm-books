@@ -6,7 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { searchInvoices, type InvoiceFilters } from "@/server/invoices";
 
-export async function InvoiceList({ filters }: { filters: InvoiceFilters }) {
+/** `pickForReturn` makes each row open the return form for that invoice. */
+export async function InvoiceList({ filters, pickForReturn }: { filters: InvoiceFilters; pickForReturn?: boolean }) {
   const { count, total, items } = await searchInvoices(filters);
   return (
     <section aria-label="Invoices" className="flex flex-col gap-2">
@@ -23,7 +24,7 @@ export async function InvoiceList({ filters }: { filters: InvoiceFilters }) {
           {items.map((inv) => (
             <li key={inv.id}>
               <Link
-                href={`/invoices/${inv.id}`}
+                href={pickForReturn ? `/credit-notes/new?invoice=${inv.id}` : `/invoices/${inv.id}`}
                 className={cn(
                   "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 hover:bg-muted/60",
                   inv.status === "cancelled" && "opacity-60",

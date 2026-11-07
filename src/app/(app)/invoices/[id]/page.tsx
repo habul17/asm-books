@@ -1,15 +1,16 @@
-import { ArrowLeftIcon, CopyPlusIcon, PencilIcon } from "lucide-react";
+import { ArrowLeftIcon, CopyPlusIcon, PencilIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { getInvoice } from "@/server/invoices";
 import { getBusiness } from "@/server/settings";
 
@@ -35,6 +36,11 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
             <PencilIcon /> Edit
           </Link>
         )}
+        {final && (
+          <Link href={`/credit-notes/new?invoice=${inv.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <Undo2Icon /> Return items
+          </Link>
+        )}
         <Link
           href={inv.customerId ? `/invoices/new?customer=${inv.customerId}` : "/invoices/new"}
           className={buttonVariants({ size: "sm" })}
@@ -55,7 +61,25 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         {!final && inv.cancelReason && <span>Cancelled: {inv.cancelReason}</span>}
       </p>
 
-      <InvoiceDocument invoice={inv} business={business} />
+      <InvoiceDocument
+        invoice={inv}
+        business={business}
+        details={
+          <>
+            {inv.dueDate && <p>Due: {formatDate(inv.dueDate)}</p>}
+            <p>{inv.paymentType === "cash" ? "Cash sale" : "Credit sale"}</p>
+          </>
+        }
+      />
+
+      <div className="print:hidden">
+        <CreditNoteList
+          filters={{ query: "", status: "all", customerId: null, invoiceId: inv.id }}
+          limit={50}
+          compact
+          title="Returns from this invoice"
+        />
+      </div>
 
       {final && <CancelInvoiceForm id={inv.id} />}
     </>

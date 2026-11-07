@@ -4,10 +4,66 @@ import { amountInWords, taxSummary } from "@/lib/invoices/math";
 import type { BusinessSettings } from "@/lib/settings/business";
 import type { InvoiceDetail } from "@/server/invoices";
 
+type Line = InvoiceDetail["lines"][number];
+
+/** What a printed tax document needs; both invoices and credit notes have it. */
+export interface TaxDocumentData
+  extends Pick<
+    InvoiceDetail,
+    | "number"
+    | "date"
+    | "status"
+    | "customerName"
+    | "billingAddress"
+    | "customerMobile"
+    | "customerGstin"
+    | "placeOfSupply"
+    | "taxType"
+    | "taxableTotal"
+    | "cgstTotal"
+    | "sgstTotal"
+    | "igstTotal"
+    | "roundOff"
+    | "grandTotal"
+    | "notes"
+  > {
+  lines: Pick<
+    Line,
+    | "id"
+    | "lineNo"
+    | "partNo"
+    | "description"
+    | "hsn"
+    | "unit"
+    | "qty"
+    | "rate"
+    | "discountPct"
+    | "gstRate"
+    | "taxable"
+    | "cgst"
+    | "sgst"
+    | "igst"
+    | "total"
+  >[];
+}
+
 const stateLabel = (code: string | null) => (code && GST_STATES[code] ? `${GST_STATES[code]} (${code})` : null);
 
-/** The invoice as printed: A4, black on white, also used as the on-screen view. */
-export function InvoiceDocument({ invoice: inv, business: b }: { invoice: InvoiceDetail; business: BusinessSettings }) {
+/**
+ * The invoice as printed: A4, black on white, also used as the on-screen view.
+ * Credit notes use it too, with their own `title` and `details` under the number.
+ */
+export function InvoiceDocument({
+  invoice: inv,
+  business: b,
+  title,
+  details,
+}: {
+  invoice: TaxDocumentData;
+  business: BusinessSettings;
+  title?: string;
+  details?: React.ReactNode;
+}) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
   const hasDiscount = inv.lines.some((l) => l.discountPct > 0);
@@ -32,11 +88,10 @@ export function InvoiceDocument({ invoice: inv, business: b }: { invoice: Invoic
           {(b.phone || b.email) && <p>{[b.phone, b.email].filter(Boolean).join(" · ")}</p>}
         </div>
         <div className="text-right">
-          <p className="text-lg font-semibold tracking-wide uppercase">{b.invoiceTitle}</p>
+          <p className="text-lg font-semibold tracking-wide uppercase">{title ?? b.invoiceTitle}</p>
           <p className="font-mono text-sm">{inv.number}</p>
           <p>Date: {formatDate(inv.date)}</p>
-          {inv.dueDate && <p>Due: {formatDate(inv.dueDate)}</p>}
-          <p>{inv.paymentType === "cash" ? "Cash sale" : "Credit sale"}</p>
+          {details}
         </div>
       </header>
 

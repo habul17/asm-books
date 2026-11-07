@@ -20,8 +20,8 @@ export function ListToolbar({
   path: string;
   placeholder: string;
   label: string;
-  /** Option text for "all", "final" and "cancelled". */
-  statusLabels: { all: string; final: string; cancelled: string };
+  /** Option text for "all", "final" and "cancelled"; leave out to hide the filter. */
+  statusLabels?: { all: string; final: string; cancelled: string };
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,11 +56,13 @@ export function ListToolbar({
           className="h-10 pl-9 text-base"
         />
       </div>
-      <NativeSelect aria-label="Status" value={status} onChange={(e) => go({ status: e.target.value })}>
-        <NativeSelectOption value="all">{statusLabels.all}</NativeSelectOption>
-        <NativeSelectOption value="final">{statusLabels.final}</NativeSelectOption>
-        <NativeSelectOption value="cancelled">{statusLabels.cancelled}</NativeSelectOption>
-      </NativeSelect>
+      {statusLabels && (
+        <NativeSelect aria-label="Status" value={status} onChange={(e) => go({ status: e.target.value })}>
+          <NativeSelectOption value="all">{statusLabels.all}</NativeSelectOption>
+          <NativeSelectOption value="final">{statusLabels.final}</NativeSelectOption>
+          <NativeSelectOption value="cancelled">{statusLabels.cancelled}</NativeSelectOption>
+        </NativeSelect>
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href
 export const ITEMS: AppModule = { label: "Items", icon: PackageIcon, href: "/catalogue" };
 export const PRICE_LISTS: AppModule = { label: "Price Lists", icon: ListChecksIcon, href: "/price-lists" };
 export const PAYMENTS_RECEIVED: AppModule = { label: "Payments Received", icon: CircleArrowDownIcon, href: "/payments" };
+export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusIcon, href: "/credit-notes" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
 
@@ -66,7 +67,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       INVOICES,
       PAYMENTS_RECEIVED,
       soon("Recurring Invoices", RepeatIcon),
-      soon("Credit Notes", FileMinusIcon),
+      CREDIT_NOTES,
       soon("e-Way Bills", TruckIcon),
     ],
   },
