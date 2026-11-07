@@ -50,6 +50,13 @@
       "when": 1794028560471,
       "tag": "0006_payments_received",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794030153494,
+      "tag": "0007_credit_notes",
+      "breakpoints": true
     }
   ]
 }

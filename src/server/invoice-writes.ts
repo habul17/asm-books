@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
 import {
+  creditNotes,
   customers,
   invoiceLines,
   invoices,
@@ -131,17 +132,24 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
   return { fy, prefix: business.invoicePrefix, header, lines: calculated };
 }
 
-const qtyByProduct = (lines: { productId: number | null; qty: number }[]) => {
+export const qtyByProduct = (lines: { productId: number | null; qty: number }[]) => {
   const m = new Map<number, number>();
   for (const l of lines) if (l.productId != null) m.set(l.productId, (m.get(l.productId) ?? 0) + l.qty);
   return m;
 };
 
 /** Records stock changes and updates each product's running stock in two statements. */
-async function moveStock(
+export async function moveStock(
   tx: Tx,
   changes: Map<number, number>,
-  info: { kind: "sale" | "sale_edit" | "sale_cancel"; invoiceId: number; date: string; note: string; userId: number },
+  info: {
+    kind: (typeof stockMovements.$inferInsert)["kind"];
+    invoiceId: number;
+    creditNoteId?: number;
+    date: string;
+    note: string;
+    userId: number;
+  },
 ) {
   const rows = [...changes].map(([productId, qty]) => ({ productId, qty: Math.round(qty * 1000) / 1000 })).filter((r) => r.qty !== 0);
   if (!rows.length) return;
@@ -151,6 +159,7 @@ async function moveStock(
       qty: r.qty,
       kind: info.kind,
       invoiceId: info.invoiceId,
+      creditNoteId: info.creditNoteId ?? null,
       date: info.date,
       note: info.note,
       createdBy: info.userId,
@@ -202,6 +211,17 @@ async function lockInvoice(tx: Tx, id: number) {
     .for("update");
   if (!inv) throw new InvoiceInputError("Invoice not found.");
   if (inv.status === "cancelled") throw new InvoiceInputError("This invoice is cancelled and cannot be changed.");
+  // Returns are worked out from the invoice's lines, so those lines must stay as they are.
+  const [returned] = await tx
+    .select({ number: creditNotes.number })
+    .from(creditNotes)
+    .where(and(eq(creditNotes.invoiceId, id), eq(creditNotes.status, "final")))
+    .limit(1);
+  if (returned) {
+    throw new InvoiceInputError(
+      `Goods from this invoice were returned on credit note ${returned.number}. Cancel that credit note first.`,
+    );
+  }
   const lines = await tx
     .select({ productId: invoiceLines.productId, cost: invoiceLines.cost, qty: invoiceLines.qty })
     .from(invoiceLines)

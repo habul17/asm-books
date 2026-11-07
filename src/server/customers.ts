@@ -7,7 +7,7 @@ import { and, asc, count, eq, ilike, isNull, or, sql, type SQL } from "drizzle-o
 import { getDb } from "@/db";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
-import { customerGroups, customers, customFields, invoices, payments, priceLists } from "@/db/schema";
+import { creditNotes, customerGroups, customers, customFields, invoices, payments, priceLists } from "@/db/schema";
 import type { CustomFieldDef } from "@/lib/customers/validation";
 import { GST_STATES } from "@/lib/gst";
 
@@ -18,8 +18,8 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /**
  * What the customer owes us right now. Positive: they owe us; negative: they paid in advance.
- * Opening balance, plus credit invoices, minus payments received (cancelled ones are ignored).
- * Credit notes are taken off here once they are built.
+ * Opening balance, plus credit invoices, minus payments received and returns credited
+ * to their account (cancelled ones are ignored).
  */
 export const customerBalance = sql<number>`(${col(customers.openingBalance)} + coalesce((
   SELECT sum(${col(invoices.grandTotal)}) FROM ${invoices}
@@ -28,6 +28,10 @@ export const customerBalance = sql<number>`(${col(customers.openingBalance)} + c
 ), 0) - coalesce((
   SELECT sum(${col(payments.amount)}) FROM ${payments}
   WHERE ${col(payments.customerId)} = ${col(customers.id)} AND ${col(payments.status)} = 'final'
+), 0) - coalesce((
+  SELECT sum(${col(creditNotes.grandTotal)}) FROM ${creditNotes}
+  WHERE ${col(creditNotes.customerId)} = ${col(customers.id)}
+    AND ${col(creditNotes.status)} = 'final' AND ${col(creditNotes.refundType)} = 'credit'
 ), 0))`.mapWith(Number);
 const balance = customerBalance;
 
