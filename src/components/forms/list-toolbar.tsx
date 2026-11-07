@@ -6,11 +6,23 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { invoicesHref } from "@/lib/invoices/href";
+import { listHref } from "@/lib/list-href";
 
 const DEBOUNCE_MS = 200;
 
-export function InvoiceToolbar() {
+/** Search box plus an "all / active / cancelled" filter, kept in the URL. */
+export function ListToolbar({
+  path,
+  placeholder,
+  label,
+  statusLabels,
+}: {
+  path: string;
+  placeholder: string;
+  label: string;
+  /** Option text for "all", "final" and "cancelled". */
+  statusLabels: { all: string; final: string; cancelled: string };
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(searchParams.get("q") ?? "");
@@ -21,7 +33,7 @@ export function InvoiceToolbar() {
   const status = searchParams.get("status") ?? "all";
   const go = (next: { q?: string; status?: string }) =>
     startTransition(() =>
-      router.replace(invoicesHref({ q: (next.q ?? value).trim(), status: next.status ?? status }), { scroll: false }),
+      router.replace(listHref(path, { q: (next.q ?? value).trim(), status: next.status ?? status }), { scroll: false }),
     );
 
   return (
@@ -37,17 +49,17 @@ export function InvoiceToolbar() {
             clearTimeout(timer.current);
             timer.current = setTimeout(() => go({ q: next }), DEBOUNCE_MS);
           }}
-          placeholder="Search invoice no, customer or mobile…"
-          aria-label="Search invoices"
+          placeholder={placeholder}
+          aria-label={label}
           autoComplete="off"
           aria-busy={pending}
           className="h-10 pl-9 text-base"
         />
       </div>
       <NativeSelect aria-label="Status" value={status} onChange={(e) => go({ status: e.target.value })}>
-        <NativeSelectOption value="all">All invoices</NativeSelectOption>
-        <NativeSelectOption value="final">Active only</NativeSelectOption>
-        <NativeSelectOption value="cancelled">Cancelled only</NativeSelectOption>
+        <NativeSelectOption value="all">{statusLabels.all}</NativeSelectOption>
+        <NativeSelectOption value="final">{statusLabels.final}</NativeSelectOption>
+        <NativeSelectOption value="cancelled">{statusLabels.cancelled}</NativeSelectOption>
       </NativeSelect>
     </div>
   );

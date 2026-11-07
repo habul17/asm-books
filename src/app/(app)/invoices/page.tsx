@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { InvoiceList, InvoiceListSkeleton } from "@/components/invoices/invoice-list";
-import { InvoiceToolbar } from "@/components/invoices/invoice-toolbar";
+import { ListToolbar } from "@/components/forms/list-toolbar";
 import { buttonVariants } from "@/components/ui/button";
 import type { InvoiceStatusFilter } from "@/server/invoices";
 
@@ -37,7 +37,12 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
         </Link>
       </div>
       <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
-        <InvoiceToolbar />
+        <ListToolbar
+          path="/invoices"
+          label="Search invoices"
+          placeholder="Search invoice no, customer or mobile…"
+          statusLabels={{ all: "All invoices", final: "Active only", cancelled: "Cancelled only" }}
+        />
       </Suspense>
       <Suspense fallback={<InvoiceListSkeleton />}>
         <List searchParams={searchParams} />
