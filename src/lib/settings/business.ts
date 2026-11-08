@@ -33,6 +33,8 @@ export interface BusinessSettings {
   vendorPaymentPrefix: string;
   /** Start of every expense number, e.g. EXP → EXP/26-27/0001. */
   expensePrefix: string;
+  /** Start of every inventory adjustment number, e.g. ADJ → ADJ/26-27/0001. */
+  adjustmentPrefix: string;
   /** Printed at the bottom of every invoice. */
   terms: string;
   /** Used for products without their own GST rate. */
@@ -60,6 +62,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   creditNotePrefix: "CN",
   vendorPaymentPrefix: "PAY",
   expensePrefix: "EXP",
+  adjustmentPrefix: "ADJ",
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
@@ -142,6 +145,10 @@ const businessSchema = z.object({
   expensePrefix: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || "EXP" : "EXP"),
     z.string().regex(/^[A-Z0-9]{1,6}$/, "Expense prefix: 1 to 6 letters or numbers"),
+  ),
+  adjustmentPrefix: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toUpperCase() || "ADJ" : "ADJ"),
+    z.string().regex(/^[A-Z0-9]{1,6}$/, "Adjustment prefix: 1 to 6 letters or numbers"),
   ),
   terms: text(3000, "Terms"),
   defaultGstRate: z.preprocess(

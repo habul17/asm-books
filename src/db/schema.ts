@@ -423,6 +423,7 @@ export const stockMovementKind = pgEnum("stock_movement_kind", [
   "sale_return_cancel",
   "purchase_edit",
   "purchase_cancel",
+  "adjust_cancel",
 ]);
 
 /** Every stock change, so stock can always be explained. products.stock_qty is their running total. */
@@ -439,6 +440,7 @@ export const stockMovements = pgTable(
     invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "restrict" }),
     creditNoteId: integer("credit_note_id").references((): AnyPgColumn => creditNotes.id, { onDelete: "restrict" }),
     billId: integer("bill_id").references((): AnyPgColumn => bills.id, { onDelete: "restrict" }),
+    adjustmentId: integer("adjustment_id").references((): AnyPgColumn => stockAdjustments.id, { onDelete: "restrict" }),
     date: date("date", { mode: "string" }).notNull(),
     note: text("note"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -449,6 +451,7 @@ export const stockMovements = pgTable(
     index("stock_movements_invoice_idx").on(t.invoiceId),
     index("stock_movements_credit_note_idx").on(t.creditNoteId),
     index("stock_movements_bill_idx").on(t.billId),
+    index("stock_movements_adjustment_idx").on(t.adjustmentId),
     check("stock_movements_qty_check", sql`${t.qty} <> 0`),
   ],
 );
@@ -762,5 +765,61 @@ export const expenses = pgTable(
     index("expenses_date_idx").on(t.date.desc(), t.id.desc()),
     index("expenses_category_idx").on(sql`lower(${t.category})`),
     check("expenses_amount_check", sql`${t.amount} > 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Inventory adjustments
+// ---------------------------------------------------------------------------
+
+/** Stock corrected by hand: damaged, lost, found in a count, opening stock… */
+export const stockAdjustments = pgTable(
+  "stock_adjustments",
+  {
+    id: id(),
+    /** e.g. ADJ/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    reason: text("reason").notNull(),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("stock_adjustments_fy_seq_unique").on(t.fy, t.seq),
+    index("stock_adjustments_date_idx").on(t.date.desc(), t.id.desc()),
+  ],
+);
+
+export const stockAdjustmentLines = pgTable(
+  "stock_adjustment_lines",
+  {
+    id: id(),
+    adjustmentId: integer("adjustment_id")
+      .notNull()
+      .references(() => stockAdjustments.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    unit: text("unit").notNull(),
+    /** Stock just before this adjustment was saved. */
+    qtyBefore: quantity("qty_before").notNull(),
+    /** Positive: added to stock. Negative: taken out. */
+    qty: quantity("qty").notNull(),
+    /** Latest purchase price at the time, to value the adjustment. */
+    cost: cost("cost"),
+  },
+  (t) => [
+    unique("stock_adjustment_lines_line_unique").on(t.adjustmentId, t.lineNo),
+    index("stock_adjustment_lines_product_idx").on(t.productId),
+    check("stock_adjustment_lines_qty_check", sql`${t.qty} <> 0`),
   ],
 );

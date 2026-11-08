@@ -10,29 +10,38 @@ import type { PickedItem } from "@/server/invoices";
 
 import { useLookup } from "./use-lookup";
 
+/** What the picker shows for each part; `price` is left out where no price applies. */
+interface PickerItem {
+  id: number;
+  partNo: string | null;
+  description: string;
+  stockQty: number;
+  price?: number | null;
+}
+
 /**
  * Search box that adds a part to the invoice. Enter adds the highlighted part.
  * `search` replaces the default lookup (selling prices from the price list).
  */
-export function ItemPicker({
+export function ItemPicker<T extends PickerItem = PickedItem>({
   priceListId = null,
   search,
   onPick,
   inputRef,
 }: {
   priceListId?: number | null;
-  search?: (query: string) => Promise<PickedItem[]>;
-  onPick: (item: PickedItem) => void;
+  search?: (query: string) => Promise<T[]>;
+  onPick: (item: T) => void;
   inputRef: RefObject<HTMLInputElement | null>;
 }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const { results, loading } = useLookup(query, search ?? ((q) => findItems(q, priceListId)));
+  const { results, loading } = useLookup<T>(query, search ?? ((q) => findItems(q, priceListId) as unknown as Promise<T[]>));
   const shown = open && query.trim() !== "";
 
-  const pick = (item: PickedItem | undefined) => {
+  const pick = (item: T | undefined) => {
     if (!item) return;
     onPick(item);
     setQuery("");
@@ -96,12 +105,16 @@ export function ItemPicker({
               >
                 <span className="w-16 shrink-0 font-mono text-xs">{item.partNo}</span>
                 <span className="min-w-0 flex-1 truncate">{item.description}</span>
-                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                <span
+                  className={`shrink-0 text-xs text-muted-foreground ${"price" in item ? "hidden sm:inline" : "tabular-nums"}`}
+                >
                   stock {formatQty(item.stockQty)}
                 </span>
-                <span className="w-20 shrink-0 text-right tabular-nums">
-                  {item.price != null ? formatMoney(item.price) : "—"}
-                </span>
+                {"price" in item && (
+                  <span className="w-20 shrink-0 text-right tabular-nums">
+                    {item.price != null ? formatMoney(item.price) : "—"}
+                  </span>
+                )}
               </li>
             ))
           )}

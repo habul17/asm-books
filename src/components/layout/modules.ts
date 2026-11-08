@@ -52,6 +52,11 @@ export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusI
 export const VENDORS: AppModule = { label: "Vendors", icon: StoreIcon, href: "/vendors" };
 export const BILLS: AppModule = { label: "Bills", icon: ReceiptTextIcon, href: "/bills" };
 export const PAYMENTS_MADE: AppModule = { label: "Payments Made", icon: CircleArrowUpIcon, href: "/payments-made" };
+export const INVENTORY_ADJUSTMENTS: AppModule = {
+  label: "Inventory Adjustments",
+  icon: PackageOpenIcon,
+  href: "/inventory-adjustments",
+};
 export const EXPENSES: AppModule = { label: "Expenses", icon: WalletIcon, href: "/expenses" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
@@ -60,7 +65,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 export const MODULE_GROUPS: ModuleGroup[] = [
   { title: null, modules: [HOME, soon("Banking", LandmarkIcon)] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
-  { title: "Inventory", modules: [soon("Inventory Adjustments", PackageOpenIcon)] },
+  { title: "Inventory", modules: [INVENTORY_ADJUSTMENTS] },
   {
     title: "Sales",
     modules: [
