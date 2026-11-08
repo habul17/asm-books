@@ -17,8 +17,8 @@ export default function ReportsPage() {
         </Link>
         <h1 className="text-xl font-semibold">Reports</h1>
       </div>
-      {REPORT_GROUPS.map((labels) => (
-        <ModuleList key={labels[0]} rows={labels.map((label) => ({ label, href: null }))} />
+      {REPORT_GROUPS.map((rows) => (
+        <ModuleList key={rows[0].label} rows={rows} />
       ))}
     </div>
   );

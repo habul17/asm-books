@@ -116,10 +116,26 @@ export function isActive(pathname: string | null, href: string | null): boolean 
 /** Full-screen forms hide the bottom tabs so their own save bar stays reachable. */
 export const isFormPage = (pathname: string | null) => pathname != null && /\/(new|edit)$/.test(pathname);
 
-/** Reports grouped like the Reports screen; all are still to be built. */
-export const REPORT_GROUPS: string[][] = [
-  ["Balance Sheet", "Profit and Loss", "Cash Flow Statement"],
-  ["Sales by Customer", "Sales by Item", "Sales by Salesperson"],
-  ["Customer Balances Summary", "AR Aging Summary", "AR Aging Details", "Payments Received"],
-  ["Vendor Balances Summary", "Payments Made", "Expenses by Category"],
+/** Reports grouped like the Reports screen. A null href shows "Soon". */
+export const REPORT_GROUPS: { label: string; href: string | null }[][] = [
+  [
+    { label: "Profit and Loss", href: "/reports/profit-and-loss" },
+    { label: "Balance Sheet", href: null },
+    { label: "Cash Flow Statement", href: null },
+  ],
+  [
+    { label: "Sales Summary", href: "/reports/sales" },
+    { label: "Sales by Customer", href: "/reports/sales-by-customer" },
+    { label: "Sales by Item", href: "/reports/sales-by-item" },
+    { label: "GST Summary", href: "/reports/gst" },
+  ],
+  [
+    { label: "Customer Balances (who owes you)", href: "/reports/customer-balances" },
+    { label: "AR Aging Summary", href: null },
+  ],
+  [
+    { label: "Vendor Balances (what you owe)", href: "/reports/vendor-balances" },
+    { label: "Expenses by Category", href: "/reports/expenses-by-category" },
+  ],
+  [{ label: "Low Stock", href: "/reports/low-stock" }],
 ];
