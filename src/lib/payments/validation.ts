@@ -16,7 +16,7 @@ export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
 /** Largest single payment accepted; far above any real one, it only stops typing mistakes. */
 export const PAYMENT_MAX = 100_000_000;
 
-const trimmed = (max: number, label: string) =>
+export const trimmed = (max: number, label: string) =>
   z.preprocess(
     (v) => (typeof v === "string" ? v.trim() : ""),
     z.string().max(max, `${label} can be at most ${max} characters`),
@@ -29,7 +29,7 @@ const partyId = (error: string) =>
   );
 
 /** Fields shared by money received from customers and money paid to vendors. */
-const moneyFields = (amountLabel: string) => ({
+export const moneyFields = (amountLabel: string) => ({
   date: z.preprocess(
     (v) => (typeof v === "string" ? v : ""),
     z.iso.date("Enter a valid date"),
@@ -54,9 +54,9 @@ export type PaymentInput = z.infer<typeof paymentSchema>;
 
 export type VendorPaymentInput = z.infer<typeof vendorPaymentSchema>;
 
-type Parsed<T> = { value: T; error?: never } | { error: string; value?: never };
+export type Parsed<T> = { value: T; error?: never } | { error: string; value?: never };
 
-function parseWith<T extends { amount: number }>(schema: z.ZodType<T>, form: FormData | Record<string, unknown>): Parsed<T> {
+export function parseWith<T extends { amount: number }>(schema: z.ZodType<T>, form: FormData | Record<string, unknown>): Parsed<T> {
   const raw = form instanceof FormData ? Object.fromEntries(form) : form;
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };

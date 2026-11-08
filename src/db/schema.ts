@@ -728,3 +728,39 @@ export const vendorPayments = pgTable(
     check("vendor_payments_amount_check", sql`${t.amount} > 0`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Expenses
+// ---------------------------------------------------------------------------
+
+/** Money spent on running the shop (rent, salary, freight…), not on parts for stock. */
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: id(),
+    /** e.g. EXP/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    /** Free text with suggestions, e.g. Rent, Salary, Freight. */
+    category: text("category").notNull(),
+    /** Who was paid, e.g. landlord, staff member, transporter. */
+    paidTo: text("paid_to"),
+    amount: money("amount").notNull(),
+    mode: paymentMode("mode").notNull(),
+    reference: text("reference"),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("expenses_fy_seq_unique").on(t.fy, t.seq),
+    index("expenses_date_idx").on(t.date.desc(), t.id.desc()),
+    index("expenses_category_idx").on(sql`lower(${t.category})`),
+    check("expenses_amount_check", sql`${t.amount} > 0`),
+  ],
+);

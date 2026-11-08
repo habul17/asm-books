@@ -124,6 +124,16 @@ export function BusinessForm({
             className="uppercase"
           />
         </Field>
+        <Field label="Expense prefix" htmlFor="b-eprefix" hint="For expenses: EXP gives EXP/26-27/0001">
+          <Input
+            id="b-eprefix"
+            name="expensePrefix"
+            defaultValue={b.expensePrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
         <Field label="Invoice title" htmlFor="b-title">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>
