@@ -1,5 +1,8 @@
 import {
   CalendarCheckIcon,
+  DatabaseBackupIcon,
+  KeyRoundIcon,
+  UserCogIcon,
   ChartColumnIcon,
   CircleArrowDownIcon,
   CircleArrowUpIcon,
@@ -59,6 +62,9 @@ export const INVENTORY_ADJUSTMENTS: AppModule = {
 };
 export const EXPENSES: AppModule = { label: "Expenses", icon: WalletIcon, href: "/expenses" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
+export const USERS: AppModule = { label: "Users", icon: UserCogIcon, href: "/users" };
+export const BACKUPS: AppModule = { label: "Backups", icon: DatabaseBackupIcon, href: "/backup" };
+export const ACCOUNT: AppModule = { label: "My account", icon: KeyRoundIcon, href: "/account" };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
@@ -97,6 +103,9 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       soon("Documents", FolderIcon),
       REPORTS,
       SETTINGS,
+      USERS,
+      BACKUPS,
+      ACCOUNT,
       soon("Tasks", CalendarCheckIcon),
       soon("Notifications", BellIcon),
     ],

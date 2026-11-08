@@ -83,3 +83,11 @@ export async function endSession() {
   }
   store.delete(SESSION_COOKIE);
 }
+
+/** The current session's id (a hash of the cookie), to keep it when signing out other devices. */
+export async function currentSessionId(): Promise<string | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return isSessionToken(token) ? sessionIdFromToken(token) : null;
+}
+
+export const isOwner = (user: CurrentUser) => user.role === "owner";
