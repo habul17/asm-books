@@ -28,7 +28,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/sales-
             {formatMoney(totals.taxable)} · profit {formatMoney(profit)}
           </p>
           {totals.noCost > 0 && (
-            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
               {formatMoney(totals.noCost)} of sales had no purchase price, so their profit is not counted. Add purchase
               prices to those parts for a true profit.
             </p>

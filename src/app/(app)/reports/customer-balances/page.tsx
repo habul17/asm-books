@@ -32,7 +32,7 @@ async function Body() {
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 hover:bg-muted/60"
                 >
                   <span className="truncate font-medium">{c.name}</span>
-                  <span className={`text-right font-medium tabular-nums ${c.balance < 0 ? "text-emerald-600" : ""}`}>
+                  <span className={`text-right font-medium tabular-nums ${c.balance < 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
                     {formatMoney(Math.abs(c.balance))}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">

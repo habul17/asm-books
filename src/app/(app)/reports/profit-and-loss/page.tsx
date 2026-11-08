@@ -57,7 +57,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/profit
       />
       <Figures rows={[{ label: "Net profit", hint: pl.net < 0 ? "A loss for this period" : undefined, value: pl.net, strong: true }]} />
       {(pl.salesWithoutCost > 0 || pl.adjustmentLinesWithoutCost > 0) && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
           {pl.salesWithoutCost > 0 && (
             <>
               {formatMoney(pl.salesWithoutCost)} of sales were parts with no purchase price, so their cost counts as ₹0 and
