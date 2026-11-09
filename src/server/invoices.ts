@@ -144,6 +144,7 @@ export async function getEditorOptions() {
     sellerState: business.stateCode || null,
     defaultGstRate: business.defaultGstRate,
     defaultPriceListId: business.defaultPriceListId,
+    allowWalkIn: business.allowWalkIn,
     priceLists: lists,
   };
 }

@@ -39,6 +39,15 @@ describe("parseBusiness", () => {
     expect(parseBusiness(form({ defaultPriceListId: "4" })).value?.defaultPriceListId).toBe(4);
   });
 
+  it("reads the sales rule checkboxes (unticked boxes are not sent)", () => {
+    expect(parseBusiness(form({})).value).toMatchObject({ allowWalkIn: false, allowShortStock: false });
+    expect(parseBusiness(form({ allowWalkIn: "on", allowShortStock: "on" })).value).toMatchObject({
+      allowWalkIn: true,
+      allowShortStock: true,
+    });
+    expect(readBusiness({ allowWalkIn: "yes" }).allowWalkIn).toBe(false);
+  });
+
   it("takes the state from a valid GSTIN", () => {
     const gstin = withCheckChar("33ABCDE1234F1Z");
     const r = parseBusiness(form({ gstin: gstin.toLowerCase(), stateCode: "29" }));

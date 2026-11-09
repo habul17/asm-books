@@ -105,6 +105,8 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   }, [dirty, saving]);
 
   const isWalkIn = mode === "walk-in";
+  // An old walk-in invoice can still be edited after walk-ins are switched off.
+  const walkInAllowed = options.allowWalkIn || initial.mode === "walk-in";
   const effectivePayment = isWalkIn ? "cash" : paymentType;
   const placeOfSupply = (!isWalkIn && customer?.stateCode) || options.sellerState;
   const taxType = taxTypeFor(options.sellerState, placeOfSupply);
@@ -196,7 +198,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   const save = () => {
     setError(null);
     if (!isWalkIn && !customer) {
-      setError("Choose a customer, or switch to walk-in.");
+      setError(walkInAllowed ? "Choose a customer, or switch to walk-in." : "Choose a customer.");
       return;
     }
     for (const [i, l] of lines.entries()) {
@@ -247,6 +249,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <Label>Bill to</Label>
+              {walkInAllowed && (
               <div className="flex rounded-lg bg-muted p-0.5 text-sm" role="radiogroup" aria-label="Customer type">
                 {(["customer", "walk-in"] as const).map((m) => (
                   <button
@@ -264,6 +267,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
                   </button>
                 ))}
               </div>
+              )}
             </div>
             {isWalkIn ? (
               <div className="grid gap-2 sm:grid-cols-2">

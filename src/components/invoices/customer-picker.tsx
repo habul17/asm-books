@@ -87,7 +87,7 @@ export function CustomerPicker({
         >
           {results.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">
-              {loading ? "Searching…" : "No customers found. Add them in Customers, or use walk-in."}
+              {loading ? "Searching…" : "No customers found. Add them in Customers first."}
             </li>
           ) : (
             results.map((c, i) => (

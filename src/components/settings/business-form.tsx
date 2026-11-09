@@ -183,6 +183,32 @@ export function BusinessForm({
         </Field>
       </fieldset>
 
+      <fieldset disabled={!canEdit} className="flex flex-col gap-3">
+        <legend className="mb-3 text-sm font-medium text-muted-foreground">Sales rules</legend>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="allowWalkIn" defaultChecked={b.allowWalkIn} className="mt-0.5 size-4 accent-primary" />
+          <span>
+            Allow walk-in sales
+            <span className="block text-muted-foreground">When off, every invoice must be for a saved customer.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="allowShortStock"
+            defaultChecked={b.allowShortStock}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            Allow selling more than the stock in hand
+            <span className="block text-muted-foreground">
+              When off, an invoice is stopped if a part does not have enough stock. Turn on for a while if your stock
+              is not entered yet.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Bank and UPI (printed for payment)</legend>
         <Field label="Bank name" htmlFor="b-bank">

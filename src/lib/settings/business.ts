@@ -41,6 +41,10 @@ export interface BusinessSettings {
   defaultGstRate: number;
   /** Prices walk-in sales and customers who have no price list of their own. */
   defaultPriceListId: number | null;
+  /** When false, every invoice must be for a saved customer. */
+  allowWalkIn: boolean;
+  /** When false, an invoice cannot sell more of a part than is in stock. */
+  allowShortStock: boolean;
 }
 
 export const DEFAULT_BUSINESS: BusinessSettings = {
@@ -66,6 +70,8 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
+  allowWalkIn: false,
+  allowShortStock: false,
 };
 
 /** Reads the stored JSON safely: unknown keys are dropped and wrong types fall back to defaults. */
@@ -163,6 +169,8 @@ const businessSchema = z.object({
       .positive("Choose a price list from the list")
       .nullable(),
   ),
+  allowWalkIn: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+  allowShortStock: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
 });
 
 /** Checks the settings form. A valid GSTIN sets the state. */

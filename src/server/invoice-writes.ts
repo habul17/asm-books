@@ -60,6 +60,11 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     }
     customer = row;
   }
+  // Walk-ins can be switched off in Settings; an existing walk-in invoice can still be edited.
+  const wasWalkIn = existing != null && existing.customerId == null;
+  if (!customer && !business.allowWalkIn && !wasWalkIn) {
+    throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Settings.");
+  }
   const paymentType = customer ? input.paymentType : "cash";
   const placeOfSupply = customer?.stateCode || business.stateCode || null;
   const taxType = taxTypeFor(business.stateCode || null, placeOfSupply);
@@ -129,7 +134,13 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     notes: input.notes || null,
     ...totals,
   };
-  return { fy, prefix: business.invoicePrefix, header, lines: calculated };
+  return {
+    fy,
+    prefix: business.invoicePrefix,
+    allowShortStock: business.allowShortStock,
+    header,
+    lines: calculated,
+  };
 }
 
 export const qtyByProduct = (lines: { productId: number | null; qty: number }[]) => {
@@ -137,6 +148,35 @@ export const qtyByProduct = (lines: { productId: number | null; qty: number }[])
   for (const l of lines) if (l.productId != null) m.set(l.productId, (m.get(l.productId) ?? 0) + l.qty);
   return m;
 };
+
+/**
+ * Stops a sale that would take a part below zero. Locks the parts being sold
+ * so two invoices saved together cannot both take the last piece.
+ * `changes` holds stock deltas; only negative ones (stock going out) are checked.
+ */
+export async function assertStockAvailable(tx: Tx, changes: Map<number, number>) {
+  const out = [...changes].filter(([, qty]) => qty < 0);
+  if (!out.length) return;
+  const rows = await tx
+    .select({ id: products.id, partNo: products.partNo, stockQty: products.stockQty, unit: products.unit })
+    .from(products)
+    .where(inArray(products.id, out.map(([id]) => id)))
+    .orderBy(products.id)
+    .for("update");
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const short = out
+    .map(([id, qty]) => ({ p: byId.get(id), need: -qty }))
+    .filter(({ p, need }) => p && Math.round((p.stockQty - need) * 1000) < 0);
+  if (!short.length) return;
+  const list = short
+    .slice(0, 5)
+    .map(({ p }) => `${p!.partNo} (only ${Math.max(p!.stockQty, 0)} ${p!.unit} in stock)`)
+    .join(", ");
+  throw new InvoiceInputError(
+    `Not enough stock: ${list}${short.length > 5 ? ` and ${short.length - 5} more` : ""}. ` +
+      "Enter the stock first, or ask the owner to allow selling more than stock in Settings.",
+  );
+}
 
 /** Records stock changes and updates each product's running stock in two statements. */
 export async function moveStock(
@@ -181,7 +221,9 @@ export async function moveStock(
 
 export async function createInvoice(input: InvoiceInput, userId: number): Promise<number> {
   return withTransaction(async (tx) => {
-    const { fy, prefix, header, lines } = await prepare(tx, input, null);
+    const { fy, prefix, allowShortStock, header, lines } = await prepare(tx, input, null);
+    const sold = new Map([...qtyByProduct(lines)].map(([p, q]) => [p, -q]));
+    if (!allowShortStock) await assertStockAvailable(tx, sold);
     // One invoice number at a time, so two people saving together never get the same number.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
     const [{ next }] = await tx
@@ -194,7 +236,6 @@ export async function createInvoice(input: InvoiceInput, userId: number): Promis
       .values({ ...header, number, fy, seq: next, createdBy: userId })
       .returning({ id: invoices.id });
     await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
-    const sold = new Map([...qtyByProduct(lines)].map(([p, q]) => [p, -q]));
     await moveStock(tx, sold, { kind: "sale", invoiceId: id, date: header.date, note: number, userId });
     return id;
   });
@@ -236,15 +277,16 @@ async function lockInvoice(tx: Tx, id: number) {
 export async function updateInvoice(id: number, input: InvoiceInput, userId: number): Promise<void> {
   await withTransaction(async (tx) => {
     const existing = await lockInvoice(tx, id);
-    const { header, lines } = await prepare(tx, input, existing);
-    await tx.update(invoices).set(header).where(eq(invoices.id, id));
-    await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, id));
-    await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
+    const { allowShortStock, header, lines } = await prepare(tx, input, existing);
     // Only the change in quantity moves stock.
     const before = qtyByProduct(existing.lines);
     const after = qtyByProduct(lines);
     const diff = new Map<number, number>();
     for (const p of new Set([...before.keys(), ...after.keys()])) diff.set(p, (before.get(p) ?? 0) - (after.get(p) ?? 0));
+    if (!allowShortStock) await assertStockAvailable(tx, diff);
+    await tx.update(invoices).set(header).where(eq(invoices.id, id));
+    await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, id));
+    await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
     await moveStock(tx, diff, { kind: "sale_edit", invoiceId: id, date: header.date, note: existing.number, userId });
   });
 }
