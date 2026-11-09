@@ -59,12 +59,15 @@ export function calcLine({ qty, rate, discountPct, gstRate }: LineInput, type: T
   return { taxable, cgst, sgst, igst, total: round2(taxable + cgst + sgst + igst) };
 }
 
-/** Works out every line and the invoice totals, rounding the grand total to whole rupees. */
-export function calcInvoice<L extends LineInput>(lines: L[], type: TaxType) {
+/**
+ * Works out every line and the invoice totals. The grand total is rounded to
+ * whole rupees unless `round` is false (some supplier bills keep the paise).
+ */
+export function calcInvoice<L extends LineInput>(lines: L[], type: TaxType, { round = true } = {}) {
   const out = lines.map((l) => ({ ...l, ...calcLine(l, type) }));
   const sum = (k: keyof LineAmounts) => round2(out.reduce((s, l) => s + l[k], 0));
   const exact = sum("total");
-  const grandTotal = Math.round(exact);
+  const grandTotal = round ? Math.round(exact) : exact;
   const totals: InvoiceTotals = {
     taxableTotal: sum("taxable"),
     cgstTotal: sum("cgst"),

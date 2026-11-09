@@ -15,7 +15,7 @@ export async function NewBillForm({ vendorId }: { vendorId: number | null }) {
   const due = vendor?.paymentTermsDays != null ? addDays(today, vendor.paymentTermsDays) : "";
   return (
     <BillEditor
-      initial={{ id: null, vendor, billNo: "", date: today, dueDate: due, updatePrices: true, notes: "", lines: [] }}
+      initial={{ id: null, vendor, billNo: "", date: today, dueDate: due, updatePrices: true, roundTotal: true, notes: "", lines: [] }}
       sellerState={options.sellerState}
       cancelHref={vendor ? `/vendors/${vendor.id}` : "/bills"}
     />
@@ -35,6 +35,8 @@ export async function EditBillForm({ id }: { id: number }) {
         date: bill.date,
         dueDate: bill.dueDate ?? "",
         updatePrices: bill.updatePrices,
+        // A total with paise means the bill was saved without rounding.
+        roundTotal: Number.isInteger(Math.round(bill.grandTotal * 100) / 100),
         notes: bill.notes ?? "",
         lines: bill.lines.map((l) => ({
           key: `e${l.id}`,

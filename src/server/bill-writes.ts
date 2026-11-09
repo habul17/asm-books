@@ -75,7 +75,7 @@ async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) 
   });
 
   const taxType = taxTypeFor(business.stateCode || null, vendor.stateCode || business.stateCode || null);
-  const { lines: calculated, totals } = calcInvoice(lines, taxType);
+  const { lines: calculated, totals } = calcInvoice(lines, taxType, { round: input.roundTotal });
   const header = {
     vendorId: vendor.id,
     billNo: input.billNo,

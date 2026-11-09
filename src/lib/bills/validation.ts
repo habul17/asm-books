@@ -22,6 +22,8 @@ export const billInputSchema = z
     date: z.iso.date("Bill date is not valid"),
     dueDate: z.iso.date("Due date is not valid").nullable(),
     updatePrices: z.boolean(),
+    /** False keeps the paise on the bill total, as on the supplier's bill. */
+    roundTotal: z.boolean().default(true),
     notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
     lines: z.array(lineSchema).min(1, "Add at least one item").max(MAX_BILL_LINES, `A bill can have at most ${MAX_BILL_LINES} items`),
   })

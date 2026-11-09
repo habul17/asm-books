@@ -103,3 +103,12 @@ describe("amountInWords", () => {
     expect(amountInWords(19.999, { paise: true })).toBe("Rupees Twenty Only");
   });
 });
+
+describe("calcInvoice without rounding", () => {
+  it("keeps the paise and has no round off", () => {
+    const line = { qty: 1, rate: 100.5, discountPct: 0, gstRate: 18 };
+    // 100.50 + CGST 9.05 + SGST 9.05 = 118.60
+    expect(calcInvoice([line], "intra").totals).toMatchObject({ grandTotal: 119, roundOff: 0.4 });
+    expect(calcInvoice([line], "intra", { round: false }).totals).toMatchObject({ grandTotal: 118.6, roundOff: 0 });
+  });
+});

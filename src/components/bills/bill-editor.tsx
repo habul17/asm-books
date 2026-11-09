@@ -37,6 +37,7 @@ export interface BillDraft {
   date: string;
   dueDate: string;
   updatePrices: boolean;
+  roundTotal: boolean;
   notes: string;
   lines: BillLineDraft[];
 }
@@ -70,6 +71,7 @@ export function BillEditor({
   const [date, setDate] = useState(initial.date);
   const [dueDate, setDueDate] = useState(initial.dueDate);
   const [updatePrices, setUpdatePrices] = useState(initial.updatePrices);
+  const [roundTotal, setRoundTotal] = useState(initial.roundTotal);
   const [notes, setNotes] = useState(initial.notes);
   const [lines, setLines] = useState(initial.lines);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export function BillEditor({
       gstRate: l.gstRate,
     })),
     taxType,
+    { round: roundTotal },
   );
 
   const chooseVendor = (v: PickedVendor | null) => {
@@ -126,6 +129,7 @@ export function BillEditor({
         date,
         dueDate: dueDate || null,
         updatePrices,
+        roundTotal,
         notes,
         lines: lines.map((l) => ({
           productId: l.productId,
@@ -269,6 +273,21 @@ export function BillEditor({
           <span className="block text-muted-foreground">
             These rates (after discount, before GST) become the parts&apos; purchase prices, so your price lists follow
             them.
+          </span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={roundTotal}
+          onChange={(e) => setRoundTotal(e.target.checked)}
+          className="mt-0.5 size-4 accent-primary"
+        />
+        <span>
+          <span className="font-medium">Round total to whole rupees</span>
+          <span className="block text-muted-foreground">
+            Untick when the supplier&apos;s bill keeps the paise, like ₹1,234.56.
           </span>
         </span>
       </label>
