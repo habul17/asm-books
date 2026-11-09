@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseInvoiceInput } from "@/lib/invoices/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { cancelInvoice, createInvoice, InvoiceInputError, updateInvoice } from "@/server/invoice-writes";
 import { pickCustomers, pickItems, priceItems } from "@/server/invoices";
 
@@ -45,6 +45,7 @@ export async function saveInvoice(id: number | null, input: unknown): Promise<Ac
 
 export async function cancelInvoiceAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Invoice not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };

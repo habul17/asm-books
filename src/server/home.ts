@@ -5,7 +5,7 @@ import { connection } from "next/server";
 
 import { getDb } from "@/db";
 import { customers, invoices, payments } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
 import { todayInIndia } from "./invoice-writes";
@@ -13,7 +13,7 @@ import { todayInIndia } from "./invoice-writes";
 /** Numbers for the Home screen: sales and money received, money owed to us, latest bills. */
 export async function getHomeSummary() {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  const user = await requireUser();
   const today = todayInIndia();
   const monthStart = `${today.slice(0, 8)}01`;
   const final = eq(invoices.status, "final");
@@ -62,6 +62,8 @@ export async function getHomeSummary() {
   ]);
 
   return {
+    /** Staff do not see sales and money totals. */
+    showTotals: isOwner(user),
     sales: salesRows[0] ?? { today: 0, todayCount: 0, month: 0, monthCount: 0 },
     received: receivedRows[0] ?? { today: 0, todayCount: 0 },
     owed: owedRows[0] ?? { receivable: 0, owingCount: 0, overLimit: 0 },

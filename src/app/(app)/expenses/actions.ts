@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseExpenseInput } from "@/lib/expenses/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import {
   cancelExpense,
   createExpense,
@@ -47,7 +47,8 @@ export async function saveExpense(id: number | null, _prev: ActionState, formDat
 }
 
 export async function cancelExpenseAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireUser();
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Expense not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };

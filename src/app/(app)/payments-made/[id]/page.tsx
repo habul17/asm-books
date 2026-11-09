@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VendorBalance } from "@/components/vendors/vendor-balance";
 import { getBusiness } from "@/server/settings";
 import { getVendorPayment } from "@/server/vendor-payments";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Payment made" };
 
@@ -54,7 +55,11 @@ async function Payment({ params }: { params: PageProps<"/payments-made/[id]">["p
 
       <PaymentVoucher payment={payment} business={business} />
 
-      {final && <CancelVendorPaymentForm id={payment.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelVendorPaymentForm id={payment.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

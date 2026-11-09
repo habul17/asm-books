@@ -25,9 +25,10 @@ function Stat({ label, value, note, href }: { label: string; value: string; note
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 async function Summary() {
-  const { sales, received, owed, recent } = await getHomeSummary();
+  const { showTotals, sales, received, owed, recent } = await getHomeSummary();
   return (
     <>
+      {showTotals && (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Sales today" value={formatMoney(sales.today)} note={plural(sales.todayCount, "invoice")} href="/invoices" />
         <Stat
@@ -51,6 +52,7 @@ async function Summary() {
           href="/customers"
         />
       </div>
+      )}
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">

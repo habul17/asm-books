@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parsePaymentInput } from "@/lib/payments/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { cancelPayment, createPayment, PaymentInputError, updatePayment } from "@/server/payment-writes";
 
 export interface ActionState {
@@ -42,7 +42,8 @@ export async function savePayment(id: number | null, _prev: ActionState, formDat
 }
 
 export async function cancelPaymentAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireUser();
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Payment not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };

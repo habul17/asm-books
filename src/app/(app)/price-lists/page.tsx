@@ -12,6 +12,7 @@ import {
 import { PriceListTree, type Selection } from "@/components/price-lists/price-list-tree";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { viewerIsOwner } from "@/server/auth";
 import { getPriceListTree, PRICES_MAX, PRICES_PAGE } from "@/server/price-lists";
 
 export const metadata: Metadata = { title: "Price lists" };
@@ -40,7 +41,7 @@ function readParams(params: Params) {
 
 async function PriceListsScreen({ searchParams }: { searchParams: Promise<Params> }) {
   const { selection, query, manualOnly, limit, rename } = readParams(await searchParams);
-  const { folders, lists } = await getPriceListTree();
+  const [{ folders, lists }, canEdit] = await Promise.all([getPriceListTree(), viewerIsOwner()]);
 
   // New items go into the folder that is open (or the selected list's folder).
   const currentFolder =
@@ -56,7 +57,7 @@ async function PriceListsScreen({ searchParams }: { searchParams: Promise<Params
   } else if (selection.kind === "folder") {
     const folder = folders.find((f) => f.id === selection.id);
     panel = folder ? (
-      <FolderPanel folder={folder} folders={folders} lists={lists} rename={rename} />
+      <FolderPanel folder={folder} folders={folders} lists={lists} rename={rename} canEdit={canEdit} />
     ) : (
       <NotFoundPanel what="folder" />
     );
@@ -70,6 +71,7 @@ async function PriceListsScreen({ searchParams }: { searchParams: Promise<Params
         manualOnly={manualOnly}
         limit={limit}
         rename={rename}
+        canEdit={canEdit}
       />
     ) : (
       <NotFoundPanel what="price list" />
@@ -80,10 +82,14 @@ async function PriceListsScreen({ searchParams }: { searchParams: Promise<Params
     <div className="grid items-start gap-4 md:grid-cols-[18rem_minmax(0,1fr)]">
       <Card className={selection ? "hidden md:flex md:sticky md:top-6" : "md:sticky md:top-6"} size="sm">
         <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <NewFolderButton parentId={currentFolder} />
-            <NewPriceListButton folderId={currentFolder} />
-          </div>
+          {canEdit ? (
+            <div className="flex flex-wrap gap-2">
+              <NewFolderButton parentId={currentFolder} />
+              <NewPriceListButton folderId={currentFolder} />
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Only the owner can change price lists.</p>
+          )}
           <PriceListTree folders={folders} lists={lists} selected={selection} />
         </CardContent>
       </Card>

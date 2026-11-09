@@ -58,11 +58,13 @@ export function FolderPanel({
   folders,
   lists,
   rename,
+  canEdit,
 }: {
   folder: FolderRow;
   folders: FolderRow[];
   lists: PriceListRow[];
   rename: boolean;
+  canEdit: boolean;
 }) {
   const path = folderPathResolver(folders)(folder.parentId);
   const subfolders = folders.filter((f) => f.parentId === folder.id).length;
@@ -78,6 +80,13 @@ export function FolderPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        {!canEdit ? (
+          <p className="text-sm text-muted-foreground">
+            This folder has {subfolders} folder{subfolders === 1 ? "" : "s"} and {listCount} price list
+            {listCount === 1 ? "" : "s"}. Only the owner can change price lists.
+          </p>
+        ) : (
+          <>
         <FolderForm key={folder.id} folder={folder} folders={folders} rename={rename} />
         <div className="flex flex-wrap gap-2">
           <NewFolderButton parentId={folder.id} label="Subfolder here" />
@@ -92,6 +101,8 @@ export function FolderPanel({
         ) : (
           <DeleteButton kind="folder" id={folder.id} />
         )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -104,6 +115,7 @@ export async function PriceListPanel({
   manualOnly,
   limit,
   rename,
+  canEdit,
 }: {
   list: PriceListRow;
   folders: FolderRow[];
@@ -111,6 +123,7 @@ export async function PriceListPanel({
   manualOnly: boolean;
   limit: number;
   rename: boolean;
+  canEdit: boolean;
 }) {
   const path = folderPathResolver(folders)(list.folderId);
 
@@ -126,6 +139,7 @@ export async function PriceListPanel({
         <p className="text-sm text-muted-foreground">{describeRule(list)}</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        {canEdit && (
         <details key={list.id} open={rename} className="group rounded-lg border">
           <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
             <ChevronRightIcon className="size-4 transition-transform group-open:rotate-90" />
@@ -136,6 +150,7 @@ export async function PriceListPanel({
             <DeleteButton kind="list" id={list.id} />
           </div>
         </details>
+        )}
         <section className="flex flex-col gap-3">
           <h3 className="font-medium">Prices in this list</h3>
           <PricesToolbar
@@ -145,7 +160,7 @@ export async function PriceListPanel({
             manualOnly={manualOnly}
             manualCount={list.manualCount}
           />
-          <PricesTable list={list} query={query} manualOnly={manualOnly} limit={limit} />
+          <PricesTable list={list} query={query} manualOnly={manualOnly} limit={limit} canEdit={canEdit} />
         </section>
       </CardContent>
     </Card>
@@ -157,11 +172,13 @@ async function PricesTable({
   query,
   manualOnly,
   limit,
+  canEdit,
 }: {
   list: PriceListRow;
   query: string;
   manualOnly: boolean;
   limit: number;
+  canEdit: boolean;
 }) {
   const { total, items } = await getListPrices(list, { query, manualOnly, limit });
   const nextLimit = Math.min(limit + PRICES_PAGE, PRICES_MAX);
@@ -201,13 +218,17 @@ async function PricesTable({
                     {formatMoney(p.rulePrice)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ManualPriceInput
-                      key={`${p.id}:${p.manualPrice}`}
-                      listId={list.id}
-                      productId={p.id}
-                      partNo={p.partNo}
-                      value={p.manualPrice}
-                    />
+                    {canEdit ? (
+                      <ManualPriceInput
+                        key={`${p.id}:${p.manualPrice}`}
+                        listId={list.id}
+                        productId={p.id}
+                        partNo={p.partNo}
+                        value={p.manualPrice}
+                      />
+                    ) : (
+                      <span className="tabular-nums">{p.manualPrice == null ? "—" : formatMoney(p.manualPrice)}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium tabular-nums">{formatMoney(p.price)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatMoney(p.profit)}</TableCell>

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getInvoice } from "@/server/invoices";
 import { getBusiness } from "@/server/settings";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -81,7 +82,11 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         />
       </div>
 
-      {final && <CancelInvoiceForm id={inv.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelInvoiceForm id={inv.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

@@ -22,7 +22,7 @@ import {
   vendors,
 } from "@/db/schema";
 import { parsePeriod, type Period } from "@/lib/reports/period";
-import { requireUser } from "@/server/auth";
+import { requireOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
 import { todayInIndia } from "./invoice-writes";
@@ -50,7 +50,7 @@ const returnInPeriod = (p: Period) => and(eq(creditNotes.status, "final"), betwe
 
 /** Sales and returns for the period, money received, and a day-by-day breakdown. */
 export async function salesSummary(period: Period) {
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const gst = sql`${invoices.cgstTotal} + ${invoices.sgstTotal} + ${invoices.igstTotal}`;
   const cnGst = sql`${creditNotes.cgstTotal} + ${creditNotes.sgstTotal} + ${creditNotes.igstTotal}`;
@@ -114,7 +114,7 @@ export async function salesSummary(period: Period) {
 
 /** Sales per customer for the period, less their returns. Walk-in sales are one row. */
 export async function salesByCustomer(period: Period) {
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const [sold, returned] = await db.batch([
     db
@@ -170,7 +170,7 @@ export const ITEM_REPORT_LIMIT = 300;
 
 /** Quantity, sales (before GST), cost and profit per part for the period, less returns. */
 export async function salesByItem(period: Period) {
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const [sold, returned] = await db.batch([
     db
@@ -245,7 +245,7 @@ export async function salesByItem(period: Period) {
 
 /** Expenses for the period, per category. */
 export async function expensesByCategory(period: Period) {
-  await requireUser();
+  await requireOwner();
   const rows = await getDb()
     .select({
       category: sql<string>`min(${expenses.category})`,
@@ -264,7 +264,7 @@ export async function expensesByCategory(period: Period) {
  * sales − returns − cost of parts sold = gross profit; then − expenses ± stock written off or found.
  */
 export async function profitAndLoss(period: Period) {
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const [items, spent, adjRows] = await Promise.all([
     salesByItem(period),
@@ -308,7 +308,7 @@ export async function profitAndLoss(period: Period) {
 
 /** Output GST (sales less returns) against input GST (purchase bills) for the period. */
 export async function gstSummary(period: Period) {
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const [out, back, input, byRate, byRateBack] = await db.batch([
     db
@@ -395,7 +395,7 @@ export async function gstSummary(period: Period) {
 /** Customers who owe us money or have paid in advance, biggest balance first. */
 export async function customerBalances() {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  await requireOwner();
   const rows = await getDb()
     .select({
       id: customers.id,
@@ -418,7 +418,7 @@ export async function customerBalances() {
 /** Vendors we owe money to or have paid in advance, biggest balance first. */
 export async function vendorBalances() {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  await requireOwner();
   const db = getDb();
   const lastPaid = sql<string | null>`(
     SELECT max(${col(vendorPayments.date)}) FROM ${vendorPayments}

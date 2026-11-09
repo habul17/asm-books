@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VendorBalance } from "@/components/vendors/vendor-balance";
 import { formatDate, formatMoney, formatQty } from "@/lib/format";
 import { getBill } from "@/server/bills";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Bill" };
 
@@ -116,7 +117,11 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
 
       {b.notes && <p className="text-sm whitespace-pre-line text-muted-foreground">Note: {b.notes}</p>}
 
-      {final && <CancelBillForm id={b.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelBillForm id={b.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

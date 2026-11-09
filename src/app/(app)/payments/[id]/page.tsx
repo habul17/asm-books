@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
 import { getPayment } from "@/server/payments";
 import { getBusiness } from "@/server/settings";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Payment" };
 
@@ -55,7 +56,11 @@ async function Payment({ params }: { params: PageProps<"/payments/[id]">["params
 
       <PaymentReceipt payment={payment} business={business} />
 
-      {final && <CancelPaymentForm id={payment.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelPaymentForm id={payment.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

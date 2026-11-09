@@ -91,3 +91,24 @@ export async function currentSessionId(): Promise<string | null> {
 }
 
 export const isOwner = (user: CurrentUser) => user.role === "owner";
+
+/** Thrown when a staff user asks for owner-only data. */
+export class OwnerOnlyError extends Error {
+  constructor() {
+    super("Only the owner can see this.");
+    this.name = "OwnerOnlyError";
+  }
+}
+
+/** Like `requireUser`, but only lets the owner through. Use for owner-only reads. */
+export async function requireOwner(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!isOwner(user)) throw new OwnerOnlyError();
+  return user;
+}
+
+/** True when the signed-in user is the owner. For showing or hiding owner-only buttons. */
+export async function viewerIsOwner(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return !!user && isOwner(user);
+}

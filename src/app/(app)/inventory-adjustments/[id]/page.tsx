@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney, formatQty } from "@/lib/format";
 import { getAdjustment } from "@/server/adjustments";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Inventory adjustment" };
 
@@ -95,7 +96,11 @@ async function Adjustment({ params }: { params: PageProps<"/inventory-adjustment
         )}
       </section>
 
-      {final && <CancelAdjustmentForm id={adj.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelAdjustmentForm id={adj.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

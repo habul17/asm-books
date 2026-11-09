@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseBillInput } from "@/lib/bills/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { BillInputError, cancelBill, createBill, updateBill } from "@/server/bill-writes";
 import { pickBillItems } from "@/server/bills";
 import { pickVendors } from "@/server/vendors";
@@ -45,6 +45,7 @@ export async function saveBill(id: number | null, input: unknown): Promise<Actio
 
 export async function cancelBillAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Bill not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };

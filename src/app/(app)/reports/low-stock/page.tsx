@@ -48,7 +48,7 @@ async function Body() {
 
 export default function LowStockPage() {
   return (
-    <ReportPage>
+    <ReportPage staffAllowed>
       <ReportHeader title="Low Stock">
         Parts out of stock (that you have stocked or sold before) or at their minimum level. Set a part&rsquo;s minimum on its Items page.
       </ReportHeader>

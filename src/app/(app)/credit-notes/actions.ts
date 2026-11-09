@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseCreditNoteInput } from "@/lib/credit-notes/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { cancelCreditNote, createCreditNote, CreditNoteInputError } from "@/server/credit-note-writes";
 
 export interface ActionState {
@@ -37,6 +37,7 @@ export async function saveCreditNote(input: unknown): Promise<ActionState> {
 
 export async function cancelCreditNoteAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Credit note not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };

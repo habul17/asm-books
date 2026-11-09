@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "cn";
 
+import { OwnerGate } from "@/components/layout/owner-gate";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -118,7 +119,17 @@ export function ReportSkeleton() {
   );
 }
 
-/** Wrapper every report page uses: centred column with the header first. */
-export function ReportPage({ children }: { children: ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">{children}</div>;
+/** Wrapper every report page uses: centred column with the header first. Owner only unless `staffAllowed`. */
+export function ReportPage({ children, staffAllowed = false }: { children: ReactNode; staffAllowed?: boolean }) {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      {staffAllowed ? (
+        children
+      ) : (
+        <OwnerGate what="see reports" fallback={<ReportSkeleton />}>
+          {children}
+        </OwnerGate>
+      )}
+    </div>
+  );
 }

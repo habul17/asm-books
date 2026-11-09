@@ -14,6 +14,7 @@ import { customersHref } from "@/lib/customers/href";
 import { formatDate } from "@/lib/format";
 import { getCreditNote } from "@/server/credit-notes";
 import { getBusiness } from "@/server/settings";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Credit note" };
 
@@ -69,7 +70,11 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
         }
       />
 
-      {final && <CancelCreditNoteForm id={note.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelCreditNoteForm id={note.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

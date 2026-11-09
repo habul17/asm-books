@@ -12,6 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getExpense } from "@/server/expenses";
 import { getBusiness } from "@/server/settings";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Expense" };
 
@@ -49,7 +50,11 @@ async function Expense({ params }: { params: PageProps<"/expenses/[id]">["params
 
       <ExpenseVoucher expense={expense} business={business} />
 
-      {final && <CancelExpenseForm id={expense.id} />}
+      {final && (
+        <OwnerOnlyBlock>
+          <CancelExpenseForm id={expense.id} />
+        </OwnerOnlyBlock>
+      )}
     </>
   );
 }

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { parseAdjustmentInput } from "@/lib/adjustments/validation";
 import { AdjustmentInputError, cancelAdjustment, createAdjustment } from "@/server/adjustment-writes";
 import { pickStockItems } from "@/server/adjustments";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 
 export interface ActionState {
   ok?: boolean;
@@ -38,6 +38,7 @@ export async function saveAdjustment(input: unknown): Promise<ActionState> {
 
 export async function cancelAdjustmentAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can cancel. Please ask the owner." };
   if (!idSchema.safeParse(id).success) return { error: "Adjustment not found." };
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) return { error: "Please give a reason for cancelling." };
