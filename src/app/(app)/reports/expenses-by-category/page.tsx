@@ -12,7 +12,7 @@ const PATH = "/reports/expenses-by-category";
 
 async function Body({ searchParams }: { searchParams: PageProps<"/reports/expenses-by-category">["searchParams"] }) {
   const period = await readPeriod(periodParams(await searchParams));
-  const { items, total } = await expensesByCategory(period);
+  const { items, total, gst } = await expensesByCategory(period);
   return (
     <>
       <PeriodPicker path={PATH} period={period} />
@@ -43,6 +43,12 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/expens
             <span className="tabular-nums">{formatMoney(total)}</span>
           </li>
         </ul>
+      )}
+      {items.length > 0 && gst > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Amounts are before GST. GST you can claim back on these expenses: {formatMoney(gst)} (shown in the GST
+          Summary).
+        </p>
       )}
     </>
   );

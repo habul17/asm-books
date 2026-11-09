@@ -68,7 +68,10 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/gst">[
           { label: "Sales", hint: plural(g.sales.count, "invoice"), ...g.sales },
           { label: "Less returns", hint: plural(g.returns.count, "credit note"), ...g.returns },
           { label: "Output GST", ...g.output, strong: true },
-          { label: "Input GST", hint: `Purchase bills · ${g.input.count}`, ...g.input },
+          { label: "Input GST", hint: `Purchase bills · ${g.inputFromBills.count}`, ...g.inputFromBills },
+          ...(g.inputFromExpenses.count > 0
+            ? [{ label: "Input GST", hint: plural(g.inputFromExpenses.count, "expense"), ...g.inputFromExpenses }]
+            : []),
           { label: "Output − input", ...g.payable, strong: true },
         ]}
       />
@@ -76,7 +79,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/gst">[
         {payable >= 0 ? "GST to pay (before other credits): " : "Extra input credit: "}
         <span className="font-semibold tabular-nums">{formatMoney(Math.abs(payable))}</span>
         <span className="block text-xs text-muted-foreground">
-          A guide only. Check with your accountant before filing; GST on expenses is not recorded here.
+          A guide only. Check with your accountant before filing.
         </span>
       </p>
       <section className="flex flex-col gap-2">

@@ -750,7 +750,15 @@ export const expenses = pgTable(
     category: text("category").notNull(),
     /** Who was paid, e.g. landlord, staff member, transporter. */
     paidTo: text("paid_to"),
+    /** Set when the expense was paid to a saved vendor; `paidTo` then holds their name. */
+    vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    /** Total paid, including any GST. */
     amount: money("amount").notNull(),
+    /** GST rate included in `amount`; 0 when no GST is claimed. */
+    gstRate: percent("gst_rate").notNull().default(0),
+    cgst: money("cgst").notNull().default(0),
+    sgst: money("sgst").notNull().default(0),
+    igst: money("igst").notNull().default(0),
     mode: paymentMode("mode").notNull(),
     reference: text("reference"),
     notes: text("notes"),
@@ -765,6 +773,8 @@ export const expenses = pgTable(
     index("expenses_date_idx").on(t.date.desc(), t.id.desc()),
     index("expenses_category_idx").on(sql`lower(${t.category})`),
     check("expenses_amount_check", sql`${t.amount} > 0`),
+    check("expenses_gst_check", sql`${t.cgst} + ${t.sgst} + ${t.igst} <= ${t.amount}`),
+    index("expenses_vendor_idx").on(t.vendorId),
   ],
 );
 

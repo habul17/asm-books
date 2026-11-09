@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseExpenseInput } from "./validation";
+import { expenseGst, parseExpenseInput } from "./validation";
 
 const ok = {
   category: "  Freight   /  Transport ",
@@ -18,6 +18,8 @@ describe("parseExpenseInput", () => {
       value: {
         category: "Freight / Transport",
         paidTo: "VRL Logistics",
+        vendorId: null,
+        gstRate: 0,
         date: "2026-11-08",
         amount: 1250,
         mode: "cash",
@@ -43,5 +45,23 @@ describe("parseExpenseInput", () => {
     [{ mode: "barter" }, "Choose how it was paid"],
   ])("rejects %j", (change, error) => {
     expect(parseExpenseInput({ ...ok, ...change })).toEqual({ error });
+  });
+});
+
+describe("expense GST", () => {
+  it("reads the supplier and GST rate", () => {
+    expect(parseExpenseInput({ ...ok, vendorId: "7", gstRate: "18" }).value).toMatchObject({ vendorId: 7, gstRate: 18 });
+    expect(parseExpenseInput({ ...ok, gstRate: "7" }).error).toBeTruthy();
+    expect(parseExpenseInput({ ...ok, vendorId: "abc" }).error).toBeTruthy();
+  });
+
+  it("splits GST out of the total", () => {
+    // 1180 incl. 18% = 1000 + 180
+    expect(expenseGst(1180, 18, false)).toEqual({ cgst: 90, sgst: 90, igst: 0 });
+    expect(expenseGst(1180, 18, true)).toEqual({ cgst: 0, sgst: 0, igst: 180 });
+    expect(expenseGst(1000, 0, false)).toEqual({ cgst: 0, sgst: 0, igst: 0 });
+    // Odd paise go to SGST so the halves add up exactly.
+    const g = expenseGst(100.01, 18, false);
+    expect(Math.round((g.cgst + g.sgst) * 100) / 100).toBe(15.26);
   });
 });

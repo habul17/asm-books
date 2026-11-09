@@ -35,6 +35,7 @@ export function ExpenseVoucher({ expense: p, business: b }: { expense: ExpenseDe
         <p className="text-xs font-semibold text-black/60 uppercase">Expense</p>
         <p className="font-semibold">{p.category}</p>
         {p.paidTo && <p>Paid to: {p.paidTo}</p>}
+        {p.vendorGstin && <p>Supplier GSTIN: {p.vendorGstin}</p>}
       </section>
 
       <section className="grid gap-4 py-4 sm:grid-cols-[1fr_auto]">
@@ -57,6 +58,25 @@ export function ExpenseVoucher({ expense: p, business: b }: { expense: ExpenseDe
         <div className="rounded-lg border border-black/20 px-5 py-3 text-right">
           <p className="text-xs text-black/60 uppercase">Amount paid</p>
           <p className="text-2xl font-bold tabular-nums">{formatMoney(p.amount)}</p>
+          {p.gstRate > 0 && (
+            <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 text-xs text-black/70">
+              <dt>Before GST</dt>
+              <dd className="tabular-nums">{formatMoney(Math.round((p.amount - p.cgst - p.sgst - p.igst) * 100) / 100)}</dd>
+              {p.igst > 0 ? (
+                <>
+                  <dt>IGST {p.gstRate}%</dt>
+                  <dd className="tabular-nums">{formatMoney(p.igst)}</dd>
+                </>
+              ) : (
+                <>
+                  <dt>CGST {p.gstRate / 2}%</dt>
+                  <dd className="tabular-nums">{formatMoney(p.cgst)}</dd>
+                  <dt>SGST {p.gstRate / 2}%</dt>
+                  <dd className="tabular-nums">{formatMoney(p.sgst)}</dd>
+                </>
+              )}
+            </dl>
+          )}
         </div>
       </section>
 

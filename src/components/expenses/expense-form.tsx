@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { saveExpense } from "@/app/(app)/expenses/actions";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
@@ -9,12 +10,15 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/payments/validation";
+import { GST_RATES } from "@/lib/settings/business";
 
 export interface ExpenseFormValues {
   date: string;
   category: string;
   paidTo: string;
+  vendorId: number | null;
   amount: number | null;
+  gstRate: number;
   mode: PaymentMode;
   reference: string;
   notes: string;
@@ -24,6 +28,7 @@ export function ExpenseForm({
   id,
   initial,
   categories,
+  vendors,
   backHref,
 }: {
   /** null for a new expense. */
@@ -31,9 +36,12 @@ export function ExpenseForm({
   initial: ExpenseFormValues;
   /** Suggestions for the category box. */
   categories: string[];
+  /** Saved suppliers to pick for "Paid to". */
+  vendors: { id: number; name: string }[];
   backHref: string;
 }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveExpense.bind(null, id));
+  const [vendorId, setVendorId] = useState(initial.vendorId == null ? "" : String(initial.vendorId));
 
   return (
     <form onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-5">
@@ -74,17 +82,46 @@ export function ExpenseForm({
         <Field label="Date" htmlFor="e-date">
           <Input id="e-date" name="date" type="date" required defaultValue={initial.date} className="h-10" />
         </Field>
-        <Field label="Paid to (optional)" htmlFor="e-paid-to">
-          <Input
-            id="e-paid-to"
-            name="paidTo"
-            maxLength={100}
-            autoComplete="off"
-            defaultValue={initial.paidTo}
-            placeholder="Landlord, staff name, transporter…"
-          />
+        <Field label="Paid to" htmlFor="e-vendor">
+          <NativeSelect
+            id="e-vendor"
+            name="vendorId"
+            value={vendorId}
+            onChange={(e) => setVendorId(e.target.value)}
+            className="w-full"
+          >
+            <NativeSelectOption value="">— Someone else (type the name) —</NativeSelectOption>
+            {vendors.map((v) => (
+              <NativeSelectOption key={v.id} value={v.id}>
+                {v.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          {vendorId === "" && (
+            <Input
+              id="e-paid-to"
+              name="paidTo"
+              aria-label="Name of who was paid (optional)"
+              maxLength={100}
+              autoComplete="off"
+              defaultValue={initial.vendorId == null ? initial.paidTo : ""}
+              placeholder="Landlord, staff name… (optional)"
+              className="mt-2"
+            />
+          )}
         </Field>
       </div>
+
+      <Field label="GST in this amount" htmlFor="e-gst" hint="Choose the rate if the bill shows GST you can claim back.">
+        <NativeSelect id="e-gst" name="gstRate" defaultValue={String(initial.gstRate)} className="w-full sm:w-1/2">
+          <NativeSelectOption value="0">No GST</NativeSelectOption>
+          {GST_RATES.filter((r) => r > 0).map((r) => (
+            <NativeSelectOption key={r} value={r}>
+              Includes {r}% GST
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Paid by" htmlFor="e-mode">

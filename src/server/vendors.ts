@@ -120,3 +120,14 @@ export async function pickVendorById(id: number) {
 }
 
 export type PickedVendor = Awaited<ReturnType<typeof pickVendors>>[number];
+
+/** Vendors to choose from in the expense form: active ones, plus `keepId` if it was switched off. */
+export async function vendorOptions(keepId: number | null = null) {
+  await requireUser();
+  return getDb()
+    .select({ id: vendors.id, name: vendors.name })
+    .from(vendors)
+    .where(keepId ? or(eq(vendors.active, true), eq(vendors.id, keepId)) : eq(vendors.active, true))
+    .orderBy(sql`lower(${vendors.name})`)
+    .limit(1000);
+}

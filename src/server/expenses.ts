@@ -4,7 +4,7 @@ import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { expenses, users } from "@/db/schema";
+import { expenses, users, vendors } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 
 export const EXPENSE_LIMIT = 100;
@@ -79,7 +79,13 @@ export async function getExpense(id: number) {
       date: expenses.date,
       category: expenses.category,
       paidTo: expenses.paidTo,
+      vendorId: expenses.vendorId,
+      vendorGstin: vendors.gstin,
       amount: expenses.amount,
+      gstRate: expenses.gstRate,
+      cgst: expenses.cgst,
+      sgst: expenses.sgst,
+      igst: expenses.igst,
       mode: expenses.mode,
       reference: expenses.reference,
       notes: expenses.notes,
@@ -89,6 +95,7 @@ export async function getExpense(id: number) {
     })
     .from(expenses)
     .leftJoin(users, eq(users.id, expenses.createdBy))
+    .leftJoin(vendors, eq(vendors.id, expenses.vendorId))
     .where(eq(expenses.id, id));
   return row ?? null;
 }

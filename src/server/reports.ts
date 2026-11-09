@@ -243,20 +243,26 @@ export async function salesByItem(period: Period) {
   };
 }
 
-/** Expenses for the period, per category. */
+/** Expenses for the period, per category. `amount` is before GST (claimable GST is not a cost). */
 export async function expensesByCategory(period: Period) {
   await requireOwner();
+  const net = sql`${expenses.amount} - ${expenses.cgst} - ${expenses.sgst} - ${expenses.igst}`;
   const rows = await getDb()
     .select({
       category: sql<string>`min(${expenses.category})`,
       count: rowCount(),
-      amount: total(sql`${expenses.amount}`),
+      amount: total(net),
+      gst: total(sql`${expenses.cgst} + ${expenses.sgst} + ${expenses.igst}`),
     })
     .from(expenses)
     .where(and(eq(expenses.status, "final"), between(expenses.date, period.from, period.to)))
     .groupBy(sql`lower(${expenses.category})`)
-    .orderBy(desc(sql`sum(${expenses.amount})`));
-  return { items: rows, total: round2(rows.reduce((s, r) => s + r.amount, 0)) };
+    .orderBy(desc(sql`sum(${net})`));
+  return {
+    items: rows,
+    total: round2(rows.reduce((s, r) => s + r.amount, 0)),
+    gst: round2(rows.reduce((s, r) => s + r.gst, 0)),
+  };
 }
 
 /**
@@ -310,7 +316,7 @@ export async function profitAndLoss(period: Period) {
 export async function gstSummary(period: Period) {
   await requireOwner();
   const db = getDb();
-  const [out, back, input, byRate, byRateBack] = await db.batch([
+  const [out, back, input, spent, byRate, byRateBack] = await db.batch([
     db
       .select({
         count: rowCount(),
@@ -343,6 +349,22 @@ export async function gstSummary(period: Period) {
       .where(and(eq(bills.status, "final"), between(bills.date, period.from, period.to))),
     db
       .select({
+        count: rowCount(),
+        taxable: total(sql`${expenses.amount} - ${expenses.cgst} - ${expenses.sgst} - ${expenses.igst}`),
+        cgst: total(sql`${expenses.cgst}`),
+        sgst: total(sql`${expenses.sgst}`),
+        igst: total(sql`${expenses.igst}`),
+      })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.status, "final"),
+          sql`${expenses.gstRate} > 0`,
+          between(expenses.date, period.from, period.to),
+        ),
+      ),
+    db
+      .select({
         rate: invoiceLines.gstRate,
         taxable: total(sql`${invoiceLines.taxable}`),
         tax: total(sql`${invoiceLines.cgst} + ${invoiceLines.sgst} + ${invoiceLines.igst}`),
@@ -366,7 +388,15 @@ export async function gstSummary(period: Period) {
   const zero = { count: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
   const sales = out[0] ?? zero;
   const returns = back[0] ?? zero;
-  const purchases = input[0] ?? zero;
+  const bought = input[0] ?? zero;
+  const expenseGst = spent[0] ?? zero;
+  const purchases = {
+    count: bought.count + expenseGst.count,
+    taxable: round2(bought.taxable + expenseGst.taxable),
+    cgst: round2(bought.cgst + expenseGst.cgst),
+    sgst: round2(bought.sgst + expenseGst.sgst),
+    igst: round2(bought.igst + expenseGst.igst),
+  };
   const minus = (a: typeof zero, b: typeof zero) => ({
     taxable: round2(a.taxable - b.taxable),
     cgst: round2(a.cgst - b.cgst),
@@ -387,6 +417,9 @@ export async function gstSummary(period: Period) {
     returns,
     output,
     input: purchases,
+    /** Part of `input` that came from purchase bills and from expenses with GST. */
+    inputFromBills: bought,
+    inputFromExpenses: expenseGst,
     payable: minus({ ...output, count: 0 }, purchases),
     byRate: [...rates.values()].sort((a, b) => a.rate - b.rate),
   };
