@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computePrice, roundTo, type PriceRule } from "./pricing";
+import { computePrice, roundTo, withoutGst, type PriceRule } from "./pricing";
 
 const bases = { purchase: 100, previous_purchase: 80, list: 200 };
 const rule = (r: Partial<PriceRule> = {}): PriceRule => ({
@@ -45,5 +45,13 @@ describe("computePrice", () => {
 describe("roundTo", () => {
   it("rounds to paise when step is 0", () => {
     expect(roundTo(10.005, 0)).toBe(10.01);
+  });
+});
+
+describe("withoutGst", () => {
+  it("takes GST out of a GST-inclusive price", () => {
+    expect(withoutGst(118, 18)).toBe(100);
+    expect(withoutGst(21.7442199, 18)).toBeCloseTo(18.427305, 5);
+    expect(withoutGst(50, 0)).toBe(50);
   });
 });

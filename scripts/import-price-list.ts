@@ -7,6 +7,10 @@
 //     changed, and a purchase price is recorded only when it differs from the
 //     current one. Nothing is ever deleted.
 //
+// Prices in the spreadsheet include GST; it is taken out before saving, so the
+// stored purchase price is before GST (bills record prices the same way).
+// Use --gst-in-prices 0 for a spreadsheet whose prices are already before GST.
+//
 // Usage:
 //   pnpm import:price-list "<path/to/file.xlsx>"            # preview
 //   pnpm import:price-list "<path/to/file.xlsx>" --apply    # write
@@ -22,6 +26,7 @@ import ExcelJS from "exceljs";
 
 import * as schema from "../src/db/schema";
 import { parsePriceListRows, type RawRow } from "../src/lib/catalogue/price-list-import";
+import { withoutGst } from "../src/lib/pricing";
 
 const { brands, categories, products, purchasePrices } = schema;
 
@@ -66,16 +71,22 @@ async function main() {
       apply: { type: "boolean", default: false },
       date: { type: "string", default: todayInIndia() },
       brand: { type: "string", default: DEFAULT_BRAND },
+      "gst-in-prices": { type: "string", default: "18" },
     },
   });
+  const gstInPrices = Number(values["gst-in-prices"]);
 
   const file = positionals[0] && path.resolve(positionals[0]);
   if (!file || !existsSync(file)) {
-    console.error('Usage: pnpm import:price-list "<file.xlsx>" [--apply] [--date YYYY-MM-DD]');
+    console.error('Usage: pnpm import:price-list "<file.xlsx>" [--apply] [--date YYYY-MM-DD] [--gst-in-prices 18]');
     process.exit(1);
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(values.date)) {
     console.error("--date must be YYYY-MM-DD");
+    process.exit(1);
+  }
+  if (!Number.isFinite(gstInPrices) || gstInPrices < 0 || gstInPrices > 40) {
+    console.error("--gst-in-prices must be a GST rate between 0 and 40");
     process.exit(1);
   }
   if (!process.env.DATABASE_URL) {
@@ -205,7 +216,7 @@ async function main() {
 
       const newPrices = parsed.products
         .filter((p) => p.price != null)
-        .map((p) => ({ productId: ids.get(p.partNo)!, price: p.price! }))
+        .map((p) => ({ productId: ids.get(p.partNo)!, price: withoutGst(p.price!, gstInPrices) }))
         .filter(({ productId, price }) => {
           const now = current.get(productId);
           return now == null || Math.abs(now - price) > 1e-9;
@@ -232,7 +243,7 @@ async function main() {
   console.log(`  Added:             ${stats.productsAdded}`);
   console.log(`  Updated:           ${stats.productsUpdated}`);
   console.log(`  Unchanged:         ${stats.productsUnchanged}`);
-  console.log(`  New prices:        ${stats.pricesRecorded} (dated ${values.date})`);
+  console.log(`  New prices:        ${stats.pricesRecorded} (dated ${values.date}, ${gstInPrices}% GST taken out)`);
   console.log(`  New categories:    ${stats.categoriesAdded}`);
   if (noPrice) console.log(`  Without price:     ${noPrice}`);
   if (parsed.duplicates.length) {

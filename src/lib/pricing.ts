@@ -57,3 +57,11 @@ export function computePrice(
   const discounted = adjusted * (1 - rule.discountPct / 100);
   return { base, price: roundTo(discounted, rule.roundTo), manual: false };
 }
+
+/**
+ * The price before GST, from a price that includes GST at `gstRate` percent.
+ * Kept to 10 decimal places, the precision purchase prices are stored at.
+ */
+export function withoutGst(priceWithGst: number, gstRate: number): number {
+  return Math.round((priceWithGst / (1 + gstRate / 100)) * 1e10) / 1e10;
+}
