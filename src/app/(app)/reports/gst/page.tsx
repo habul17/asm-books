@@ -72,6 +72,12 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/gst">[
           ...(g.inputFromExpenses.count > 0
             ? [{ label: "Input GST", hint: plural(g.inputFromExpenses.count, "expense"), ...g.inputFromExpenses }]
             : []),
+          ...(g.purchaseReturns.count > 0
+            ? [{ label: "Less purchase returns", hint: plural(g.purchaseReturns.count, "debit note"), ...g.purchaseReturns }]
+            : []),
+          ...(g.inputFromExpenses.count > 0 || g.purchaseReturns.count > 0
+            ? [{ label: "Input GST (net)", ...g.input, strong: true }]
+            : []),
           { label: "Output − input", ...g.payable, strong: true },
         ]}
       />

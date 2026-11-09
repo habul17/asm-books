@@ -425,6 +425,8 @@ export const stockMovementKind = pgEnum("stock_movement_kind", [
   "purchase_cancel",
   "adjust_cancel",
   "adjust_edit",
+  "purchase_return",
+  "purchase_return_cancel",
 ]);
 
 /** Every stock change, so stock can always be explained. products.stock_qty is their running total. */
@@ -442,6 +444,9 @@ export const stockMovements = pgTable(
     creditNoteId: integer("credit_note_id").references((): AnyPgColumn => creditNotes.id, { onDelete: "restrict" }),
     billId: integer("bill_id").references((): AnyPgColumn => bills.id, { onDelete: "restrict" }),
     adjustmentId: integer("adjustment_id").references((): AnyPgColumn => stockAdjustments.id, { onDelete: "restrict" }),
+    purchaseReturnId: integer("purchase_return_id").references((): AnyPgColumn => purchaseReturns.id, {
+      onDelete: "restrict",
+    }),
     date: date("date", { mode: "string" }).notNull(),
     note: text("note"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -453,6 +458,7 @@ export const stockMovements = pgTable(
     index("stock_movements_credit_note_idx").on(t.creditNoteId),
     index("stock_movements_bill_idx").on(t.billId),
     index("stock_movements_adjustment_idx").on(t.adjustmentId),
+    index("stock_movements_purchase_return_idx").on(t.purchaseReturnId),
     check("stock_movements_qty_check", sql`${t.qty} <> 0`),
   ],
 );
@@ -694,6 +700,85 @@ export const billLines = pgTable(
     check("bill_lines_rate_check", sql`${t.rate} >= 0`),
     check("bill_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
     check("bill_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
+  ],
+);
+
+/**
+ * Goods sent back to a vendor (debit note). It lowers what we owe them and
+ * takes the parts out of stock. Not edited: a wrong one is cancelled.
+ */
+export const purchaseReturns = pgTable(
+  "purchase_returns",
+  {
+    id: id(),
+    /** e.g. DN/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    vendorId: integer("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "restrict" }),
+    vendorName: text("vendor_name").notNull(),
+    vendorGstin: text("vendor_gstin"),
+    /** The vendor's bill the goods came on, if known. */
+    billRef: text("bill_ref"),
+    taxType: taxType("tax_type").notNull(),
+    reason: text("reason").notNull(),
+    taxableTotal: money("taxable_total").notNull(),
+    cgstTotal: money("cgst_total").notNull(),
+    sgstTotal: money("sgst_total").notNull(),
+    igstTotal: money("igst_total").notNull(),
+    roundOff: money("round_off").notNull(),
+    grandTotal: money("grand_total").notNull(),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("purchase_returns_fy_seq_unique").on(t.fy, t.seq),
+    index("purchase_returns_date_idx").on(t.date.desc(), t.id.desc()),
+    index("purchase_returns_vendor_idx").on(t.vendorId),
+    check("purchase_returns_grand_total_check", sql`${t.grandTotal} >= 0`),
+  ],
+);
+
+export const purchaseReturnLines = pgTable(
+  "purchase_return_lines",
+  {
+    id: id(),
+    purchaseReturnId: integer("purchase_return_id")
+      .notNull()
+      .references(() => purchaseReturns.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    hsn: text("hsn"),
+    unit: text("unit").notNull().default("Nos"),
+    qty: quantity("qty").notNull(),
+    /** Rate before GST, as on the vendor's bill. */
+    rate: cost("rate").notNull(),
+    discountPct: percent("discount_pct").notNull().default(0),
+    gstRate: percent("gst_rate").notNull(),
+    taxable: money("taxable").notNull(),
+    cgst: money("cgst").notNull(),
+    sgst: money("sgst").notNull(),
+    igst: money("igst").notNull(),
+    total: money("total").notNull(),
+  },
+  (t) => [
+    unique("purchase_return_lines_line_unique").on(t.purchaseReturnId, t.lineNo),
+    index("purchase_return_lines_product_idx").on(t.productId),
+    check("purchase_return_lines_qty_check", sql`${t.qty} > 0`),
+    check("purchase_return_lines_rate_check", sql`${t.rate} >= 0`),
+    check("purchase_return_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
+    check("purchase_return_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
   ],
 );
 

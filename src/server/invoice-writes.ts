@@ -188,6 +188,7 @@ export async function moveStock(
     creditNoteId?: number;
     billId?: number;
     adjustmentId?: number;
+    purchaseReturnId?: number;
     date: string;
     note: string;
     userId: number;
@@ -204,6 +205,7 @@ export async function moveStock(
       creditNoteId: info.creditNoteId ?? null,
       billId: info.billId ?? null,
       adjustmentId: info.adjustmentId ?? null,
+      purchaseReturnId: info.purchaseReturnId ?? null,
       date: info.date,
       note: info.note,
       createdBy: info.userId,

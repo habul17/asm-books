@@ -144,6 +144,16 @@ export function BusinessForm({
             className="uppercase"
           />
         </Field>
+        <Field label="Debit note prefix" htmlFor="b-dprefix" hint="For purchase returns: DN gives DN/26-27/0001">
+          <Input
+            id="b-dprefix"
+            name="debitNotePrefix"
+            defaultValue={b.debitNotePrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
         <Field label="Invoice title" htmlFor="b-title">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>

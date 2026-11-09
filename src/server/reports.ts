@@ -15,6 +15,7 @@ import {
   invoices,
   payments,
   products,
+  purchaseReturns,
   stockAdjustmentLines,
   stockAdjustments,
   stockMovements,
@@ -316,7 +317,7 @@ export async function profitAndLoss(period: Period) {
 export async function gstSummary(period: Period) {
   await requireOwner();
   const db = getDb();
-  const [out, back, input, spent, byRate, byRateBack] = await db.batch([
+  const [out, back, input, spent, sentBack, byRate, byRateBack] = await db.batch([
     db
       .select({
         count: rowCount(),
@@ -365,6 +366,16 @@ export async function gstSummary(period: Period) {
       ),
     db
       .select({
+        count: rowCount(),
+        taxable: total(sql`${purchaseReturns.taxableTotal}`),
+        cgst: total(sql`${purchaseReturns.cgstTotal}`),
+        sgst: total(sql`${purchaseReturns.sgstTotal}`),
+        igst: total(sql`${purchaseReturns.igstTotal}`),
+      })
+      .from(purchaseReturns)
+      .where(and(eq(purchaseReturns.status, "final"), between(purchaseReturns.date, period.from, period.to))),
+    db
+      .select({
         rate: invoiceLines.gstRate,
         taxable: total(sql`${invoiceLines.taxable}`),
         tax: total(sql`${invoiceLines.cgst} + ${invoiceLines.sgst} + ${invoiceLines.igst}`),
@@ -390,12 +401,13 @@ export async function gstSummary(period: Period) {
   const returns = back[0] ?? zero;
   const bought = input[0] ?? zero;
   const expenseGst = spent[0] ?? zero;
+  const returnedToVendors = sentBack[0] ?? zero;
   const purchases = {
     count: bought.count + expenseGst.count,
-    taxable: round2(bought.taxable + expenseGst.taxable),
-    cgst: round2(bought.cgst + expenseGst.cgst),
-    sgst: round2(bought.sgst + expenseGst.sgst),
-    igst: round2(bought.igst + expenseGst.igst),
+    taxable: round2(bought.taxable + expenseGst.taxable - returnedToVendors.taxable),
+    cgst: round2(bought.cgst + expenseGst.cgst - returnedToVendors.cgst),
+    sgst: round2(bought.sgst + expenseGst.sgst - returnedToVendors.sgst),
+    igst: round2(bought.igst + expenseGst.igst - returnedToVendors.igst),
   };
   const minus = (a: typeof zero, b: typeof zero) => ({
     taxable: round2(a.taxable - b.taxable),
@@ -420,6 +432,8 @@ export async function gstSummary(period: Period) {
     /** Part of `input` that came from purchase bills and from expenses with GST. */
     inputFromBills: bought,
     inputFromExpenses: expenseGst,
+    /** Goods sent back to vendors; their GST comes off the input credit. */
+    purchaseReturns: returnedToVendors,
     payable: minus({ ...output, count: 0 }, purchases),
     byRate: [...rates.values()].sort((a, b) => a.rate - b.rate),
   };

@@ -35,6 +35,8 @@ export interface BusinessSettings {
   expensePrefix: string;
   /** Start of every inventory adjustment number, e.g. ADJ → ADJ/26-27/0001. */
   adjustmentPrefix: string;
+  /** Start of every purchase return (debit note) number, e.g. DN → DN/26-27/0001. */
+  debitNotePrefix: string;
   /** Printed at the bottom of every invoice. */
   terms: string;
   /** Used for products without their own GST rate. */
@@ -67,6 +69,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   vendorPaymentPrefix: "PAY",
   expensePrefix: "EXP",
   adjustmentPrefix: "ADJ",
+  debitNotePrefix: "DN",
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
@@ -155,6 +158,10 @@ const businessSchema = z.object({
   adjustmentPrefix: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || "ADJ" : "ADJ"),
     z.string().regex(/^[A-Z0-9]{1,6}$/, "Adjustment prefix: 1 to 6 letters or numbers"),
+  ),
+  debitNotePrefix: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toUpperCase() || "DN" : "DN"),
+    z.string().regex(/^[A-Z0-9]{1,6}$/, "Debit note prefix: 1 to 6 letters or numbers"),
   ),
   terms: text(3000, "Terms"),
   defaultGstRate: z.preprocess(

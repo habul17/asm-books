@@ -4,7 +4,7 @@ import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { bills, vendorPayments, vendors } from "@/db/schema";
+import { bills, purchaseReturns, vendorPayments, vendors } from "@/db/schema";
 import { col } from "@/db/sql";
 import { GST_STATES } from "@/lib/gst";
 import { requireUser } from "@/server/auth";
@@ -16,7 +16,7 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /**
  * What we owe the vendor right now. Positive: we owe them; negative: we paid in advance.
- * Opening balance plus active bills, minus active payments made to them.
+ * Opening balance plus active bills, minus active payments made to them and goods sent back.
  */
 export const vendorBalance = sql<number>`(${col(vendors.openingBalance)} + coalesce((
   SELECT sum(${col(bills.grandTotal)}) FROM ${bills}
@@ -24,6 +24,9 @@ export const vendorBalance = sql<number>`(${col(vendors.openingBalance)} + coale
 ), 0) - coalesce((
   SELECT sum(${col(vendorPayments.amount)}) FROM ${vendorPayments}
   WHERE ${col(vendorPayments.vendorId)} = ${col(vendors.id)} AND ${col(vendorPayments.status)} = 'final'
+), 0) - coalesce((
+  SELECT sum(${col(purchaseReturns.grandTotal)}) FROM ${purchaseReturns}
+  WHERE ${col(purchaseReturns.vendorId)} = ${col(vendors.id)} AND ${col(purchaseReturns.status)} = 'final'
 ), 0))`.mapWith(Number);
 
 function wordConditions(query: string) {

@@ -58,11 +58,14 @@ export function InvoiceDocument({
   business: b,
   title,
   details,
+  partyLabel = "Bill to",
 }: {
   invoice: TaxDocumentData;
   business: BusinessSettings;
   title?: string;
   details?: React.ReactNode;
+  /** Heading over the other party, e.g. "Bill to" or "Returned to". */
+  partyLabel?: string;
 }) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
@@ -97,7 +100,7 @@ export function InvoiceDocument({
 
       <section className="grid gap-4 border-b border-black/20 py-4 sm:grid-cols-2">
         <div>
-          <p className="text-xs font-semibold text-black/60 uppercase">Bill to</p>
+          <p className="text-xs font-semibold text-black/60 uppercase">{partyLabel}</p>
           <p className="font-semibold">{inv.customerName}</p>
           {inv.billingAddress && <p className="whitespace-pre-line">{inv.billingAddress}</p>}
           {inv.customerMobile && <p>Mobile: {inv.customerMobile}</p>}
