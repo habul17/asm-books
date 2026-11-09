@@ -9,6 +9,7 @@ import { formatDate, formatMoney, formatQty } from "@/lib/format";
 import { round2 } from "@/lib/pricing";
 import { getProduct } from "@/server/catalogue";
 
+import { MinStockForm } from "./min-stock-form";
 import { catalogueHref } from "./product-results";
 import { QuickMarkup } from "./quick-markup";
 
@@ -76,6 +77,8 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
           </Fact>
           <Fact label="Previous purchase">{formatMoney(p.previousPurchasePrice)}</Fact>
         </dl>
+
+        <MinStockForm productId={p.id} minStock={p.minStock} unit={p.unit} />
 
         <section className="flex flex-col gap-3">
           <h3 className="font-medium">Selling prices</h3>

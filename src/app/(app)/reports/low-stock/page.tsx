@@ -50,7 +50,7 @@ export default function LowStockPage() {
   return (
     <ReportPage>
       <ReportHeader title="Low Stock">
-        Parts out of stock (that you have stocked or sold before) or at their minimum level.
+        Parts out of stock (that you have stocked or sold before) or at their minimum level. Set a part&rsquo;s minimum on its Items page.
       </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body />
