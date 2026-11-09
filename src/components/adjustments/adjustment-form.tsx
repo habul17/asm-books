@@ -33,12 +33,30 @@ const show = (n: number) => String(round3(n));
 
 let nextKey = 0;
 
+export interface AdjustmentFormInitial {
+  /** null for a new adjustment. */
+  id: number | null;
+  date: string;
+  reason: string;
+  notes: string;
+  /** For an edit, each item's `stockQty` is the stock without this adjustment. */
+  lines: { item: StockItem; qty: number }[];
+}
+
 /** Correct stock by hand: type what the shelf holds, or how many to add or take out. */
-export function AdjustmentForm({ today }: { today: string }) {
-  const [date, setDate] = useState(today);
-  const [reason, setReason] = useState<string>(ADJUSTMENT_REASONS[0]);
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<Line[]>([]);
+export function AdjustmentForm({ initial }: { initial: AdjustmentFormInitial }) {
+  const editing = initial.id != null;
+  const [date, setDate] = useState(initial.date);
+  const [reason, setReason] = useState<string>(initial.reason);
+  const [notes, setNotes] = useState(initial.notes);
+  const [lines, setLines] = useState<Line[]>(() =>
+    initial.lines.map((l) => ({
+      key: `e${++nextKey}`,
+      item: l.item,
+      counted: show(l.item.stockQty + l.qty),
+      change: show(l.qty),
+    })),
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -68,7 +86,7 @@ export function AdjustmentForm({ today }: { today: string }) {
     const negative = lines.find((l) => round3(l.item.stockQty + (num(l.change) ?? 0)) < 0);
     if (negative) return setError(`${negative.item.description}: stock cannot go below 0.`);
     startSaving(async () => {
-      const result = await saveAdjustment({
+      const result = await saveAdjustment(initial.id, {
         date,
         reason,
         notes,
@@ -126,7 +144,8 @@ export function AdjustmentForm({ today }: { today: string }) {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {l.item.partNo && <span className="font-mono">{l.item.partNo} · </span>}
-                        In the app now: {formatQty(l.item.stockQty)} {l.item.unit}
+                        {editing ? "Without this adjustment" : "In the app now"}: {formatQty(l.item.stockQty)}{" "}
+                        {l.item.unit}
                       </p>
                     </div>
                     <Button
@@ -211,11 +230,14 @@ export function AdjustmentForm({ today }: { today: string }) {
             </span>
           )}
         </div>
-        <Link href="/inventory-adjustments" className={buttonVariants({ variant: "ghost" })}>
+        <Link
+          href={editing ? `/inventory-adjustments/${initial.id}` : "/inventory-adjustments"}
+          className={buttonVariants({ variant: "ghost" })}
+        >
           Cancel
         </Link>
         <Button type="submit" disabled={saving || lines.length === 0}>
-          {saving ? "Saving…" : "Save adjustment"}
+          {saving ? "Saving…" : editing ? "Save changes" : "Save adjustment"}
         </Button>
         {error && (
           <p role="alert" className="basis-full text-sm text-destructive">

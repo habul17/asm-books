@@ -140,3 +140,98 @@ export async function cancelAdjustment(id: number, reason: string, userId: numbe
     });
   });
 }
+
+/**
+ * Changes a saved adjustment. Stock moves only by the difference between the
+ * old and new quantities, and no part may end up below zero.
+ */
+export async function updateAdjustment(id: number, input: AdjustmentInput, userId: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    const [adj] = await tx
+      .select({ id: stockAdjustments.id, number: stockAdjustments.number, fy: stockAdjustments.fy, status: stockAdjustments.status })
+      .from(stockAdjustments)
+      .where(eq(stockAdjustments.id, id))
+      .for("update");
+    if (!adj) throw new AdjustmentInputError("Adjustment not found.");
+    if (adj.status === "cancelled") throw new AdjustmentInputError("This adjustment is cancelled and cannot be changed.");
+    if (financialYear(input.date) !== adj.fy) {
+      throw new AdjustmentInputError(`This adjustment belongs to the year ${adj.fy}. Keep the date inside that year.`);
+    }
+
+    const oldLines = await tx
+      .select({ productId: stockAdjustmentLines.productId, qty: stockAdjustmentLines.qty, cost: stockAdjustmentLines.cost })
+      .from(stockAdjustmentLines)
+      .where(eq(stockAdjustmentLines.adjustmentId, id));
+    const oldQty = new Map(oldLines.map((l) => [l.productId, l.qty]));
+    const oldCost = new Map(oldLines.map((l) => [l.productId, l.cost]));
+
+    const ids = [...new Set([...oldLines.map((l) => l.productId), ...input.lines.map((l) => l.productId)])];
+    const found = await tx
+      .select({
+        id: products.id,
+        partNo: products.partNo,
+        description: products.description,
+        unit: products.unit,
+        stockQty: products.stockQty,
+        cost: purchasePriceAt(0),
+      })
+      .from(products)
+      .where(inArray(products.id, ids))
+      .orderBy(products.id)
+      .for("update", { of: products });
+    const byId = new Map(found.map((p) => [p.id, p]));
+
+    // Stock as it would be without this adjustment.
+    const base = (productId: number) => round3((byId.get(productId)?.stockQty ?? 0) - (oldQty.get(productId) ?? 0));
+
+    const lines = input.lines.map((l, i) => {
+      const p = byId.get(l.productId);
+      if (!p) throw new AdjustmentInputError(`Item ${i + 1} was not found. Please remove it and add it again.`);
+      const before = base(p.id);
+      if (round3(before + l.qty) < 0) {
+        throw new AdjustmentInputError(
+          `${p.description}: only ${formatQty(before)} in stock, so ${formatQty(-l.qty)} cannot be taken out.`,
+        );
+      }
+      return {
+        lineNo: i + 1,
+        productId: p.id,
+        partNo: p.partNo,
+        description: p.description,
+        unit: p.unit,
+        qtyBefore: before,
+        qty: l.qty,
+        // Keep the cost from when the adjustment was first made.
+        cost: oldCost.has(p.id) ? (oldCost.get(p.id) ?? null) : p.cost,
+      };
+    });
+
+    // A part taken off the adjustment gets its stock change undone; that must not go below zero either.
+    const newQty = new Map(lines.map((l) => [l.productId, l.qty]));
+    for (const [productId] of oldQty) {
+      if (!newQty.has(productId) && base(productId) < 0) {
+        const p = byId.get(productId);
+        throw new AdjustmentInputError(
+          `${p?.description ?? "A removed item"}: only ${formatQty(p?.stockQty ?? 0)} in stock now, so it cannot be removed from this adjustment.`,
+        );
+      }
+    }
+
+    await tx
+      .update(stockAdjustments)
+      .set({ date: input.date, reason: input.reason, notes: input.notes || null })
+      .where(eq(stockAdjustments.id, id));
+    await tx.delete(stockAdjustmentLines).where(eq(stockAdjustmentLines.adjustmentId, id));
+    await tx.insert(stockAdjustmentLines).values(lines.map((l) => ({ ...l, adjustmentId: id })));
+
+    const diff = new Map<number, number>();
+    for (const productId of ids) diff.set(productId, round3((newQty.get(productId) ?? 0) - (oldQty.get(productId) ?? 0)));
+    await moveStock(tx, diff, {
+      kind: "adjust_edit",
+      adjustmentId: id,
+      date: input.date,
+      note: `${adj.number} · ${input.reason}`.slice(0, 200),
+      userId,
+    });
+  });
+}

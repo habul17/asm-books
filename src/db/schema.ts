@@ -424,6 +424,7 @@ export const stockMovementKind = pgEnum("stock_movement_kind", [
   "purchase_edit",
   "purchase_cancel",
   "adjust_cancel",
+  "adjust_edit",
 ]);
 
 /** Every stock change, so stock can always be explained. products.stock_qty is their running total. */

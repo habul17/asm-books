@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseAdjustmentInput } from "@/lib/adjustments/validation";
-import { AdjustmentInputError, cancelAdjustment, createAdjustment } from "@/server/adjustment-writes";
+import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment } from "@/server/adjustment-writes";
 import { pickStockItems } from "@/server/adjustments";
 import { isOwner, requireUser } from "@/server/auth";
 
@@ -22,18 +22,23 @@ function failure(action: string, err: unknown): ActionState {
   return { error: "Could not save. Please try again." };
 }
 
-/** Records an adjustment, then opens it. Adjustments are never edited; a wrong one is cancelled. */
-export async function saveAdjustment(input: unknown): Promise<ActionState> {
+/** Records a new adjustment (id null) or changes a saved one, then opens it. */
+export async function saveAdjustment(id: number | null, input: unknown): Promise<ActionState> {
   const user = await requireUser();
+  if (id != null && !idSchema.safeParse(id).success) return { error: "Adjustment not found." };
   const parsed = parseAdjustmentInput(input);
   if (parsed.error !== undefined) return { error: parsed.error };
-  let id: number;
+  let savedId: number;
   try {
-    id = await createAdjustment(parsed.value, user.id);
+    if (id == null) savedId = await createAdjustment(parsed.value, user.id);
+    else {
+      await updateAdjustment(id, parsed.value, user.id);
+      savedId = id;
+    }
   } catch (err) {
     return failure("save", err);
   }
-  redirect(`/inventory-adjustments/${id}`);
+  redirect(`/inventory-adjustments/${savedId}`);
 }
 
 export async function cancelAdjustmentAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -35,6 +35,14 @@ async function Adjustment({ params }: { params: PageProps<"/inventory-adjustment
           <span className="font-mono">{adj.number}</span>
           {!final && <Badge variant="destructive">cancelled</Badge>}
         </h1>
+        {final && (
+          <Link
+            href={`/inventory-adjustments/${adj.id}/edit`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <PencilIcon /> Edit
+          </Link>
+        )}
         <Link href="/inventory-adjustments/new" className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> Another adjustment
         </Link>

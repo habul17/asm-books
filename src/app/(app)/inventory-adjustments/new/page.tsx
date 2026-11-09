@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { AdjustmentForm } from "@/components/adjustments/adjustment-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ADJUSTMENT_REASONS } from "@/lib/adjustments/validation";
 import { requireUser } from "@/server/auth";
 import { todayInIndia } from "@/server/invoice-writes";
 
@@ -12,7 +13,11 @@ export const metadata: Metadata = { title: "New adjustment" };
 async function Form() {
   await connection(); // Today's date must be read per request, not at build time.
   await requireUser();
-  return <AdjustmentForm today={todayInIndia()} />;
+  return (
+    <AdjustmentForm
+      initial={{ id: null, date: todayInIndia(), reason: ADJUSTMENT_REASONS[0], notes: "", lines: [] }}
+    />
+  );
 }
 
 export default function NewAdjustmentPage() {

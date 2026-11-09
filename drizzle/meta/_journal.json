@@ -92,6 +92,13 @@
       "when": 1794206748272,
       "tag": "0012_expense_gst_vendor",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794207096992,
+      "tag": "0013_adjustment_edit",
+      "breakpoints": true
     }
   ]
 }
