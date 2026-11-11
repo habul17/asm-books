@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2Icon } from "lucide-react";
+import { CheckIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
+import type { ScanFlag } from "@/lib/bills/scan";
 import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { GST_RATES } from "@/lib/settings/business";
@@ -28,6 +29,8 @@ export interface BillLineDraft {
   rate: string;
   discountPct: string;
   gstRate: number;
+  /** Things to check on a row that was filled in from a scanned bill. */
+  flags?: ScanFlag[];
 }
 
 export interface BillDraft {
@@ -47,7 +50,7 @@ const num = (s: string) => {
   return s.trim() === "" || !Number.isFinite(n) ? null : n;
 };
 
-function addDays(date: string, days: number) {
+export function addDays(date: string, days: number) {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
@@ -61,10 +64,13 @@ export function BillEditor({
   initial,
   sellerState,
   cancelHref,
+  printedTotal = null,
 }: {
   initial: BillDraft;
   sellerState: string | null;
   cancelHref: string;
+  /** For a scanned bill: the total printed on the paper bill, to compare with the total worked out here. */
+  printedTotal?: number | null;
 }) {
   const [vendor, setVendor] = useState(initial.vendor);
   const [billNo, setBillNo] = useState(initial.billNo);
@@ -117,9 +123,31 @@ export function BillEditor({
     ]);
   };
 
+  /** Sets the part of a scanned row that could not be matched; the scanned qty and rate stay. */
+  const choosePart = (key: string, item: PickedItem) =>
+    setLines((ls) =>
+      ls.map((l) =>
+        l.key === key
+          ? {
+              ...l,
+              productId: item.id,
+              partNo: item.partNo,
+              description: item.description,
+              unit: item.unit,
+              flags: l.flags?.filter((f) => f.kind !== "part"),
+            }
+          : l,
+      ),
+    );
+
+  const totalGap = printedTotal == null ? null : Math.round((totals.grandTotal - printedTotal) * 100) / 100;
+
   const save = () => {
     setError(null);
     if (!vendor) return setError("Choose a vendor");
+    // A scanned row without a part would not reach stock or prices.
+    const noPart = lines.findIndex((l) => l.productId == null && l.flags?.some((f) => f.kind === "part"));
+    if (noPart >= 0) return setError(`Item ${noPart + 1}: pick the part, or remove this row`);
     const bad = lines.findIndex((l) => num(l.qty) == null || num(l.rate) == null);
     if (bad >= 0) return setError(`Item ${bad + 1}: enter the quantity and rate`);
     startSaving(async () => {
@@ -203,6 +231,31 @@ export function BillEditor({
                     <Trash2Icon />
                   </Button>
                 </div>
+                {l.flags && l.flags.length > 0 && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    <ul className="flex flex-col gap-1">
+                      {l.flags.map((f) => (
+                        <li key={f.kind + f.text} className="flex items-start gap-1.5">
+                          <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" />
+                          <span>{f.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {l.productId == null ? (
+                      <LinePartPicker onPick={(item) => choosePart(l.key, item)} />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-fit"
+                        onClick={() => update(l.key, { flags: [] })}
+                      >
+                        <CheckIcon /> I checked this row
+                      </Button>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-[1fr_1.4fr_1fr_1fr] gap-2">
                   <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                     Qty ({l.unit})
@@ -307,6 +360,15 @@ export function BillEditor({
               {totals.roundOff !== 0 && <> · round off {formatMoney(totals.roundOff)}</>}
             </span>
           )}
+          {totalGap != null && lines.length > 0 && (
+            <span
+              className={`block text-xs font-medium ${Math.abs(totalGap) <= 1 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}
+            >
+              {Math.abs(totalGap) <= 1
+                ? `Matches the total printed on the bill (${formatMoney(printedTotal)})`
+                : `The bill's printed total is ${formatMoney(printedTotal)}. This is ${formatMoney(Math.abs(totalGap))} ${totalGap > 0 ? "more" : "less"}. Check the rows.`}
+            </span>
+          )}
         </div>
         <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
           Cancel
@@ -322,4 +384,10 @@ export function BillEditor({
       </div>
     </form>
   );
+}
+
+/** Search box that sets the part of one scanned row. */
+function LinePartPicker({ onPick }: { onPick: (item: PickedItem) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return <ItemPicker search={findBillItems} onPick={onPick} inputRef={ref} />;
 }

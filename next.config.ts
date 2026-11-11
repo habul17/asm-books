@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  experimental: {
+    // Bill scans upload one photo or PDF (up to 4 MB) through a server action.
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   async headers() {
     return [
       {

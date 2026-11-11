@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { getDb } from "@/db";
 import { billLines, bills, categories, products, users, vendors } from "@/db/schema";
 import { requireUser } from "@/server/auth";
+import { billScanReady } from "@/server/bill-scan";
 import { loadBusiness } from "@/server/settings";
 
 import { productSearch, purchasePriceAt } from "./product-search";
@@ -130,5 +131,5 @@ export async function getBillEditorOptions() {
   await connection(); // Always read live data; never prerender at build time.
   await requireUser();
   const business = await loadBusiness(getDb());
-  return { sellerState: business.stateCode || null, defaultGstRate: business.defaultGstRate };
+  return { sellerState: business.stateCode || null, defaultGstRate: business.defaultGstRate, scanReady: billScanReady() };
 }

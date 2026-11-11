@@ -7,6 +7,7 @@ import { todayInIndia } from "@/server/invoice-writes";
 import { pickVendorById } from "@/server/vendors";
 
 import { BillEditor } from "./bill-editor";
+import { NewBillWorkspace } from "./new-bill-workspace";
 
 export async function NewBillForm({ vendorId }: { vendorId: number | null }) {
   await connection(); // Today's date must be read per request, not at build time.
@@ -14,10 +15,11 @@ export async function NewBillForm({ vendorId }: { vendorId: number | null }) {
   const today = todayInIndia();
   const due = vendor?.paymentTermsDays != null ? addDays(today, vendor.paymentTermsDays) : "";
   return (
-    <BillEditor
+    <NewBillWorkspace
       initial={{ id: null, vendor, billNo: "", date: today, dueDate: due, updatePrices: true, roundTotal: true, notes: "", lines: [] }}
       sellerState={options.sellerState}
       cancelHref={vendor ? `/vendors/${vendor.id}` : "/bills"}
+      scanReady={options.scanReady}
     />
   );
 }
