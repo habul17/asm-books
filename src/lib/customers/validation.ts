@@ -1,23 +1,13 @@
-// Input rules for customers, customer groups and custom fields.
+// Input rules for customers and customer groups.
 
 import { z } from "zod";
 
+import { parseExtra, type CustomFieldDef, type ExtraValues } from "@/lib/custom-fields";
 import { checkGstin, GST_STATES } from "@/lib/gst";
 
 export const CUSTOMER_NAME_MAX = 200;
 export const GROUP_NAME_MAX = 120;
-export const FIELD_LABEL_MAX = 80;
 export const MONEY_MAX = 1_000_000_000;
-
-export const CUSTOM_FIELD_TYPES = ["text", "number", "date"] as const;
-export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
-
-export interface CustomFieldDef {
-  id: number;
-  label: string;
-  type: CustomFieldType;
-  active: boolean;
-}
 
 /** Trimmed text; empty becomes null. */
 export const optionalText = (max: number, label: string) =>
@@ -120,7 +110,7 @@ const customerBase = z.object({
 export function parseCustomer(
   form: Record<string, unknown>,
   fields: CustomFieldDef[],
-  previousExtra: Record<string, string | number> = {},
+  previousExtra: ExtraValues = {},
 ) {
   const parsed = customerBase.safeParse(form);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form" } as const;
@@ -135,27 +125,8 @@ export function parseCustomer(
     stateCode = g.stateCode; // The GSTIN decides the state.
   }
 
-  const extra: Record<string, string | number> = {};
-  for (const f of fields) {
-    const key = String(f.id);
-    if (!f.active) {
-      if (previousExtra[key] != null && previousExtra[key] !== "") extra[key] = previousExtra[key];
-      continue;
-    }
-    const raw = form[`extra.${f.id}`];
-    const value = typeof raw === "string" ? raw.trim() : "";
-    if (value === "") continue;
-    if (f.type === "number") {
-      const n = Number(value.replace(/,/g, ""));
-      if (!Number.isFinite(n)) return { error: `${f.label} must be a number` } as const;
-      extra[key] = n;
-    } else if (f.type === "date") {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return { error: `${f.label} must be a date` } as const;
-      extra[key] = value;
-    } else {
-      extra[key] = value.slice(0, 1000);
-    }
-  }
+  const extra = parseExtra(fields, (fieldId) => form[`extra.${fieldId}`], previousExtra);
+  if (extra.error !== undefined) return { error: extra.error } as const;
 
   const amount = Math.abs(openingBalance ?? 0);
   return {
@@ -164,7 +135,7 @@ export function parseCustomer(
       gstin,
       stateCode,
       openingBalance: balanceSide === "we-owe" ? -amount : amount,
-      extra,
+      extra: extra.value,
     },
   } as const;
 }
@@ -178,18 +149,4 @@ export const groupSchema = z.object({
     .min(1, "Group name is required")
     .max(GROUP_NAME_MAX, `Group name can be at most ${GROUP_NAME_MAX} characters`),
   priceListId: optionalId,
-});
-
-export const newFieldSchema = z.object({
-  label: z
-    .string({ error: "Field name is required" })
-    .trim()
-    .min(1, "Field name is required")
-    .max(FIELD_LABEL_MAX, `Field name can be at most ${FIELD_LABEL_MAX} characters`),
-  type: z.enum(CUSTOM_FIELD_TYPES, { error: "Choose text, number or date" }),
-});
-
-export const editFieldSchema = z.object({
-  label: newFieldSchema.shape.label,
-  active: checkbox,
 });

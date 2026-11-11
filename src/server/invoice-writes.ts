@@ -12,9 +12,11 @@ import {
   products,
   stockMovements,
 } from "@/db/schema";
+import { parseExtra, type ExtraValues } from "@/lib/custom-fields";
 import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/invoices/math";
 import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
+import { loadCustomFields } from "@/server/custom-fields";
 import { loadBusiness } from "@/server/settings";
 
 import { purchasePriceAt } from "./product-search";
@@ -39,6 +41,7 @@ interface ExistingInvoice {
   fy: string;
   customerId: number | null;
   priceListId: number | null;
+  extra: ExtraValues;
   lines: { productId: number | null; cost: number | null; qty: number }[];
 }
 
@@ -114,6 +117,10 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     };
   });
 
+  // Custom fields: only fields that exist are saved; switched-off ones keep what they had.
+  const extra = parseExtra(await loadCustomFields("invoice", tx), (fieldId) => input.extra[String(fieldId)], existing?.extra);
+  if (extra.error !== undefined) throw new InvoiceInputError(extra.error);
+
   const { lines: calculated, totals } = calcInvoice(lines, taxType);
   const terms = customer?.paymentTermsDays;
   const header = {
@@ -132,6 +139,7 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     priceListId: input.priceListId,
     paymentType,
     notes: input.notes || null,
+    extra: extra.value,
     ...totals,
   };
   return {
@@ -252,6 +260,7 @@ async function lockInvoice(tx: Tx, id: number) {
       status: invoices.status,
       customerId: invoices.customerId,
       priceListId: invoices.priceListId,
+      extra: invoices.extra,
     })
     .from(invoices)
     .where(eq(invoices.id, id))

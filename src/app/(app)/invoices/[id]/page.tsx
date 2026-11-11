@@ -65,6 +65,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       <InvoiceDocument
         invoice={inv}
         business={business}
+        extra={inv.shownExtra}
         details={
           <>
             {inv.dueDate && <p>Due: {formatDate(inv.dueDate)}</p>}

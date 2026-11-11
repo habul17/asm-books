@@ -2,9 +2,11 @@
 
 import { z } from "zod";
 
+import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
 import { isGstRate } from "@/lib/settings/business";
 
 export const MAX_LINES = 300;
+const MAX_EXTRA = 100;
 
 const lineSchema = z.object({
   productId: z.number().int().positive().nullable(),
@@ -27,6 +29,11 @@ export const invoiceInputSchema = z.object({
   paymentType: z.enum(["credit", "cash"], "Choose credit or cash"),
   priceListId: z.number().int().positive().nullable(),
   notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
+  /** Custom field values as typed, keyed by field id. They are checked against the fields on the server. */
+  extra: z
+    .record(z.string().max(20), z.string().max(FIELD_VALUE_MAX, `A custom field can be at most ${FIELD_VALUE_MAX} characters`))
+    .refine((v) => Object.keys(v).length <= MAX_EXTRA, "Too many custom fields")
+    .default({}),
   lines: z.array(lineSchema).min(1, "Add at least one item").max(MAX_LINES, `An invoice can have at most ${MAX_LINES} items`),
 });
 

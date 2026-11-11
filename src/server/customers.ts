@@ -8,7 +8,7 @@ import { getDb } from "@/db";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { creditNotes, customerGroups, customers, customFields, invoices, payments, priceLists } from "@/db/schema";
-import type { CustomFieldDef } from "@/lib/customers/validation";
+import type { CustomFieldDef } from "@/lib/custom-fields";
 import { GST_STATES } from "@/lib/gst";
 
 export const CUSTOMER_LIMIT = 100;

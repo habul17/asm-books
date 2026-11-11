@@ -22,6 +22,7 @@ export async function NewInvoiceEditor({ customerId }: { customerId: number | nu
     paymentType: "credit",
     priceListId: customer?.priceListId ?? options.defaultPriceListId,
     notes: "",
+    extra: {},
     lines: [],
     originalCredit: 0,
   };
@@ -45,6 +46,7 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     paymentType: inv.paymentType,
     priceListId: inv.priceListId,
     notes: inv.notes ?? "",
+    extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
     lines: inv.lines.map((l) => ({
       key: `e${l.id}`,
       productId: l.productId,

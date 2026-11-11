@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { shownExtra } from "@/lib/custom-fields";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
@@ -81,12 +82,7 @@ export async function EditCustomerPanel({ id, backHref, viewHref }: { id: number
 export async function CustomerPanel({ id, backHref, editHref }: { id: number; backHref: string; editHref: string }) {
   const [c, options] = await Promise.all([getCustomer(id), getCustomerOptions()]);
   if (!c) return <NotFound backHref={backHref} />;
-  const extras = options.fields
-    .filter((f) => f.active && c.extra[String(f.id)] != null)
-    .map((f) => {
-      const v = c.extra[String(f.id)];
-      return { id: f.id, label: f.label, value: f.type === "date" ? formatDate(String(v)) : String(v) };
-    });
+  const extras = shownExtra(options.fields, c.extra);
 
   return (
     <Card className="md:sticky md:top-6">

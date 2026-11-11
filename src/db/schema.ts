@@ -260,7 +260,7 @@ export const customers = pgTable(
 
 export const customFieldType = pgEnum("custom_field_type", ["text", "number", "date"]);
 
-/** Extra fields the owner adds to customers (and later to other records). */
+/** Extra fields the business adds to its records. `entity` says which kind of record. */
 export const customFields = pgTable(
   "custom_fields",
   {
@@ -273,7 +273,7 @@ export const customFields = pgTable(
     active: boolean("active").notNull().default(true),
     ...timestamps,
   },
-  (t) => [check("custom_fields_entity_check", sql`${t.entity} IN ('customer')`)],
+  (t) => [check("custom_fields_entity_check", sql`${t.entity} IN ('customer', 'invoice')`)],
 );
 
 // ---------------------------------------------------------------------------
@@ -362,6 +362,8 @@ export const invoices = pgTable(
     roundOff: money("round_off").notNull(),
     grandTotal: money("grand_total").notNull(),
     notes: text("notes"),
+    /** Custom field values keyed by custom_fields.id. */
+    extra: jsonb("extra").$type<Record<string, string | number>>().notNull().default({}),
     status: invoiceStatus("status").notNull().default("final"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
 import { formatMoney, formatQty } from "@/lib/format";
 import { GST_STATES } from "@/lib/gst";
 import { amountInWords, calcInvoice, taxTypeFor } from "@/lib/invoices/math";
@@ -46,6 +47,8 @@ export interface EditorInitial {
   paymentType: "credit" | "cash";
   priceListId: number | null;
   notes: string;
+  /** Custom field values as text, keyed by field id. */
+  extra: Record<string, string>;
   lines: EditorLine[];
   /** For an edit: the credit this invoice already adds to the customer's balance. */
   originalCredit: number;
@@ -87,6 +90,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   const [paymentType, setPaymentType] = useState(initial.paymentType);
   const [priceListId, setPriceListId] = useState(initial.priceListId);
   const [notes, setNotes] = useState(initial.notes);
+  const [extra, setExtra] = useState(initial.extra);
   const [lines, setLines] = useState(initial.lines);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -215,6 +219,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       paymentType: effectivePayment,
       priceListId,
       notes,
+      extra,
       lines: lines.map((l) => ({
         productId: l.productId,
         description: l.description,
@@ -356,6 +361,29 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
           </div>
         </CardContent>
       </Card>
+
+      {options.fields.length > 0 && (
+        <Card>
+          <CardContent className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {options.fields.map((f) => (
+              <div key={f.id} className="flex flex-col gap-1.5">
+                <Label htmlFor={`inv-extra-${f.id}`}>{f.label}</Label>
+                <Input
+                  id={`inv-extra-${f.id}`}
+                  type={f.type === "date" ? "date" : "text"}
+                  inputMode={f.type === "number" ? "decimal" : undefined}
+                  value={extra[String(f.id)] ?? ""}
+                  maxLength={FIELD_VALUE_MAX}
+                  onChange={(e) => {
+                    touch();
+                    setExtra((x) => ({ ...x, [String(f.id)]: e.target.value }));
+                  }}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="flex flex-col gap-3">

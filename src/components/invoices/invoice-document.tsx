@@ -1,3 +1,4 @@
+import type { ShownExtra } from "@/lib/custom-fields";
 import { formatDate, formatMoney, formatQty } from "@/lib/format";
 import { GST_STATES } from "@/lib/gst";
 import { amountInWords, taxSummary } from "@/lib/invoices/math";
@@ -59,6 +60,7 @@ export function InvoiceDocument({
   title,
   details,
   partyLabel = "Bill to",
+  extra = [],
 }: {
   invoice: TaxDocumentData;
   business: BusinessSettings;
@@ -66,6 +68,8 @@ export function InvoiceDocument({
   details?: React.ReactNode;
   /** Heading over the other party, e.g. "Bill to" or "Returned to". */
   partyLabel?: string;
+  /** Filled-in custom fields, printed with the place of supply. */
+  extra?: ShownExtra[];
 }) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
@@ -109,6 +113,11 @@ export function InvoiceDocument({
         <div className="sm:text-right">
           {stateLabel(inv.placeOfSupply) && <p>Place of supply: {stateLabel(inv.placeOfSupply)}</p>}
           <p>{inter ? "IGST (inter-state)" : "CGST + SGST (intra-state)"}</p>
+          {extra.map((x) => (
+            <p key={x.id} className="break-words">
+              {x.label}: <span className="font-medium">{x.value}</span>
+            </p>
+          ))}
         </div>
       </section>
 

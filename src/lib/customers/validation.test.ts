@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { CustomFieldDef } from "@/lib/custom-fields";
 import { checkGstin, withCheckChar } from "@/lib/gst";
 
-import { groupSchema, parseCustomer, type CustomFieldDef } from "./validation";
+import { groupSchema, parseCustomer } from "./validation";
 
 const GSTIN = withCheckChar("33ABCDE1234F1Z");
 

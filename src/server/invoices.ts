@@ -15,11 +15,13 @@ import {
   products,
   users,
 } from "@/db/schema";
+import { shownExtra } from "@/lib/custom-fields";
 import { computePrice } from "@/lib/pricing";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { loadBusiness } from "@/server/settings";
 
+import { loadCustomFields } from "./custom-fields";
 import { customerBalance } from "./customers";
 import { productSearch, purchasePriceAt } from "./product-search";
 
@@ -111,6 +113,8 @@ export async function getInvoice(id: number) {
   ]);
   const head = heads[0];
   if (!head) return null;
+  const hasExtra = Object.keys(head.invoice.extra).length > 0;
+  const fields = hasExtra ? await loadCustomFields("invoice", db) : [];
   const isOwner = user.role === "owner";
   const allCosted = lines.every((l) => l.cost != null);
   const cost = lines.reduce((s, l) => s + (l.cost ?? 0) * l.line.qty, 0);
@@ -118,6 +122,8 @@ export async function getInvoice(id: number) {
     ...head.invoice,
     priceListName: head.priceListName,
     createdByName: head.createdByName,
+    /** Filled-in custom fields, as printed on the invoice. */
+    shownExtra: shownExtra(fields, head.invoice.extra),
     // Costs stay on the server; only the profit total is shared, and only with the owner.
     lines: lines.map(({ line, stockQty }) => ({ ...line, stockQty })),
     profit: isOwner && allCosted ? Math.round((head.invoice.taxableTotal - cost) * 100) / 100 : null,
@@ -131,8 +137,9 @@ export async function getEditorOptions() {
   await connection(); // Always read live data; never prerender at build time.
   await requireUser();
   const db = getDb();
-  const [business, lists] = await Promise.all([
+  const [business, fields, lists] = await Promise.all([
     loadBusiness(db),
+    loadCustomFields("invoice", db),
     db
       .select({ id: priceLists.id, name: priceLists.name, enabled: priceLists.enabled })
       .from(priceLists)
@@ -146,6 +153,8 @@ export async function getEditorOptions() {
     defaultPriceListId: business.defaultPriceListId,
     allowWalkIn: business.allowWalkIn,
     priceLists: lists,
+    /** Custom fields that are switched on, in the order they are shown. */
+    fields: fields.filter((f) => f.active),
   };
 }
 

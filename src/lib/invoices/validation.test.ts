@@ -27,6 +27,13 @@ describe("parseInvoiceInput", () => {
     expect(parseInvoiceInput({ ...base, lines: [{ ...line, description: "  " }] }).error).toMatch(/empty/);
   });
 
+  it("takes custom field values as text and defaults to none", () => {
+    expect(parseInvoiceInput(base).value?.extra).toEqual({});
+    expect(parseInvoiceInput({ ...base, extra: { "3": "TN 37 AB 1234" } }).value?.extra).toEqual({ "3": "TN 37 AB 1234" });
+    expect(parseInvoiceInput({ ...base, extra: { "3": 12 } }).error).toBeTruthy();
+    expect(parseInvoiceInput({ ...base, extra: { "3": "x".repeat(1001) } }).error).toMatch(/at most 1000/);
+  });
+
   it("rejects empty invoices, bad dates and odd data", () => {
     expect(parseInvoiceInput({ ...base, lines: [] }).error).toBe("Add at least one item");
     expect(parseInvoiceInput({ ...base, date: "2026-02-30" }).error).toMatch(/date/);

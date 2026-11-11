@@ -106,6 +106,13 @@
       "when": 1794207468628,
       "tag": "0014_purchase_returns",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794399113889,
+      "tag": "0015_invoice_custom_fields",
+      "breakpoints": true
     }
   ]
 }
