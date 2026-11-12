@@ -10,7 +10,9 @@ import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TransportForm } from "@/components/transport/transport-form";
 import { formatDate, formatMoney } from "@/lib/format";
+import { needsEwayBill, transportRows } from "@/lib/transport";
 import { getInvoice } from "@/server/invoices";
 import { getBusiness } from "@/server/settings";
 import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
@@ -69,8 +71,20 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         paymentTerms={inv.paymentType === "cash" ? "Cash" : "Credit"}
         user={inv.createdByName}
         createdAt={inv.createdAt}
-        details={inv.dueDate ? [{ label: "Due Date", value: formatDate(inv.dueDate) }] : []}
+        details={[
+          ...(inv.dueDate ? [{ label: "Due Date", value: formatDate(inv.dueDate) }] : []),
+          ...transportRows(inv.transport),
+        ]}
       />
+
+      {final && (
+        <TransportForm
+          target="invoice"
+          id={inv.id}
+          transport={inv.transport}
+          needsEwayBill={needsEwayBill(inv.grandTotal, inv.transport)}
+        />
+      )}
 
       <div className="print:hidden">
         <CreditNoteList

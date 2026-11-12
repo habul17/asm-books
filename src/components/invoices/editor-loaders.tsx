@@ -2,16 +2,76 @@ import { notFound } from "next/navigation";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatQty } from "@/lib/format";
-import { getEditorOptions, getInvoice, pickCustomerById } from "@/server/invoices";
+import { SALES_DOC_KINDS, type SalesDocKind } from "@/lib/sales-docs/kinds";
+import { getEditorOptions, getInvoice, pickCustomerById, type EditorOptions } from "@/server/invoices";
 import { todayInIndia } from "@/server/invoice-writes";
+import { getSalesDoc, type SalesDocDetail } from "@/server/sales-docs";
 
 import { InvoiceEditor, type EditorInitial } from "./invoice-editor";
 
-export async function NewInvoiceEditor({ customerId }: { customerId: number | null }) {
-  const [options, customer] = await Promise.all([
+type DocLine = SalesDocDetail["lines"][number];
+
+/** A saved line as the editor shows it. The price already agreed is kept unless the user changes it. */
+const editorLine = (l: Omit<DocLine, "docId">, available: number | null): EditorInitial["lines"][number] => ({
+  key: `e${l.id}`,
+  productId: l.productId,
+  partNo: l.partNo,
+  description: l.description,
+  unit: l.unit,
+  qty: formatQty(l.qty),
+  rate: String(l.rate),
+  discountPct: l.discountPct ? String(l.discountPct) : "",
+  gstRate: l.gstRate,
+  available,
+  rateEdited: true,
+});
+
+/** Keeps a state that was picked by hand; otherwise the editor keeps following the customer. */
+const pickedSupply = (placeOfSupply: string | null, customerState: string | null | undefined, options: EditorOptions) =>
+  placeOfSupply && placeOfSupply !== (customerState || options.sellerState) ? placeOfSupply : null;
+
+/** The customer, lines and price list of a quote, order or challan, to start another document from it. */
+async function fromSalesDoc(doc: SalesDocDetail, options: EditorOptions) {
+  const customer = doc.customerId ? await pickCustomerById(doc.customerId) : null;
+  return {
+    mode: doc.customerId ? ("customer" as const) : ("walk-in" as const),
+    customer,
+    walkInName: doc.customerId ? "" : doc.customerName,
+    walkInMobile: doc.customerId ? "" : (doc.customerMobile ?? ""),
+    priceListId: doc.priceListId,
+    placeOfSupply: pickedSupply(doc.placeOfSupply, customer?.stateCode, options),
+    notes: doc.notes ?? "",
+    lines: doc.lines.map((l) => editorLine(l, null)),
+  };
+}
+
+/** Finds the open quote, order or challan with this id, whatever its kind. */
+async function findOpenDoc(id: number | null, kinds: readonly SalesDocKind[] = SALES_DOC_KINDS) {
+  if (id == null) return null;
+  const found = await Promise.all(kinds.map((k) => getSalesDoc(k, id)));
+  const doc = found.find((d) => d != null) ?? null;
+  return doc && doc.status === "open" ? doc : null;
+}
+
+export async function NewInvoiceEditor({ customerId, fromDocId }: { customerId: number | null; fromDocId?: number | null }) {
+  const [options, picked, source] = await Promise.all([
     getEditorOptions(),
     customerId ? pickCustomerById(customerId) : Promise.resolve(null),
+    findOpenDoc(fromDocId ?? null),
   ]);
+  if (source) {
+    const initial: EditorInitial = {
+      id: null,
+      date: todayInIndia(),
+      paymentType: "credit",
+      extra: {},
+      originalCredit: 0,
+      fromDocId: source.id,
+      ...(await fromSalesDoc(source, options)),
+    };
+    return <InvoiceEditor initial={initial} options={options} />;
+  }
+  const customer = picked;
   const initial: EditorInitial = {
     id: null,
     date: todayInIndia(),
@@ -46,28 +106,64 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     walkInMobile: inv.customerId ? "" : (inv.customerMobile ?? ""),
     paymentType: inv.paymentType,
     priceListId: inv.priceListId,
-    // Keep a state that was picked by hand; otherwise keep following the customer.
-    placeOfSupply:
-      inv.placeOfSupply && inv.placeOfSupply !== (customer?.stateCode || options.sellerState) ? inv.placeOfSupply : null,
+    placeOfSupply: pickedSupply(inv.placeOfSupply, customer?.stateCode, options),
     notes: inv.notes ?? "",
     extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
-    lines: inv.lines.map((l) => ({
-      key: `e${l.id}`,
-      productId: l.productId,
-      partNo: l.partNo,
-      description: l.description,
-      unit: l.unit,
-      qty: formatQty(l.qty),
-      rate: String(l.rate),
-      discountPct: l.discountPct ? String(l.discountPct) : "",
-      gstRate: l.gstRate,
-      available: l.productId != null && l.stockQty != null ? l.stockQty + (soldHere.get(l.productId) ?? 0) : null,
-      // Keep the prices already billed unless the user changes them.
-      rateEdited: true,
-    })),
+    lines: inv.lines.map((l) =>
+      editorLine(l, l.productId != null && l.stockQty != null ? l.stockQty + (soldHere.get(l.productId) ?? 0) : null),
+    ),
     originalCredit: inv.paymentType === "credit" ? inv.grandTotal : 0,
   };
   return <InvoiceEditor initial={initial} options={options} />;
+}
+
+/** A new quote, order or challan; `fromId` starts it from the quote or order it follows. */
+export async function NewSalesDocEditor({
+  kind,
+  customerId,
+  fromId,
+}: {
+  kind: SalesDocKind;
+  customerId: number | null;
+  fromId: number | null;
+}) {
+  const sourceKinds: SalesDocKind[] = kind === "order" ? ["quote"] : kind === "challan" ? ["order"] : [];
+  const [options, picked, source] = await Promise.all([
+    getEditorOptions(),
+    customerId ? pickCustomerById(customerId) : Promise.resolve(null),
+    findOpenDoc(fromId, sourceKinds),
+  ]);
+  const base = { id: null, date: todayInIndia(), paymentType: "credit" as const, extra: {}, originalCredit: 0 };
+  const initial: EditorInitial = source
+    ? { ...base, sourceId: source.id, ...(await fromSalesDoc(source, options)) }
+    : {
+        ...base,
+        mode: "customer",
+        customer: picked,
+        walkInName: "",
+        walkInMobile: "",
+        priceListId: picked?.priceListId ?? options.defaultPriceListId,
+        placeOfSupply: null,
+        notes: "",
+        lines: [],
+      };
+  return <InvoiceEditor kind={kind} initial={initial} options={{ ...options, fields: [] }} />;
+}
+
+export async function EditSalesDocEditor({ kind, id }: { kind: SalesDocKind; id: number }) {
+  const [options, doc] = await Promise.all([getEditorOptions(), getSalesDoc(kind, id)]);
+  if (!doc || doc.status !== "open") notFound();
+  const initial: EditorInitial = {
+    id: doc.id,
+    date: doc.date,
+    paymentType: "credit",
+    extra: {},
+    originalCredit: 0,
+    secondDate: doc.secondDate ?? "",
+    reason: doc.reason ?? "",
+    ...(await fromSalesDoc(doc, options)),
+  };
+  return <InvoiceEditor kind={kind} initial={initial} options={{ ...options, fields: [] }} />;
 }
 
 export function EditorSkeleton() {

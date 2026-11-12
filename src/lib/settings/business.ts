@@ -37,6 +37,12 @@ export interface BusinessSettings {
   adjustmentPrefix: string;
   /** Start of every purchase return (debit note) number, e.g. DN → DN/26-27/0001. */
   debitNotePrefix: string;
+  /** Start of every quote number, e.g. QT → QT/26-27/0001. */
+  quotePrefix: string;
+  /** Start of every sales order number, e.g. SO → SO/26-27/0001. */
+  orderPrefix: string;
+  /** Start of every delivery challan number, e.g. DC → DC/26-27/0001. */
+  challanPrefix: string;
   /** Printed at the bottom of every invoice. */
   terms: string;
   /** Used for products without their own GST rate. */
@@ -70,6 +76,9 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   expensePrefix: "EXP",
   adjustmentPrefix: "ADJ",
   debitNotePrefix: "DN",
+  quotePrefix: "QT",
+  orderPrefix: "SO",
+  challanPrefix: "DC",
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
@@ -95,6 +104,13 @@ const text = (max: number, label: string) =>
   z.preprocess(
     (v) => (typeof v === "string" ? v.trim() : ""),
     z.string().max(max, `${label} can be at most ${max} characters`),
+  );
+
+/** A number prefix that falls back to `fallback` when the box is left empty. */
+const prefix = (fallback: string, label: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toUpperCase() || fallback : fallback),
+    z.string().regex(/^[A-Z0-9]{1,6}$/, `${label} prefix: 1 to 6 letters or numbers`),
   );
 
 const businessSchema = z.object({
@@ -163,6 +179,9 @@ const businessSchema = z.object({
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || "DN" : "DN"),
     z.string().regex(/^[A-Z0-9]{1,6}$/, "Debit note prefix: 1 to 6 letters or numbers"),
   ),
+  quotePrefix: prefix("QT", "Quote"),
+  orderPrefix: prefix("SO", "Sales order"),
+  challanPrefix: prefix("DC", "Delivery challan"),
   terms: text(3000, "Terms"),
   defaultGstRate: z.preprocess(
     (v) => Number(v),

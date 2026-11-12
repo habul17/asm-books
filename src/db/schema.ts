@@ -18,6 +18,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { Transport } from "../lib/transport";
+
 // ---------------------------------------------------------------------------
 // Shared column helpers
 // ---------------------------------------------------------------------------
@@ -364,6 +366,8 @@ export const invoices = pgTable(
     notes: text("notes"),
     /** Custom field values keyed by custom_fields.id. */
     extra: jsonb("extra").$type<Record<string, string | number>>().notNull().default({}),
+    /** Transporter, vehicle and e-way bill details. */
+    transport: jsonb("transport").$type<Transport>().notNull().default({}),
     status: invoiceStatus("status").notNull().default("final"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
@@ -919,5 +923,98 @@ export const stockAdjustmentLines = pgTable(
     unique("stock_adjustment_lines_line_unique").on(t.adjustmentId, t.lineNo),
     index("stock_adjustment_lines_product_idx").on(t.productId),
     check("stock_adjustment_lines_qty_check", sql`${t.qty} <> 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Quotes, sales orders and delivery challans
+// ---------------------------------------------------------------------------
+
+export const salesDocKind = pgEnum("sales_doc_kind", ["quote", "order", "challan"]);
+export const salesDocStatus = pgEnum("sales_doc_status", ["open", "closed", "cancelled"]);
+
+/**
+ * A quote, sales order or delivery challan. These never move stock or money;
+ * the invoice made from one does. They share a table because they hold the
+ * same things: a customer, priced lines and GST worked out the same way.
+ */
+export const salesDocs = pgTable(
+  "sales_docs",
+  {
+    id: id(),
+    kind: salesDocKind("kind").notNull(),
+    /** e.g. QT/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    /** Quote: valid until. Order: deliver by. Challan: not used. */
+    secondDate: date("second_date", { mode: "string" }),
+    customerId: integer("customer_id").references(() => customers.id, { onDelete: "restrict" }),
+    customerName: text("customer_name").notNull(),
+    customerGstin: text("customer_gstin"),
+    customerMobile: text("customer_mobile"),
+    billingAddress: text("billing_address"),
+    placeOfSupply: text("place_of_supply"),
+    taxType: taxType("tax_type").notNull(),
+    priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
+    taxableTotal: money("taxable_total").notNull(),
+    cgstTotal: money("cgst_total").notNull(),
+    sgstTotal: money("sgst_total").notNull(),
+    igstTotal: money("igst_total").notNull(),
+    roundOff: money("round_off").notNull(),
+    grandTotal: money("grand_total").notNull(),
+    notes: text("notes"),
+    /** Challan: why the goods are moving without an invoice. */
+    reason: text("reason"),
+    /** Transporter, vehicle and e-way bill details. */
+    transport: jsonb("transport").$type<Transport>().notNull().default({}),
+    status: salesDocStatus("status").notNull().default("open"),
+    /** The quote or order this was made from. */
+    sourceId: integer("source_id").references((): AnyPgColumn => salesDocs.id, { onDelete: "set null" }),
+    /** The invoice this became. */
+    invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("sales_docs_kind_fy_seq_unique").on(t.kind, t.fy, t.seq),
+    index("sales_docs_kind_date_idx").on(t.kind, t.date.desc(), t.id.desc()),
+    index("sales_docs_customer_idx").on(t.customerId),
+    index("sales_docs_invoice_idx").on(t.invoiceId),
+    check("sales_docs_grand_total_check", sql`${t.grandTotal} >= 0`),
+  ],
+);
+
+export const salesDocLines = pgTable(
+  "sales_doc_lines",
+  {
+    id: id(),
+    docId: integer("doc_id")
+      .notNull()
+      .references(() => salesDocs.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    hsn: text("hsn"),
+    unit: text("unit").notNull().default("Nos"),
+    qty: quantity("qty").notNull(),
+    rate: money("rate").notNull(),
+    discountPct: percent("discount_pct").notNull().default(0),
+    gstRate: percent("gst_rate").notNull(),
+    taxable: money("taxable").notNull(),
+    cgst: money("cgst").notNull(),
+    sgst: money("sgst").notNull(),
+    igst: money("igst").notNull(),
+    total: money("total").notNull(),
+  },
+  (t) => [
+    unique("sales_doc_lines_doc_line_unique").on(t.docId, t.lineNo),
+    index("sales_doc_lines_product_idx").on(t.productId),
+    check("sales_doc_lines_qty_check", sql`${t.qty} > 0`),
+    check("sales_doc_lines_rate_check", sql`${t.rate} >= 0`),
+    check("sales_doc_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
+    check("sales_doc_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
   ],
 );

@@ -20,8 +20,8 @@ export function ListToolbar({
   path: string;
   placeholder: string;
   label: string;
-  /** Option text for "all", "final" and "cancelled"; leave out to hide the filter. */
-  statusLabels?: { all: string; final: string; cancelled: string };
+  /** Status filter options as value → text, starting with "all"; leave out to hide the filter. */
+  statusLabels?: Record<string, string>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,9 +58,11 @@ export function ListToolbar({
       </div>
       {statusLabels && (
         <NativeSelect aria-label="Status" value={status} onChange={(e) => go({ status: e.target.value })}>
-          <NativeSelectOption value="all">{statusLabels.all}</NativeSelectOption>
-          <NativeSelectOption value="final">{statusLabels.final}</NativeSelectOption>
-          <NativeSelectOption value="cancelled">{statusLabels.cancelled}</NativeSelectOption>
+          {Object.entries(statusLabels).map(([value, text]) => (
+            <NativeSelectOption key={value} value={value}>
+              {text}
+            </NativeSelectOption>
+          ))}
         </NativeSelect>
       )}
     </div>

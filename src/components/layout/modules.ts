@@ -51,6 +51,10 @@ export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href
 export const ITEMS: AppModule = { label: "Items", icon: PackageIcon, href: "/catalogue" };
 export const PRICE_LISTS: AppModule = { label: "Price Lists", icon: ListChecksIcon, href: "/price-lists" };
 export const PAYMENTS_RECEIVED: AppModule = { label: "Payments Received", icon: CircleArrowDownIcon, href: "/payments" };
+export const QUOTES: AppModule = { label: "Quotes", icon: FileSpreadsheetIcon, href: "/sales/quotes" };
+export const SALES_ORDERS: AppModule = { label: "Sales Orders", icon: FileBoxIcon, href: "/sales/orders" };
+export const DELIVERY_CHALLANS: AppModule = { label: "Delivery Challans", icon: PackageCheckIcon, href: "/sales/challans" };
+export const EWAY_BILLS: AppModule = { label: "e-Way Bills", icon: TruckIcon, href: "/eway-bills" };
 export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusIcon, href: "/credit-notes" };
 export const VENDORS: AppModule = { label: "Vendors", icon: StoreIcon, href: "/vendors" };
 export const BILLS: AppModule = { label: "Bills", icon: ReceiptTextIcon, href: "/bills" };
@@ -77,14 +81,14 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     title: "Sales",
     modules: [
       CUSTOMERS,
-      soon("Quotes", FileSpreadsheetIcon),
-      soon("Sales Orders", FileBoxIcon),
-      soon("Delivery Challans", PackageCheckIcon),
+      QUOTES,
+      SALES_ORDERS,
+      DELIVERY_CHALLANS,
       INVOICES,
       PAYMENTS_RECEIVED,
       soon("Recurring Invoices", RepeatIcon),
       CREDIT_NOTES,
-      soon("e-Way Bills", TruckIcon),
+      EWAY_BILLS,
     ],
   },
   {

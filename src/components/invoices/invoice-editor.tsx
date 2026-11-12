@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { repriceItems, saveInvoice } from "@/app/(app)/invoices/actions";
+import { saveSalesDoc } from "@/app/(app)/sales/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
 import { formatMoney, formatQty } from "@/lib/format";
 import { GST_STATES } from "@/lib/gst";
 import { amountInWords, calcInvoice, taxTypeFor } from "@/lib/invoices/math";
+import { CHALLAN_REASONS, SALES_DOC_KIND, salesDocHref, salesDocsHref, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { GST_RATES } from "@/lib/settings/business";
 import type { EditorOptions, PickedCustomer, PickedItem } from "@/server/invoices";
 
@@ -54,6 +56,14 @@ export interface EditorInitial {
   lines: EditorLine[];
   /** For an edit: the credit this invoice already adds to the customer's balance. */
   originalCredit: number;
+  /** New invoice: the quote, order or challan it is made from. */
+  fromDocId?: number | null;
+  /** Quote: valid until. Order: deliver by. */
+  secondDate?: string;
+  /** Challan: why the goods move without an invoice. */
+  reason?: string;
+  /** New order or challan: the quote or order it is made from. */
+  sourceId?: number | null;
 }
 
 const STATE_OPTIONS = Object.entries(GST_STATES).sort((a, b) => a[1].localeCompare(b[1]));
@@ -85,8 +95,24 @@ export function lineFromItem(item: PickedItem): EditorLine {
   };
 }
 
-export function InvoiceEditor({ initial, options }: { initial: EditorInitial; options: EditorOptions }) {
+/**
+ * The form for an invoice. Quotes, sales orders and delivery challans use it
+ * too (`kind`): they have no payment, and a second date or a reason instead.
+ */
+export function InvoiceEditor({
+  initial,
+  options,
+  kind = "invoice",
+}: {
+  initial: EditorInitial;
+  options: EditorOptions;
+  kind?: "invoice" | SalesDocKind;
+}) {
+  const doc = kind === "invoice" ? null : SALES_DOC_KIND[kind];
+  const noun = doc?.noun ?? "invoice";
   const [date, setDate] = useState(initial.date);
+  const [secondDate, setSecondDate] = useState(initial.secondDate ?? "");
+  const [reason, setReason] = useState(initial.reason ?? "");
   const [mode, setMode] = useState(initial.mode);
   const [customer, setCustomer] = useState(initial.customer);
   const [walkInName, setWalkInName] = useState(initial.walkInName);
@@ -116,7 +142,8 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
 
   const isWalkIn = mode === "walk-in";
   // An old walk-in invoice can still be edited after walk-ins are switched off.
-  const walkInAllowed = options.allowWalkIn || initial.mode === "walk-in";
+  // A quote is often for someone who is not a customer yet, so documents always allow a typed name.
+  const walkInAllowed = doc != null || options.allowWalkIn || initial.mode === "walk-in";
   const effectivePayment = isWalkIn ? "cash" : paymentType;
   const customerState = (!isWalkIn && customer?.stateCode) || options.sellerState;
   const placeOfSupply = supply ?? customerState;
@@ -140,7 +167,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   }, [lines, taxType]);
 
   const creditAfter =
-    !isWalkIn && customer && effectivePayment === "credit"
+    !doc && !isWalkIn && customer && effectivePayment === "credit"
       ? customer.balance - initial.originalCredit * (customer.id === initial.customer?.id ? 1 : 0) + calc.totals.grandTotal
       : null;
   const overLimit = creditAfter != null && customer?.creditLimit != null && creditAfter > customer.creditLimit;
@@ -220,6 +247,10 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       setError(walkInAllowed ? "Choose a customer, or switch to walk-in." : "Choose a customer.");
       return;
     }
+    if (doc && isWalkIn && !walkInName.trim()) {
+      setError("Type the customer's name.");
+      return;
+    }
     if (supply === "") {
       setError("Choose the state you are selling to.");
       return;
@@ -235,11 +266,9 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       customerId: isWalkIn ? null : (customer?.id ?? null),
       walkInName: isWalkIn ? walkInName : "",
       walkInMobile: isWalkIn ? walkInMobile : "",
-      paymentType: effectivePayment,
       priceListId,
       placeOfSupply: supply,
       notes,
-      extra,
       lines: lines.map((l) => ({
         productId: l.productId,
         description: l.description,
@@ -250,7 +279,20 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       })),
     };
     startSaving(async () => {
-      const result = await saveInvoice(initial.id, payload);
+      const result =
+        kind === "invoice"
+          ? await saveInvoice(initial.id, {
+              ...payload,
+              paymentType: effectivePayment,
+              extra,
+              fromDocId: initial.fromDocId ?? null,
+            })
+          : await saveSalesDoc(kind, initial.id, {
+              ...payload,
+              secondDate: secondDate || null,
+              reason,
+              sourceId: initial.sourceId ?? null,
+            });
       if (result?.error) setError(result.error);
     });
   };
@@ -289,7 +331,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
                     }}
                     className={`rounded-md px-2.5 py-1 ${mode === m ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
                   >
-                    {m === "customer" ? "Customer" : "Walk-in (cash)"}
+                    {m === "customer" ? "Customer" : doc ? "New name" : "Walk-in (cash)"}
                   </button>
                 ))}
               </div>
@@ -299,7 +341,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input
                   aria-label="Walk-in name"
-                  placeholder="Name (optional)"
+                  placeholder={doc ? "Customer name" : "Name (optional)"}
                   value={walkInName}
                   maxLength={200}
                   onChange={(e) => {
@@ -345,22 +387,60 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
                 }}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inv-pay">Payment</Label>
-              <NativeSelect
-                id="inv-pay"
-                className="w-full"
-                value={effectivePayment}
-                disabled={isWalkIn}
-                onChange={(e) => {
-                  touch();
-                  setPaymentType(e.target.value === "cash" ? "cash" : "credit");
-                }}
-              >
-                <NativeSelectOption value="credit">Credit</NativeSelectOption>
-                <NativeSelectOption value="cash">Cash / paid now</NativeSelectOption>
-              </NativeSelect>
-            </div>
+            {!doc && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="inv-pay">Payment</Label>
+                <NativeSelect
+                  id="inv-pay"
+                  className="w-full"
+                  value={effectivePayment}
+                  disabled={isWalkIn}
+                  onChange={(e) => {
+                    touch();
+                    setPaymentType(e.target.value === "cash" ? "cash" : "credit");
+                  }}
+                >
+                  <NativeSelectOption value="credit">Credit</NativeSelectOption>
+                  <NativeSelectOption value="cash">Cash / paid now</NativeSelectOption>
+                </NativeSelect>
+              </div>
+            )}
+            {doc?.secondDateLabel && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="inv-date2">{doc.secondDateLabel}</Label>
+                <Input
+                  id="inv-date2"
+                  type="date"
+                  value={secondDate}
+                  min={date}
+                  onChange={(e) => {
+                    touch();
+                    setSecondDate(e.target.value);
+                  }}
+                />
+              </div>
+            )}
+            {kind === "challan" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="inv-reason">Reason</Label>
+                <Input
+                  id="inv-reason"
+                  list="inv-reasons"
+                  value={reason}
+                  maxLength={200}
+                  placeholder="Why the goods are sent"
+                  onChange={(e) => {
+                    touch();
+                    setReason(e.target.value);
+                  }}
+                />
+                <datalist id="inv-reasons">
+                  {CHALLAN_REASONS.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
+              </div>
+            )}
             <div className="col-span-2 flex flex-col gap-1.5">
               <Label id="inv-tax-label">GST</Label>
               <div
@@ -478,7 +558,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
           )}
           {lines.length === 0 ? (
             <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              Search above to add parts to this invoice.
+              Search above to add parts to this {noun}.
             </p>
           ) : (
             <ol className="flex flex-col">
@@ -575,7 +655,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="flex flex-col gap-1.5">
-            <Label htmlFor="inv-notes">Notes (printed on the invoice)</Label>
+            <Label htmlFor="inv-notes">Notes (printed on the {noun})</Label>
             <Textarea
               id="inv-notes"
               rows={3}
@@ -617,10 +697,18 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
 
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur">
         <Button type="button" onClick={save} disabled={saving || lines.length === 0}>
-          {saving ? "Saving…" : initial.id ? "Save changes" : "Save invoice"}
+          {saving ? "Saving…" : initial.id ? "Save changes" : `Save ${noun}`}
         </Button>
         <Link
-          href={initial.id ? `/invoices/${initial.id}` : "/invoices"}
+          href={
+            kind === "invoice"
+              ? initial.id
+                ? `/invoices/${initial.id}`
+                : "/invoices"
+              : initial.id
+                ? salesDocHref(kind, initial.id)
+                : salesDocsHref(kind)
+          }
           className={buttonVariants({ variant: "ghost" })}
         >
           Cancel

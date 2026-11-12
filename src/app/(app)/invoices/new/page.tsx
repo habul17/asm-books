@@ -6,9 +6,13 @@ import { EditorSkeleton, NewInvoiceEditor } from "@/components/invoices/editor-l
 export const metadata: Metadata = { title: "New invoice" };
 
 async function Editor({ searchParams }: { searchParams: PageProps<"/invoices/new">["searchParams"] }) {
-  const raw = (await searchParams).customer;
-  const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return <NewInvoiceEditor customerId={Number.isSafeInteger(n) && n > 0 ? n : null} />;
+  const query = await searchParams;
+  const positive = (raw: string | string[] | undefined) => {
+    const n = Number(Array.isArray(raw) ? raw[0] : raw);
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
+  };
+  // `from` starts the invoice from a quote, sales order or delivery challan.
+  return <NewInvoiceEditor customerId={positive(query.customer)} fromDocId={positive(query.from)} />;
 }
 
 export default function NewInvoicePage({ searchParams }: PageProps<"/invoices/new">) {

@@ -10,6 +10,7 @@ import {
   invoices,
   priceLists,
   products,
+  salesDocs,
   stockMovements,
 } from "@/db/schema";
 import { parseExtra, type ExtraValues } from "@/lib/custom-fields";
@@ -45,46 +46,59 @@ interface ExistingInvoice {
   lines: { productId: number | null; cost: number | null; qty: number }[];
 }
 
-/** Checks the input against the database and works out every amount. */
-async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | null) {
-  const business = await loadBusiness(tx);
-  const fy = financialYear(input.date);
-  if (existing && fy !== existing.fy) {
-    throw new InvoiceInputError(`This invoice belongs to the year ${existing.fy}. Keep the date inside that year.`);
-  }
+type Customer = typeof customers.$inferSelect;
+type Business = Awaited<ReturnType<typeof loadBusiness>>;
 
-  // Customer: a saved customer, or a walk-in who pays on the spot.
-  let customer: typeof customers.$inferSelect | null = null;
-  if (input.customerId != null) {
-    const [row] = await tx.select().from(customers).where(eq(customers.id, input.customerId));
-    if (!row) throw new InvoiceInputError("Customer not found. Please choose again.");
-    if (!row.active && row.id !== existing?.customerId) {
-      throw new InvoiceInputError("This customer is switched off. Turn them on in Customers first.");
-    }
-    customer = row;
+/**
+ * The saved customer of a sale; null for a walk-in. A switched-off customer
+ * is only accepted on a document that already has them (`keepId`).
+ */
+export async function loadSaleCustomer(tx: Tx, customerId: number | null, keepId?: number | null): Promise<Customer | null> {
+  if (customerId == null) return null;
+  const [row] = await tx.select().from(customers).where(eq(customers.id, customerId));
+  if (!row) throw new InvoiceInputError("Customer not found. Please choose again.");
+  if (!row.active && row.id !== keepId) {
+    throw new InvoiceInputError("This customer is switched off. Turn them on in Customers first.");
   }
-  // Walk-ins can be switched off in Settings; an existing walk-in invoice can still be edited.
-  const wasWalkIn = existing != null && existing.customerId == null;
-  if (!customer && !business.allowWalkIn && !wasWalkIn) {
-    throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Settings.");
-  }
-  const paymentType = customer ? input.paymentType : "cash";
-  if (input.placeOfSupply && !business.stateCode) {
+  return row;
+}
+
+/** Where the sale is supplied and which GST follows. The state picked on the document wins; otherwise the customer's state, then our own. */
+export function saleSupply(business: Business, customer: Customer | null, chosen: string | null) {
+  if (chosen && !business.stateCode) {
     throw new InvoiceInputError("Set your own state in Settings before billing another state.");
   }
-  // The state picked on the invoice wins; otherwise the customer's state, then our own.
-  const placeOfSupply = input.placeOfSupply ?? (customer?.stateCode || business.stateCode || null);
-  const taxType = taxTypeFor(business.stateCode || null, placeOfSupply);
+  const placeOfSupply = chosen ?? (customer?.stateCode || business.stateCode || null);
+  return { placeOfSupply, taxType: taxTypeFor(business.stateCode || null, placeOfSupply) };
+}
 
-  if (input.priceListId != null && input.priceListId !== existing?.priceListId) {
-    const [list] = await tx
-      .select({ id: priceLists.id })
-      .from(priceLists)
-      .where(and(eq(priceLists.id, input.priceListId), isNull(priceLists.deletedAt)));
-    if (!list) throw new InvoiceInputError("Price list not found. Please choose again.");
-  }
+/** The buyer's details as copied onto the document, so later changes to the customer do not alter it. */
+export function saleParty(customer: Customer | null, walkIn: { name: string; mobile: string; fallbackName: string }) {
+  return {
+    customerId: customer?.id ?? null,
+    customerName: customer?.name ?? (walkIn.name || walkIn.fallbackName),
+    customerGstin: customer?.gstin ?? null,
+    customerMobile: customer ? customer.mobile : walkIn.mobile || null,
+    billingAddress: customer
+      ? [customer.address, [customer.city, customer.pincode].filter(Boolean).join(" - ")].filter(Boolean).join("\n") ||
+        null
+      : null,
+  };
+}
 
-  const ids = [...new Set(input.lines.map((l) => l.productId).filter((id): id is number => id != null))];
+/** Checks that a newly chosen price list still exists. */
+export async function assertPriceList(tx: Tx, priceListId: number | null, currentId?: number | null) {
+  if (priceListId == null || priceListId === currentId) return;
+  const [list] = await tx
+    .select({ id: priceLists.id })
+    .from(priceLists)
+    .where(and(eq(priceLists.id, priceListId), isNull(priceLists.deletedAt)));
+  if (!list) throw new InvoiceInputError("Price list not found. Please choose again.");
+}
+
+/** The parts on a document's lines, by id, with what the document copies from them. */
+export async function loadSaleProducts(tx: Tx, lines: { productId: number | null }[]) {
+  const ids = [...new Set(lines.map((l) => l.productId).filter((id): id is number => id != null))];
   const found = ids.length
     ? await tx
         .select({
@@ -97,7 +111,28 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
         .from(products)
         .where(inArray(products.id, ids))
     : [];
-  const byId = new Map(found.map((p) => [p.id, p]));
+  return new Map(found.map((p) => [p.id, p]));
+}
+
+/** Checks the input against the database and works out every amount. */
+async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | null) {
+  const business = await loadBusiness(tx);
+  const fy = financialYear(input.date);
+  if (existing && fy !== existing.fy) {
+    throw new InvoiceInputError(`This invoice belongs to the year ${existing.fy}. Keep the date inside that year.`);
+  }
+
+  // Customer: a saved customer, or a walk-in who pays on the spot.
+  const customer = await loadSaleCustomer(tx, input.customerId, existing?.customerId);
+  // Walk-ins can be switched off in Settings; an existing walk-in invoice can still be edited.
+  const wasWalkIn = existing != null && existing.customerId == null;
+  if (!customer && !business.allowWalkIn && !wasWalkIn) {
+    throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Settings.");
+  }
+  const paymentType = customer ? input.paymentType : "cash";
+  const { placeOfSupply, taxType } = saleSupply(business, customer, input.placeOfSupply);
+  await assertPriceList(tx, input.priceListId, existing?.priceListId);
+  const byId = await loadSaleProducts(tx, input.lines);
 
   const lines = input.lines.map((l, i) => {
     const p = l.productId != null ? byId.get(l.productId) : undefined;
@@ -130,14 +165,7 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
   const header = {
     date: input.date,
     dueDate: paymentType === "credit" && terms != null ? addDays(input.date, terms) : null,
-    customerId: customer?.id ?? null,
-    customerName: customer?.name ?? (input.walkInName || "Cash Sale"),
-    customerGstin: customer?.gstin ?? null,
-    customerMobile: customer ? customer.mobile : input.walkInMobile || null,
-    billingAddress: customer
-      ? [customer.address, [customer.city, customer.pincode].filter(Boolean).join(" - ")].filter(Boolean).join("\n") ||
-        null
-      : null,
+    ...saleParty(customer, { name: input.walkInName, mobile: input.walkInMobile, fallbackName: "Cash Sale" }),
     placeOfSupply,
     taxType,
     priceListId: input.priceListId,
@@ -233,6 +261,25 @@ export async function moveStock(
     WHERE ${products.id} = v.id`);
 }
 
+/**
+ * Marks the quote, order or challan an invoice was made from as done. An order
+ * whose challan is invoiced is done too. A document that is already closed or
+ * cancelled is left alone.
+ */
+async function closeInvoicedDoc(tx: Tx, docId: number, invoiceId: number) {
+  const [doc] = await tx
+    .update(salesDocs)
+    .set({ status: "closed", invoiceId })
+    .where(and(eq(salesDocs.id, docId), eq(salesDocs.status, "open")))
+    .returning({ kind: salesDocs.kind, sourceId: salesDocs.sourceId });
+  if (doc?.kind === "challan" && doc.sourceId != null) {
+    await tx
+      .update(salesDocs)
+      .set({ status: "closed", invoiceId })
+      .where(and(eq(salesDocs.id, doc.sourceId), eq(salesDocs.kind, "order"), eq(salesDocs.status, "open")));
+  }
+}
+
 export async function createInvoice(input: InvoiceInput, userId: number): Promise<number> {
   return withTransaction(async (tx) => {
     const { fy, prefix, allowShortStock, header, lines } = await prepare(tx, input, null);
@@ -251,6 +298,7 @@ export async function createInvoice(input: InvoiceInput, userId: number): Promis
       .returning({ id: invoices.id });
     await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
     await moveStock(tx, sold, { kind: "sale", invoiceId: id, date: header.date, note: number, userId });
+    if (input.fromDocId != null) await closeInvoicedDoc(tx, input.fromDocId, id);
     return id;
   });
 }

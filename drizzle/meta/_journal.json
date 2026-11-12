@@ -113,6 +113,13 @@
       "when": 1794399113889,
       "tag": "0015_invoice_custom_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794458166780,
+      "tag": "0016_sales_docs_and_transport",
+      "breakpoints": true
     }
   ]
 }

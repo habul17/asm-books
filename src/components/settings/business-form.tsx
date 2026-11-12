@@ -154,6 +154,36 @@ export function BusinessForm({
             className="uppercase"
           />
         </Field>
+        <Field label="Quote prefix" htmlFor="b-qprefix" hint="QT gives QT/26-27/0001">
+          <Input
+            id="b-qprefix"
+            name="quotePrefix"
+            defaultValue={b.quotePrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
+        <Field label="Sales order prefix" htmlFor="b-oprefix" hint="SO gives SO/26-27/0001">
+          <Input
+            id="b-oprefix"
+            name="orderPrefix"
+            defaultValue={b.orderPrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
+        <Field label="Delivery challan prefix" htmlFor="b-cprefix" hint="DC gives DC/26-27/0001">
+          <Input
+            id="b-cprefix"
+            name="challanPrefix"
+            defaultValue={b.challanPrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
         <Field label="Invoice title" htmlFor="b-title">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>
