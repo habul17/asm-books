@@ -87,3 +87,13 @@ describe("reminder settings", () => {
     expect(parseBusiness(form({ defaultMinStock: "-1" })).error).toMatch(/0 or more/);
   });
 });
+
+describe("opening cash", () => {
+  it("defaults to 0, keeps paise and allows an overdraft", () => {
+    expect(parseBusiness(form({})).value?.openingCash).toBe(0);
+    expect(parseBusiness(form({ openingCash: "25000.505" })).value?.openingCash).toBe(25000.51);
+    expect(parseBusiness(form({ openingCash: "-1200" })).value?.openingCash).toBe(-1200);
+    expect(parseBusiness(form({ openingCash: "abc" })).error).toBeTruthy();
+    expect(readBusiness({ openingCash: "5" }).openingCash).toBe(0);
+  });
+});

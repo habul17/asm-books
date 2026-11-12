@@ -136,8 +136,8 @@ export const isFormPage = (pathname: string | null) => pathname != null && /\/(n
 export const REPORT_GROUPS: { label: string; href: string | null }[][] = [
   [
     { label: "Profit and Loss", href: "/reports/profit-and-loss" },
-    { label: "Balance Sheet", href: null },
-    { label: "Cash Flow Statement", href: null },
+    { label: "Balance Sheet", href: "/reports/balance-sheet" },
+    { label: "Cash Flow Statement", href: "/reports/cash-flow" },
   ],
   [
     { label: "Sales Summary", href: "/reports/sales" },

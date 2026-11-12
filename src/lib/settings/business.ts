@@ -61,6 +61,8 @@ export interface BusinessSettings {
   paymentReminderDays: number;
   /** Low-stock level for parts that have no minimum of their own; 0 turns it off. */
   defaultMinStock: number;
+  /** Cash in hand and in the bank on the day the shop started using the app; reports count from it. */
+  openingCash: number;
 }
 
 export const DEFAULT_BUSINESS: BusinessSettings = {
@@ -95,7 +97,12 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   allowShortStock: false,
   paymentReminderDays: DEFAULT_REMINDER_DAYS,
   defaultMinStock: 0,
+  openingCash: 0,
 };
+
+/** Largest opening cash figure accepted, either way; it only stops typing mistakes. */
+const MAX_OPENING_CASH = 1_000_000_000;
+const validOpeningCash = (n: number) => Number.isFinite(n) && Math.abs(n) <= MAX_OPENING_CASH;
 
 const validReminderDays = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_REMINDER_DAYS;
 const validMinStock = (n: number) => Number.isFinite(n) && n >= 0 && n <= MAX_MIN_STOCK;
@@ -113,6 +120,7 @@ export function readBusiness(raw: unknown): BusinessSettings {
   if (!isGstRate(out.defaultGstRate)) out.defaultGstRate = DEFAULT_BUSINESS.defaultGstRate;
   if (!validReminderDays(out.paymentReminderDays)) out.paymentReminderDays = DEFAULT_BUSINESS.paymentReminderDays;
   if (!validMinStock(out.defaultMinStock)) out.defaultMinStock = DEFAULT_BUSINESS.defaultMinStock;
+  if (!validOpeningCash(out.openingCash)) out.openingCash = DEFAULT_BUSINESS.openingCash;
   return out;
 }
 
@@ -226,6 +234,13 @@ const businessSchema = z.object({
       .number({ error: "Low stock level should be a number" })
       .refine(validMinStock, "Low stock level should be 0 or more")
       .refine((n) => Number.isInteger(n * 1000), "Low stock level can have at most 3 decimals"),
+  ),
+  openingCash: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : 0),
+    z
+      .number({ error: "Opening cash and bank balance should be a number" })
+      .refine(validOpeningCash, "Opening cash and bank balance is too large")
+      .transform((n) => Math.round(n * 100) / 100),
   ),
 });
 

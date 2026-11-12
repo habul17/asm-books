@@ -295,6 +295,26 @@ export function BusinessForm({
       </fieldset>
 
       <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-3 text-sm font-medium text-muted-foreground">Reports</legend>
+        <Field
+          label="Opening cash and bank balance (₹)"
+          htmlFor="b-opencash"
+          hint="Cash in hand and in the bank on the day you started using ASM Books. The Balance Sheet and Cash Flow count from it."
+          className="sm:col-span-2"
+        >
+          <Input
+            id="b-opencash"
+            name="openingCash"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            defaultValue={b.openingCash}
+            className="sm:max-w-60"
+          />
+        </Field>
+      </fieldset>
+
+      <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Bank and UPI (printed for payment)</legend>
         <Field label="Bank name" htmlFor="b-bank">
           <Input id="b-bank" name="bankName" defaultValue={b.bankName} maxLength={100} />
