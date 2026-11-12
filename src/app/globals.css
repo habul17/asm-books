@@ -128,6 +128,10 @@
     @apply font-sans;
   }
 }
+/* Printed documents use bold typewriter letters, like the shop's paper bills. */
+.invoice-document {
+  font-family: "Courier New", Courier, "Liberation Mono", monospace;
+}
 /* Printing: A4 pages with a small margin; the app's own chrome is hidden with print:hidden. */
 @media print {
   @page {

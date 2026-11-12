@@ -60,14 +60,13 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
         invoice={note}
         business={business}
         title="Credit Note"
-        details={
-          <>
-            <p>
-              Against invoice {note.invoiceNumber} of {formatDate(note.invoiceDate)}
-            </p>
-            <p>Reason: {note.reason}</p>
-          </>
-        }
+        numberLabel="Note No"
+        user={note.createdByName}
+        createdAt={note.createdAt}
+        details={[
+          { label: "Against Bill", value: `${note.invoiceNumber} of ${formatDate(note.invoiceDate)}` },
+          { label: "Reason", value: note.reason },
+        ]}
       />
 
       {final && (

@@ -53,13 +53,13 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
         invoice={pr}
         business={business}
         title="Debit Note"
-        partyLabel="Returned to"
-        details={
-          <>
-            {pr.billRef && <p>Against your bill {pr.billRef}</p>}
-            <p>Reason: {pr.reason}</p>
-          </>
-        }
+        numberLabel="Note No"
+        user={pr.createdByName}
+        createdAt={pr.createdAt}
+        details={[
+          ...(pr.billRef ? [{ label: "Against Bill", value: pr.billRef }] : []),
+          { label: "Reason", value: pr.reason },
+        ]}
       />
 
       {final && (

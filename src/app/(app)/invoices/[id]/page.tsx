@@ -66,12 +66,10 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         invoice={inv}
         business={business}
         extra={inv.shownExtra}
-        details={
-          <>
-            {inv.dueDate && <p>Due: {formatDate(inv.dueDate)}</p>}
-            <p>{inv.paymentType === "cash" ? "Cash sale" : "Credit sale"}</p>
-          </>
-        }
+        paymentTerms={inv.paymentType === "cash" ? "Cash" : "Credit"}
+        user={inv.createdByName}
+        createdAt={inv.createdAt}
+        details={inv.dueDate ? [{ label: "Due Date", value: formatDate(inv.dueDate) }] : []}
       />
 
       <div className="print:hidden">
