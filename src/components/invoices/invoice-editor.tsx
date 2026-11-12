@@ -46,6 +46,8 @@ export interface EditorInitial {
   walkInMobile: string;
   paymentType: "credit" | "cash";
   priceListId: number | null;
+  /** State code picked for this sale; null follows the customer's state. */
+  placeOfSupply: string | null;
   notes: string;
   /** Custom field values as text, keyed by field id. */
   extra: Record<string, string>;
@@ -53,6 +55,8 @@ export interface EditorInitial {
   /** For an edit: the credit this invoice already adds to the customer's balance. */
   originalCredit: number;
 }
+
+const STATE_OPTIONS = Object.entries(GST_STATES).sort((a, b) => a[1].localeCompare(b[1]));
 
 let keySeq = 0;
 const newKey = () => `l${++keySeq}`;
@@ -89,6 +93,8 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   const [walkInMobile, setWalkInMobile] = useState(initial.walkInMobile);
   const [paymentType, setPaymentType] = useState(initial.paymentType);
   const [priceListId, setPriceListId] = useState(initial.priceListId);
+  // null follows the customer's state; "" is a sale to another state whose state is not chosen yet.
+  const [supply, setSupply] = useState(initial.placeOfSupply);
   const [notes, setNotes] = useState(initial.notes);
   const [extra, setExtra] = useState(initial.extra);
   const [lines, setLines] = useState(initial.lines);
@@ -112,8 +118,16 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   // An old walk-in invoice can still be edited after walk-ins are switched off.
   const walkInAllowed = options.allowWalkIn || initial.mode === "walk-in";
   const effectivePayment = isWalkIn ? "cash" : paymentType;
-  const placeOfSupply = (!isWalkIn && customer?.stateCode) || options.sellerState;
-  const taxType = taxTypeFor(options.sellerState, placeOfSupply);
+  const customerState = (!isWalkIn && customer?.stateCode) || options.sellerState;
+  const placeOfSupply = supply ?? customerState;
+  const taxType = supply === "" ? "inter" : taxTypeFor(options.sellerState, placeOfSupply);
+  const chooseTaxType = (type: "intra" | "inter") => {
+    if (type === taxType) return;
+    touch();
+    const customerIsOutside = taxTypeFor(options.sellerState, customerState) === "inter";
+    if (type === "intra") setSupply(customerIsOutside ? options.sellerState : null);
+    else setSupply(customerIsOutside ? null : "");
+  };
 
   const calc = useMemo(() => {
     const parsed = lines.map((l) => ({
@@ -192,6 +206,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
   const chooseCustomer = (c: PickedCustomer | null) => {
     touch();
     setCustomer(c);
+    setSupply(null);
     if (c) {
       setPaymentType("credit");
       const listId = c.priceListId ?? options.defaultPriceListId;
@@ -203,6 +218,10 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
     setError(null);
     if (!isWalkIn && !customer) {
       setError(walkInAllowed ? "Choose a customer, or switch to walk-in." : "Choose a customer.");
+      return;
+    }
+    if (supply === "") {
+      setError("Choose the state you are selling to.");
       return;
     }
     for (const [i, l] of lines.entries()) {
@@ -218,6 +237,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
       walkInMobile: isWalkIn ? walkInMobile : "",
       paymentType: effectivePayment,
       priceListId,
+      placeOfSupply: supply,
       notes,
       extra,
       lines: lines.map((l) => ({
@@ -265,6 +285,7 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
                     onClick={() => {
                       touch();
                       setMode(m);
+                      setSupply(null);
                     }}
                     className={`rounded-md px-2.5 py-1 ${mode === m ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
                   >
@@ -339,6 +360,56 @@ export function InvoiceEditor({ initial, options }: { initial: EditorInitial; op
                 <NativeSelectOption value="credit">Credit</NativeSelectOption>
                 <NativeSelectOption value="cash">Cash / paid now</NativeSelectOption>
               </NativeSelect>
+            </div>
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <Label id="inv-tax-label">GST</Label>
+              <div
+                className="grid grid-cols-2 rounded-lg bg-muted p-0.5 text-sm"
+                role="radiogroup"
+                aria-labelledby="inv-tax-label"
+              >
+                {(["intra", "inter"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={taxType === t}
+                    disabled={!options.sellerState}
+                    onClick={() => chooseTaxType(t)}
+                    className={`rounded-md px-2.5 py-1 disabled:opacity-60 ${taxType === t ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    <span className="block">{t === "intra" ? "Within state" : "Other state"}</span>
+                    <span className="block text-xs text-muted-foreground">{t === "intra" ? "CGST + SGST" : "IGST"}</span>
+                  </button>
+                ))}
+              </div>
+              {!options.sellerState && (
+                <p className="text-xs text-muted-foreground">
+                  To bill another state, first set your own state in{" "}
+                  <Link href="/settings" className="underline underline-offset-4">
+                    Settings
+                  </Link>
+                  .
+                </p>
+              )}
+              {taxType === "inter" && (
+                <NativeSelect
+                  aria-label="State you are selling to"
+                  className="w-full"
+                  value={placeOfSupply ?? ""}
+                  onChange={(e) => {
+                    touch();
+                    setSupply(e.target.value);
+                  }}
+                >
+                  <NativeSelectOption value="">Choose the state</NativeSelectOption>
+                  {STATE_OPTIONS.filter(([code]) => code !== options.sellerState).map(([code, name]) => (
+                    <NativeSelectOption key={code} value={code}>
+                      {name} ({code})
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              )}
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
               <Label htmlFor="inv-list">Price list</Label>

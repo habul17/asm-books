@@ -29,6 +29,10 @@ describe("parseInvoiceInput", () => {
 
   it("takes custom field values as text and defaults to none", () => {
     expect(parseInvoiceInput(base).value?.extra).toEqual({});
+    expect(parseInvoiceInput(base).value?.placeOfSupply).toBeNull();
+    expect(parseInvoiceInput({ ...base, placeOfSupply: "32" }).value?.placeOfSupply).toBe("32");
+    expect(parseInvoiceInput({ ...base, placeOfSupply: "00" }).error).toMatch(/valid state/);
+    expect(parseInvoiceInput({ ...base, placeOfSupply: "" }).error).toMatch(/valid state/);
     expect(parseInvoiceInput({ ...base, extra: { "3": "TN 37 AB 1234" } }).value?.extra).toEqual({ "3": "TN 37 AB 1234" });
     expect(parseInvoiceInput({ ...base, extra: { "3": 12 } }).error).toBeTruthy();
     expect(parseInvoiceInput({ ...base, extra: { "3": "x".repeat(1001) } }).error).toMatch(/at most 1000/);

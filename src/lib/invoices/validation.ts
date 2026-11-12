@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
+import { GST_STATES } from "@/lib/gst";
 import { isGstRate } from "@/lib/settings/business";
 
 export const MAX_LINES = 300;
@@ -28,6 +29,12 @@ export const invoiceInputSchema = z.object({
   walkInMobile: z.string().trim().max(40, "Mobile can be at most 40 characters"),
   paymentType: z.enum(["credit", "cash"], "Choose credit or cash"),
   priceListId: z.number().int().positive().nullable(),
+  /** State code the sale is supplied to, when the user chose it; null follows the customer's state. */
+  placeOfSupply: z
+    .string()
+    .refine((code) => Object.hasOwn(GST_STATES, code), "Choose a valid state")
+    .nullable()
+    .default(null),
   notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
   /** Custom field values as typed, keyed by field id. They are checked against the fields on the server. */
   extra: z

@@ -69,7 +69,11 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Settings.");
   }
   const paymentType = customer ? input.paymentType : "cash";
-  const placeOfSupply = customer?.stateCode || business.stateCode || null;
+  if (input.placeOfSupply && !business.stateCode) {
+    throw new InvoiceInputError("Set your own state in Settings before billing another state.");
+  }
+  // The state picked on the invoice wins; otherwise the customer's state, then our own.
+  const placeOfSupply = input.placeOfSupply ?? (customer?.stateCode || business.stateCode || null);
   const taxType = taxTypeFor(business.stateCode || null, placeOfSupply);
 
   if (input.priceListId != null && input.priceListId !== existing?.priceListId) {

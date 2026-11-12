@@ -21,6 +21,7 @@ export async function NewInvoiceEditor({ customerId }: { customerId: number | nu
     walkInMobile: "",
     paymentType: "credit",
     priceListId: customer?.priceListId ?? options.defaultPriceListId,
+    placeOfSupply: null,
     notes: "",
     extra: {},
     lines: [],
@@ -45,6 +46,9 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     walkInMobile: inv.customerId ? "" : (inv.customerMobile ?? ""),
     paymentType: inv.paymentType,
     priceListId: inv.priceListId,
+    // Keep a state that was picked by hand; otherwise keep following the customer.
+    placeOfSupply:
+      inv.placeOfSupply && inv.placeOfSupply !== (customer?.stateCode || options.sellerState) ? inv.placeOfSupply : null,
     notes: inv.notes ?? "",
     extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
     lines: inv.lines.map((l) => ({
