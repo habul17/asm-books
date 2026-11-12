@@ -147,7 +147,7 @@ export const REPORT_GROUPS: { label: string; href: string | null }[][] = [
   ],
   [
     { label: "Customer Balances (who owes you)", href: "/reports/customer-balances" },
-    { label: "AR Aging Summary", href: null },
+    { label: "AR Aging Summary", href: "/reports/ar-aging" },
   ],
   [
     { label: "Vendor Balances (what you owe)", href: "/reports/vendor-balances" },

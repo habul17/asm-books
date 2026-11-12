@@ -64,3 +64,18 @@ bank balance, and GST to pay shows the whole difference since the start. The
 two errors are on both sides, so the totals still agree, but the statements
 are a working view of the business and not a replacement for the accountant's
 books.
+
+## AR Aging Summary
+
+Also under **Reports**. It shows what customers owe today, split by how old
+the unpaid bills are: 0–30 days, 31–60 days, 61–90 days and over 90 days, with
+a total for all customers and a row for each customer who owes money.
+
+- Age is counted from the bill date.
+- Payments are not tied to single bills, so they are counted against the
+  oldest bills first. What is left unpaid is the newest bills.
+- An opening balance is aged from the day the customer was added.
+- The total equals "Customers owe you" on the Balance Sheet and the Customer
+  Balances report, except that customers owing less than one rupee are left
+  out.
+

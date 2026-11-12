@@ -72,13 +72,18 @@ function isLate(date: string, dueDate: string | null, today: string, days: numbe
   return dueDate ? dueDate < today : daysBetween(date, today) >= days;
 }
 
-/** Customers with a late bill, the longest wait first. */
-export function findLatePayers(
+export interface UnpaidBill extends LateBill {
+  dueDate: string | null;
+}
+
+/**
+ * Splits what each owing customer owes into the bills it is made of, newest
+ * first, with any opening balance last. Customers owing under a rupee are left out.
+ */
+export function unpaidBills(
   customers: OwingCustomer[],
   invoices: OpenInvoice[],
-  today: string,
-  days: number,
-): LatePayer[] {
+): { customer: OwingCustomer; bills: UnpaidBill[] }[] {
   const byCustomer = new Map<number, OpenInvoice[]>();
   for (const inv of invoices) {
     const list = byCustomer.get(inv.customerId);
@@ -86,24 +91,37 @@ export function findLatePayers(
     else byCustomer.set(inv.customerId, [inv]);
   }
 
-  const out: LatePayer[] = [];
+  const out: { customer: OwingCustomer; bills: UnpaidBill[] }[] = [];
   for (const c of customers) {
     if (!(c.balance >= MIN_AMOUNT)) continue;
-    const bills: LateBill[] = [];
+    const bills: UnpaidBill[] = [];
     let covered = 0;
     const own = (byCustomer.get(c.id) ?? []).sort((a, b) => a.newer - b.newer || b.id - a.id);
     for (const inv of own) {
       const unpaid = round2(Math.min(inv.grandTotal, c.balance - inv.newer));
       if (unpaid <= 0) continue;
       covered = round2(covered + unpaid);
-      if (isLate(inv.date, inv.dueDate, today, days)) {
-        bills.push({ id: inv.id, number: inv.number, date: inv.date, unpaid });
-      }
+      bills.push({ id: inv.id, number: inv.number, date: inv.date, dueDate: inv.dueDate, unpaid });
     }
     const opening = round2(c.balance - covered);
-    if (opening >= 0.01 && isLate(c.since, null, today, days)) {
-      bills.push({ id: null, number: "Opening balance", date: c.since, unpaid: opening });
-    }
+    if (opening >= 0.01) bills.push({ id: null, number: "Opening balance", date: c.since, dueDate: null, unpaid: opening });
+    out.push({ customer: c, bills });
+  }
+  return out;
+}
+
+/** Customers with a late bill, the longest wait first. */
+export function findLatePayers(
+  customers: OwingCustomer[],
+  invoices: OpenInvoice[],
+  today: string,
+  days: number,
+): LatePayer[] {
+  const out: LatePayer[] = [];
+  for (const { customer: c, bills: all } of unpaidBills(customers, invoices)) {
+    const bills: LateBill[] = all
+      .filter((b) => isLate(b.date, b.dueDate, today, days))
+      .map(({ id, number, date, unpaid }) => ({ id, number, date, unpaid }));
 
     const lateAmount = round2(bills.reduce((sum, b) => sum + b.unpaid, 0));
     if (lateAmount < MIN_AMOUNT) continue;
