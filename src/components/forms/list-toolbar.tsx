@@ -16,12 +16,15 @@ export function ListToolbar({
   placeholder,
   label,
   statusLabels,
+  filterLabel = "Status",
 }: {
   path: string;
   placeholder: string;
   label: string;
   /** Status filter options as value → text, starting with "all"; leave out to hide the filter. */
   statusLabels?: Record<string, string>;
+  /** What the filter chooses, for screen readers. */
+  filterLabel?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,7 +60,7 @@ export function ListToolbar({
         />
       </div>
       {statusLabels && (
-        <NativeSelect aria-label="Status" value={status} onChange={(e) => go({ status: e.target.value })}>
+        <NativeSelect aria-label={filterLabel} value={status} onChange={(e) => go({ status: e.target.value })}>
           {Object.entries(statusLabels).map(([value, text]) => (
             <NativeSelectOption key={value} value={value}>
               {text}

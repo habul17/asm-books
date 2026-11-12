@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
   date,
   foreignKey,
   index,
@@ -35,6 +36,9 @@ const percent = (name: string) => numeric(name, { precision: 6, scale: 2, mode: 
  * 7+ decimals (e.g. 21.7442199); rounding them would lose information.
  */
 const cost = (name: string) => numeric(name, { precision: 20, scale: 10, mode: "number" });
+
+/** Raw file bytes. Read and written through encode/decode in SQL, never selected by default. */
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 
 /** Quantity; allows fractions for items sold by length or weight. */
 const quantity = (name: string) => numeric(name, { precision: 14, scale: 3, mode: "number" });
@@ -1095,3 +1099,48 @@ export const salesDocLines = pgTable(
     check("sales_doc_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+/**
+ * A scanned paper or PDF kept for the shop: a vendor's bill, a receipt, a bank
+ * statement. It can be attached to a bill or an expense. The bytes live in
+ * `document_files`, so lists never load them.
+ */
+export const documents = pgTable(
+  "documents",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    /** A key of DOCUMENT_FOLDERS. */
+    folder: text("folder").notNull().default("other"),
+    mimeType: text("mime_type").notNull(),
+    /** File size in bytes. */
+    size: integer("size").notNull(),
+    /** The date on the paper, if the user gave one. */
+    docDate: date("doc_date", { mode: "string" }),
+    notes: text("notes"),
+    /** Hidden from staff, e.g. bank papers and payslips. */
+    ownerOnly: boolean("owner_only").notNull().default(false),
+    billId: integer("bill_id").references(() => bills.id, { onDelete: "set null" }),
+    expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "set null" }),
+    uploadedBy: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("documents_created_idx").on(t.createdAt.desc(), t.id.desc()),
+    index("documents_folder_idx").on(t.folder),
+    index("documents_bill_idx").on(t.billId),
+    index("documents_expense_idx").on(t.expenseId),
+    check("documents_size_check", sql`${t.size} > 0`),
+  ],
+);
+
+export const documentFiles = pgTable("document_files", {
+  documentId: integer("document_id")
+    .primaryKey()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  data: bytea("data").notNull(),
+});

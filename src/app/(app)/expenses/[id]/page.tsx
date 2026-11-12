@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { CancelExpenseForm } from "@/components/expenses/cancel-expense-form";
 import { ExpenseVoucher } from "@/components/expenses/expense-voucher";
 import { PrintButton } from "@/components/invoices/invoice-actions";
@@ -49,6 +50,12 @@ async function Expense({ params }: { params: PageProps<"/expenses/[id]">["params
       )}
 
       <ExpenseVoucher expense={expense} business={business} />
+
+      <DocumentAttachments
+        link={{ expenseId: expense.id }}
+        folder="receipts"
+        hint="Keep a photo or PDF of the receipt here."
+      />
 
       {final && (
         <OwnerOnlyBlock>

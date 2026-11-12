@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { CancelBillForm } from "@/components/bills/cancel-bill-form";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -126,6 +127,12 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
       </dl>
 
       {b.notes && <p className="text-sm whitespace-pre-line text-muted-foreground">Note: {b.notes}</p>}
+
+      <DocumentAttachments
+        link={{ billId: b.id }}
+        folder="bills"
+        hint="Keep a photo or PDF of the vendor's paper bill here."
+      />
 
       {final && (
         <OwnerOnlyBlock>

@@ -67,6 +67,7 @@ export const INVENTORY_ADJUSTMENTS: AppModule = {
   href: "/inventory-adjustments",
 };
 export const EXPENSES: AppModule = { label: "Expenses", icon: WalletIcon, href: "/expenses" };
+export const DOCUMENTS: AppModule = { label: "Documents", icon: FolderIcon, href: "/documents" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
 export const USERS: AppModule = { label: "Users", icon: UserCogIcon, href: "/users" };
 export const BACKUPS: AppModule = { label: "Backups", icon: DatabaseBackupIcon, href: "/backup" };
@@ -106,7 +107,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     title: "Others",
     modules: [
-      soon("Documents", FolderIcon),
+      DOCUMENTS,
       REPORTS,
       SETTINGS,
       USERS,

@@ -11,8 +11,12 @@ import type { CurrentUser } from "./auth";
 
 const BACKUP_KEY = "backup";
 
-/** Sign-in secrets are never put in a downloaded file. Sessions are left out completely. */
-const SKIP_TABLES = new Set(["sessions"]);
+/**
+ * Sign-in secrets are never put in a downloaded file. Sessions are left out
+ * completely, and so are the bytes of uploaded documents: they are too big for
+ * this file (their names and details in `documents` are kept).
+ */
+const SKIP_TABLES = new Set(["sessions", "document_files"]);
 const SKIP_COLUMNS: Record<string, string[]> = { users: ["passwordHash", "failedLogins", "lockedUntil"] };
 
 /** Every table of the app, in schema order. */
@@ -36,7 +40,7 @@ export function backupStream(user: CurrentUser): ReadableStream<Uint8Array> {
         const db = getDb();
         write(
           `{"app":"ASM Books","format":1,"createdAt":${JSON.stringify(new Date().toISOString())},` +
-            `"createdBy":${JSON.stringify(user.username)},"note":"Passwords are not included.","tables":{`,
+            `"createdBy":${JSON.stringify(user.username)},"note":"Passwords and uploaded document files are not included.","tables":{`,
         );
         for (const [i, table] of tables.entries()) {
           const name = getTableName(table);
