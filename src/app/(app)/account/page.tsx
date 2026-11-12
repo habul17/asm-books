@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { TextSizePicker } from "@/components/layout/text-size";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +33,14 @@ export default function AccountPage() {
       <Suspense fallback={<Skeleton className="h-20 rounded-xl" />}>
         <Me />
       </Suspense>
+      <Card>
+        <CardHeader>
+          <CardTitle>Text size</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TextSizePicker />
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Change password</CardTitle>

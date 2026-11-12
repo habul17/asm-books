@@ -142,4 +142,8 @@
   body {
     background: white !important;
   }
+  /* Printed pages keep their normal size whatever text size is chosen on screen. */
+  html {
+    font-size: 100% !important;
+  }
 }
