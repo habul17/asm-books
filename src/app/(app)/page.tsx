@@ -1,4 +1,4 @@
-import { CircleArrowDownIcon, PlusIcon, UserPlusIcon } from "lucide-react";
+import { BellIcon, ChevronRightIcon, CircleArrowDownIcon, PlusIcon, UserPlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getHomeSummary } from "@/server/home";
+import { getReminders } from "@/server/reminders";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -23,6 +24,32 @@ function Stat({ label, value, note, href }: { label: string; value: string; note
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** What needs attention today; nothing is shown when all is well. */
+async function Reminders() {
+  const { late, lateAmount, lowStock, days } = await getReminders();
+  const lines = [
+    late && late.length > 0
+      ? `${plural(late.length, "customer")} ${late.length === 1 ? "has" : "have"} not paid for ${plural(days, "day")} or more · ${formatMoney(lateAmount)}`
+      : null,
+    lowStock > 0 ? `${plural(lowStock, "part")} ${lowStock === 1 ? "is" : "are"} low on stock` : null,
+  ].filter((line) => line != null);
+  if (lines.length === 0) return null;
+  return (
+    <Link
+      href="/reminders"
+      className="flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 hover:bg-amber-500/15"
+    >
+      <BellIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm font-medium">
+        {lines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </span>
+      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
+  );
+}
 
 async function Summary() {
   const { showTotals, sales, received, owed, recent } = await getHomeSummary();
@@ -123,6 +150,9 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+      <Suspense fallback={null}>
+        <Reminders />
+      </Suspense>
       <Suspense fallback={<SummarySkeleton />}>
         <Summary />
       </Suspense>

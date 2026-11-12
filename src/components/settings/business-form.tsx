@@ -260,6 +260,41 @@ export function BusinessForm({
       </fieldset>
 
       <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-3 text-sm font-medium text-muted-foreground">Reminders</legend>
+        <Field
+          label="Remind when a bill is unpaid for (days)"
+          htmlFor="b-remind"
+          hint="A bill with its own due date is reminded the day after that date."
+        >
+          <Input
+            id="b-remind"
+            name="paymentReminderDays"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={365}
+            step={1}
+            defaultValue={b.paymentReminderDays}
+          />
+        </Field>
+        <Field
+          label="Low stock level for all parts"
+          htmlFor="b-minstock"
+          hint="Used for parts without their own minimum. 0 turns it off."
+        >
+          <Input
+            id="b-minstock"
+            name="defaultMinStock"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            defaultValue={b.defaultMinStock}
+          />
+        </Field>
+      </fieldset>
+
+      <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Bank and UPI (printed for payment)</legend>
         <Field label="Bank name" htmlFor="b-bank">
           <Input id="b-bank" name="bankName" defaultValue={b.bankName} maxLength={100} />

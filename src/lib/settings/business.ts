@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 
+import { MAX_MIN_STOCK } from "@/lib/catalogue/min-stock";
 import { checkGstin, GST_STATES } from "@/lib/gst";
+import { DEFAULT_REMINDER_DAYS, MAX_REMINDER_DAYS } from "@/lib/reminders/late-payments";
 
 /** GST rates allowed on invoice lines. */
 export const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40] as const;
@@ -55,6 +57,10 @@ export interface BusinessSettings {
   allowWalkIn: boolean;
   /** When false, an invoice cannot sell more of a part than is in stock. */
   allowShortStock: boolean;
+  /** A bill with no due date raises a reminder when it is unpaid for this many days. */
+  paymentReminderDays: number;
+  /** Low-stock level for parts that have no minimum of their own; 0 turns it off. */
+  defaultMinStock: number;
 }
 
 export const DEFAULT_BUSINESS: BusinessSettings = {
@@ -87,7 +93,12 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   defaultPriceListId: null,
   allowWalkIn: false,
   allowShortStock: false,
+  paymentReminderDays: DEFAULT_REMINDER_DAYS,
+  defaultMinStock: 0,
 };
+
+const validReminderDays = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_REMINDER_DAYS;
+const validMinStock = (n: number) => Number.isFinite(n) && n >= 0 && n <= MAX_MIN_STOCK;
 
 /** Reads the stored JSON safely: unknown keys are dropped and wrong types fall back to defaults. */
 export function readBusiness(raw: unknown): BusinessSettings {
@@ -100,6 +111,8 @@ export function readBusiness(raw: unknown): BusinessSettings {
     else if (typeof v === typeof out[key]) (out as Record<string, unknown>)[key] = v;
   }
   if (!isGstRate(out.defaultGstRate)) out.defaultGstRate = DEFAULT_BUSINESS.defaultGstRate;
+  if (!validReminderDays(out.paymentReminderDays)) out.paymentReminderDays = DEFAULT_BUSINESS.paymentReminderDays;
+  if (!validMinStock(out.defaultMinStock)) out.defaultMinStock = DEFAULT_BUSINESS.defaultMinStock;
   return out;
 }
 
@@ -201,6 +214,19 @@ const businessSchema = z.object({
   ),
   allowWalkIn: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
   allowShortStock: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+  paymentReminderDays: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : DEFAULT_REMINDER_DAYS),
+    z
+      .number({ error: "Days before a payment reminder should be a number" })
+      .refine(validReminderDays, `Days before a payment reminder: a whole number from 1 to ${MAX_REMINDER_DAYS}`),
+  ),
+  defaultMinStock: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : 0),
+    z
+      .number({ error: "Low stock level should be a number" })
+      .refine(validMinStock, "Low stock level should be 0 or more")
+      .refine((n) => Number.isInteger(n * 1000), "Low stock level can have at most 3 decimals"),
+  ),
 });
 
 /** Checks the settings form. A valid GSTIN sets the state. */

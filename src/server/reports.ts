@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, between, desc, eq, gt, isNotNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, between, desc, eq, gt, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
@@ -27,6 +27,7 @@ import { requireOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
 import { todayInIndia } from "./invoice-writes";
+import { loadBusiness } from "./settings";
 import { vendorBalance } from "./vendors";
 
 /** Sum of a numeric SQL expression as a JS number (0 when there are no rows). */
@@ -495,11 +496,26 @@ export const LOW_STOCK_LIMIT = 500;
 /**
  * Parts to reorder: at or below their minimum stock, or out of stock after having been
  * stocked or sold before (parts never stocked are left out, or all 1,283 would show).
+ * `defaultMin` is the shop-wide level for parts with no minimum of their own; it too
+ * only counts for parts that have been stocked or sold before. 0 turns it off.
  */
-export async function lowStock() {
+export function lowStockWhere(defaultMin: number) {
+  const moved = sql`EXISTS (SELECT 1 FROM ${stockMovements} WHERE ${col(stockMovements.productId)} = ${col(products.id)})`;
+  return and(
+    eq(products.active, true),
+    or(
+      and(isNotNull(products.minStock), gt(products.minStock, 0), lte(products.stockQty, products.minStock)),
+      lt(products.stockQty, 0),
+      and(lte(products.stockQty, 0), moved),
+      defaultMin > 0 ? and(isNull(products.minStock), lte(products.stockQty, defaultMin), moved) : undefined,
+    ),
+  );
+}
+
+export async function lowStock(limit = LOW_STOCK_LIMIT) {
   await connection(); // Always read live data; never prerender at build time.
   await requireUser();
-  const moved = sql`EXISTS (SELECT 1 FROM ${stockMovements} WHERE ${col(stockMovements.productId)} = ${col(products.id)})`;
+  const { defaultMinStock } = await loadBusiness();
   const rows = await getDb()
     .select({
       id: products.id,
@@ -510,17 +526,13 @@ export async function lowStock() {
       minStock: products.minStock,
     })
     .from(products)
-    .where(
-      and(
-        eq(products.active, true),
-        or(
-          and(isNotNull(products.minStock), gt(products.minStock, 0), lte(products.stockQty, products.minStock)),
-          lt(products.stockQty, 0),
-          and(lte(products.stockQty, 0), moved),
-        ),
-      ),
-    )
+    .where(lowStockWhere(defaultMinStock))
     .orderBy(asc(products.stockQty), asc(products.partNo))
-    .limit(LOW_STOCK_LIMIT + 1);
-  return { items: rows.slice(0, LOW_STOCK_LIMIT), more: rows.length > LOW_STOCK_LIMIT };
+    .limit(limit + 1);
+  const shopMin = defaultMinStock > 0 ? defaultMinStock : null;
+  return {
+    /** `minStock` is the level that applies: the part's own, or the shop-wide one. */
+    items: rows.slice(0, limit).map((r) => ({ ...r, minStock: r.minStock ?? shopMin })),
+    more: rows.length > limit,
+  };
 }

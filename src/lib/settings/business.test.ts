@@ -64,3 +64,26 @@ describe("parseBusiness", () => {
     expect(parseBusiness(form({ defaultPriceListId: "x" })).error).toMatch(/price list/);
   });
 });
+
+describe("reminder settings", () => {
+  it("defaults to 15 days and no shop-wide low stock level", () => {
+    const r = parseBusiness(form({}));
+    expect(r.value?.paymentReminderDays).toBe(15);
+    expect(r.value?.defaultMinStock).toBe(0);
+    expect(readBusiness({ paymentReminderDays: 0, defaultMinStock: -2 })).toMatchObject({
+      paymentReminderDays: 15,
+      defaultMinStock: 0,
+    });
+  });
+
+  it("accepts sensible values and refuses the rest", () => {
+    expect(parseBusiness(form({ paymentReminderDays: "30", defaultMinStock: "2.5" })).value).toMatchObject({
+      paymentReminderDays: 30,
+      defaultMinStock: 2.5,
+    });
+    expect(parseBusiness(form({ paymentReminderDays: "0" })).error).toMatch(/1 to 365/);
+    expect(parseBusiness(form({ paymentReminderDays: "7.5" })).error).toMatch(/whole number/);
+    expect(parseBusiness(form({ paymentReminderDays: "abc" })).error).toBeTruthy();
+    expect(parseBusiness(form({ defaultMinStock: "-1" })).error).toMatch(/0 or more/);
+  });
+});
