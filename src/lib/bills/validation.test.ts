@@ -31,6 +31,12 @@ describe("parseBillInput", () => {
     expect(parseBillInput({ ...ok, dueDate: "2026-11-01" }).error).toBe("Due date cannot be before the bill date");
   });
 
+  it("links a purchase order only when one is given", () => {
+    expect(parseBillInput(ok).value?.fromOrderId).toBeNull();
+    expect(parseBillInput({ ...ok, fromOrderId: 7 }).value?.fromOrderId).toBe(7);
+    expect(parseBillInput({ ...ok, fromOrderId: -1 }).error).toBeDefined();
+  });
+
   it("needs at least one item", () => {
     expect(parseBillInput({ ...ok, lines: [] }).error).toBe("Add at least one item");
   });

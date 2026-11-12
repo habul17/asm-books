@@ -91,6 +91,7 @@ export function InvoiceDocument({
   createdAt,
   details = [],
   extra = [],
+  showBank = true,
 }: {
   invoice: TaxDocumentData;
   business: BusinessSettings;
@@ -107,6 +108,8 @@ export function InvoiceDocument({
   details?: DocumentDetail[];
   /** Filled-in custom fields, printed after `details`. */
   extra?: ShownExtra[];
+  /** False leaves out our bank details and sale terms, e.g. on a purchase order. */
+  showBank?: boolean;
 }) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
@@ -126,7 +129,8 @@ export function InvoiceDocument({
     b.bankAccount && `A/C NO    : ${b.bankAccount}`,
     b.bankIfsc && `IFSC      : ${b.bankIfsc}`,
     b.upiId && `UPI       : ${b.upiId}`,
-  ].filter((l): l is string => Boolean(l));
+  ].filter((l): l is string => showBank && Boolean(l));
+  const terms = showBank ? b.terms : "";
   // Column widths in percent; the description gives up room for the discount column.
   const widths = hasDiscount ? [5, 12, 16, 11, 11, 10, 6, 4.5, 9, 4.5, 11] : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
 
@@ -334,7 +338,7 @@ export function InvoiceDocument({
 
           <p className="border-t border-black px-1 py-0.5">{amountInWords(inv.grandTotal)}</p>
 
-          {(bankLines.length > 0 || b.terms || inv.notes) && (
+          {(bankLines.length > 0 || terms || inv.notes) && (
             <div className="border-t border-black px-1 py-1 font-normal">
               {bankLines.length > 0 && (
                 <>
@@ -346,7 +350,7 @@ export function InvoiceDocument({
                   ))}
                 </>
               )}
-              {b.terms && <p className="whitespace-pre-line">{b.terms}</p>}
+              {terms && <p className="whitespace-pre-line">{terms}</p>}
               {inv.notes && <p className="whitespace-pre-line">Note: {inv.notes}</p>}
             </div>
           )}

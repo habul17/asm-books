@@ -4,7 +4,7 @@ import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { billLines, bills, categories, products, users, vendors } from "@/db/schema";
+import { billLines, bills, categories, products, purchaseOrders, users, vendors } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 import { billScanReady } from "@/server/bill-scan";
 import { loadBusiness } from "@/server/settings";
@@ -87,10 +87,12 @@ export async function getBill(id: number) {
         vendorMobile: vendors.mobile,
         balanceNow: vendorBalance,
         createdByName: users.name,
+        purchaseOrderNumber: purchaseOrders.number,
       })
       .from(bills)
       .innerJoin(vendors, eq(vendors.id, bills.vendorId))
       .leftJoin(users, eq(users.id, bills.createdBy))
+      .leftJoin(purchaseOrders, eq(purchaseOrders.id, bills.purchaseOrderId))
       .where(eq(bills.id, id)),
     db.select().from(billLines).where(eq(billLines.billId, id)).orderBy(asc(billLines.lineNo)),
   ]);

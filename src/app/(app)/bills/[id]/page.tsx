@@ -71,6 +71,16 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
           <dd>{inter ? "IGST (other state)" : "CGST + SGST"}</dd>
           <dt className="text-muted-foreground">Prices</dt>
           <dd>{b.updatePrices ? "Purchase prices updated" : "Purchase prices not changed"}</dd>
+          {b.purchaseOrderId != null && b.purchaseOrderNumber && (
+            <>
+              <dt className="text-muted-foreground">Order</dt>
+              <dd>
+                <Link href={`/purchase-orders/${b.purchaseOrderId}`} className="font-mono hover:underline">
+                  {b.purchaseOrderNumber}
+                </Link>
+              </dd>
+            </>
+          )}
           {b.createdByName && (
             <>
               <dt className="text-muted-foreground">Entered by</dt>

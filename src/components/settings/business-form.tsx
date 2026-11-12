@@ -184,6 +184,16 @@ export function BusinessForm({
             className="uppercase"
           />
         </Field>
+        <Field label="Purchase order prefix" htmlFor="b-poprefix" hint="PO gives PO/26-27/0001">
+          <Input
+            id="b-poprefix"
+            name="purchaseOrderPrefix"
+            defaultValue={b.purchaseOrderPrefix}
+            maxLength={6}
+            autoCapitalize="characters"
+            className="uppercase"
+          />
+        </Field>
         <Field label="Invoice title" htmlFor="b-title">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>

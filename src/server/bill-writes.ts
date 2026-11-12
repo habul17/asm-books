@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
-import { billLines, bills, products, purchasePrices, vendors } from "@/db/schema";
+import { billLines, bills, products, purchaseOrders, purchasePrices, vendors } from "@/db/schema";
 import type { BillInput } from "@/lib/bills/validation";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { loadBusiness } from "@/server/settings";
@@ -22,31 +22,19 @@ interface ExistingBill {
 /** Rate after discount: what one unit really cost, kept to 6 decimals. */
 const netRate = (rate: number, discountPct: number) => Math.round(rate * (1 - discountPct / 100) * 1e6) / 1e6;
 
-/** Checks the input against the database and works out every amount. */
-async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) {
-  const business = await loadBusiness(tx);
-  const [vendor] = await tx.select().from(vendors).where(eq(vendors.id, input.vendorId));
+/** The vendor being bought from. A switched-off vendor is allowed only when the document already had them. */
+export async function loadPurchaseVendor(tx: Tx, vendorId: number, keepId?: number | null) {
+  const [vendor] = await tx.select().from(vendors).where(eq(vendors.id, vendorId));
   if (!vendor) throw new BillInputError("Vendor not found. Please choose again.");
-  if (!vendor.active && vendor.id !== existing?.vendorId) {
+  if (!vendor.active && vendor.id !== keepId) {
     throw new BillInputError("This vendor is switched off. Turn them on in Vendors first.");
   }
+  return vendor;
+}
 
-  // The same vendor bill must not be entered twice.
-  const [dup] = await tx
-    .select({ id: bills.id })
-    .from(bills)
-    .where(
-      and(
-        eq(bills.vendorId, vendor.id),
-        eq(sql`lower(${bills.billNo})`, input.billNo.toLowerCase()),
-        eq(bills.status, "final"),
-        existing ? ne(bills.id, existing.id) : undefined,
-      ),
-    )
-    .limit(1);
-  if (dup) throw new BillInputError(`Bill ${input.billNo} from ${vendor.name} is already entered.`);
-
-  const ids = [...new Set(input.lines.map((l) => l.productId).filter((id): id is number => id != null))];
+/** Checks each line's part and fills in what is printed from the catalogue. */
+export async function buildPurchaseLines(tx: Tx, input: BillInput["lines"]) {
+  const ids = [...new Set(input.map((l) => l.productId).filter((id): id is number => id != null))];
   const found = ids.length
     ? await tx
         .select({ id: products.id, partNo: products.partNo, hsn: products.hsn, unit: products.unit })
@@ -55,7 +43,7 @@ async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) 
     : [];
   const byId = new Map(found.map((p) => [p.id, p]));
 
-  const lines = input.lines.map((l, i) => {
+  return input.map((l, i) => {
     const p = l.productId != null ? byId.get(l.productId) : undefined;
     if (l.productId != null && !p) throw new BillInputError(`Item ${i + 1}: this part no longer exists.`);
     const qty = Math.round(l.qty * 1000) / 1000;
@@ -73,6 +61,29 @@ async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) 
       gstRate: l.gstRate,
     };
   });
+}
+
+/** Checks the input against the database and works out every amount. */
+async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) {
+  const business = await loadBusiness(tx);
+  const vendor = await loadPurchaseVendor(tx, input.vendorId, existing?.vendorId);
+
+  // The same vendor bill must not be entered twice.
+  const [dup] = await tx
+    .select({ id: bills.id })
+    .from(bills)
+    .where(
+      and(
+        eq(bills.vendorId, vendor.id),
+        eq(sql`lower(${bills.billNo})`, input.billNo.toLowerCase()),
+        eq(bills.status, "final"),
+        existing ? ne(bills.id, existing.id) : undefined,
+      ),
+    )
+    .limit(1);
+  if (dup) throw new BillInputError(`Bill ${input.billNo} from ${vendor.name} is already entered.`);
+
+  const lines = await buildPurchaseLines(tx, input.lines);
 
   const taxType = taxTypeFor(business.stateCode || null, vendor.stateCode || business.stateCode || null);
   const { lines: calculated, totals } = calcInvoice(lines, taxType, { round: input.roundTotal });
@@ -112,13 +123,32 @@ async function recordPrices(
 const removePrices = (tx: Tx, billId: number) =>
   tx.delete(purchasePrices).where(eq(purchasePrices.source, `bill:${billId}`));
 
+/**
+ * The purchase order a new bill is for. Returns null when the order is
+ * cancelled or belongs to another vendor, so a stray id is simply ignored.
+ */
+async function lockOrder(tx: Tx, orderId: number | null, vendorId: number) {
+  if (orderId == null) return null;
+  const [order] = await tx
+    .select({ id: purchaseOrders.id, vendorId: purchaseOrders.vendorId, status: purchaseOrders.status })
+    .from(purchaseOrders)
+    .where(eq(purchaseOrders.id, orderId))
+    .for("update");
+  return order && order.vendorId === vendorId && order.status !== "cancelled" ? order : null;
+}
+
 export async function createBill(input: BillInput, userId: number): Promise<number> {
   return withTransaction(async (tx) => {
     const { vendor, header, lines } = await prepare(tx, input, null);
+    const order = await lockOrder(tx, input.fromOrderId, vendor.id);
     const [{ id }] = await tx
       .insert(bills)
-      .values({ ...header, createdBy: userId })
+      .values({ ...header, purchaseOrderId: order?.id ?? null, createdBy: userId })
       .returning({ id: bills.id });
+    // The parts have arrived, so the order is done. It can be reopened if more are still to come.
+    if (order?.status === "open") {
+      await tx.update(purchaseOrders).set({ status: "closed" }).where(eq(purchaseOrders.id, order.id));
+    }
     await tx.insert(billLines).values(lines.map((l) => ({ ...l, billId: id })));
     await moveStock(tx, qtyByProduct(lines), { kind: "purchase", billId: id, date: header.date, note: header.billNo, userId });
     if (header.updatePrices) await recordPrices(tx, id, { ...header, vendorName: vendor.name }, lines);

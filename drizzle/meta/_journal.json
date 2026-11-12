@@ -120,6 +120,13 @@
       "when": 1794458166780,
       "tag": "0016_sales_docs_and_transport",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794460537248,
+      "tag": "0017_purchase_orders",
+      "breakpoints": true
     }
   ]
 }

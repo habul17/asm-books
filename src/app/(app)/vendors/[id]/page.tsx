@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { BillList, BillListSkeleton } from "@/components/bills/bill-list";
+import { PurchaseOrderList, PurchaseOrderListSkeleton } from "@/components/purchase-orders/purchase-order-list";
 import { VendorPaymentList, VendorPaymentListSkeleton } from "@/components/payments-made/vendor-payment-list";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -38,6 +39,11 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
         <Link href={`/vendors/${v.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
           <PencilIcon /> Edit
         </Link>
+        {v.active && (
+          <Link href={`/purchase-orders/new?vendor=${v.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <PlusIcon /> New order
+          </Link>
+        )}
         {v.active && (
           <Link href={`/bills/new?vendor=${v.id}`} className={buttonVariants({ size: "sm" })}>
             <PlusIcon /> New bill
@@ -93,6 +99,13 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
           </Fact>
         )}
       </dl>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Purchase orders</h2>
+        <Suspense fallback={<PurchaseOrderListSkeleton />}>
+          <PurchaseOrderList filters={{ query: "", status: "all", vendorId: v.id }} limit={50} />
+        </Suspense>
+      </section>
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Bills</h2>

@@ -6,7 +6,7 @@ import { isGstRate } from "@/lib/settings/business";
 
 export const MAX_BILL_LINES = 300;
 
-const lineSchema = z.object({
+export const billLineSchema = z.object({
   productId: z.number().int().positive().nullable(),
   description: z.string().trim().min(1, "description is empty").max(300, "description can be at most 300 characters"),
   qty: z.number({ error: "quantity is not valid" }).gt(0, "quantity must be more than 0").max(1_000_000, "quantity is too large"),
@@ -25,7 +25,9 @@ export const billInputSchema = z
     /** False keeps the paise on the bill total, as on the supplier's bill. */
     roundTotal: z.boolean().default(true),
     notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
-    lines: z.array(lineSchema).min(1, "Add at least one item").max(MAX_BILL_LINES, `A bill can have at most ${MAX_BILL_LINES} items`),
+    /** The purchase order this bill is for; saving the bill closes it. */
+    fromOrderId: z.number().int().positive().nullable().default(null),
+    lines: z.array(billLineSchema).min(1, "Add at least one item").max(MAX_BILL_LINES, `A bill can have at most ${MAX_BILL_LINES} items`),
   })
   .refine((b) => b.dueDate == null || b.dueDate >= b.date, { message: "Due date cannot be before the bill date", path: ["dueDate"] });
 

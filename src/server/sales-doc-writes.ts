@@ -21,7 +21,7 @@ import {
 } from "./invoice-writes";
 
 /** Key for the lock that hands out quote, order and challan numbers one at a time. */
-const SALES_DOC_NUMBER_LOCK = 72_810_007;
+const SALES_DOC_NUMBER_LOCK = 72_810_009;
 
 interface ExistingDoc {
   fy: string;

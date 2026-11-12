@@ -43,6 +43,8 @@ export interface BusinessSettings {
   orderPrefix: string;
   /** Start of every delivery challan number, e.g. DC → DC/26-27/0001. */
   challanPrefix: string;
+  /** Start of every purchase order number, e.g. PO → PO/26-27/0001. */
+  purchaseOrderPrefix: string;
   /** Printed at the bottom of every invoice. */
   terms: string;
   /** Used for products without their own GST rate. */
@@ -79,6 +81,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   quotePrefix: "QT",
   orderPrefix: "SO",
   challanPrefix: "DC",
+  purchaseOrderPrefix: "PO",
   terms: "",
   defaultGstRate: 18,
   defaultPriceListId: null,
@@ -182,6 +185,7 @@ const businessSchema = z.object({
   quotePrefix: prefix("QT", "Quote"),
   orderPrefix: prefix("SO", "Sales order"),
   challanPrefix: prefix("DC", "Delivery challan"),
+  purchaseOrderPrefix: prefix("PO", "Purchase order"),
   terms: text(3000, "Terms"),
   defaultGstRate: z.preprocess(
     (v) => Number(v),

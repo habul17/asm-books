@@ -57,6 +57,7 @@ export const DELIVERY_CHALLANS: AppModule = { label: "Delivery Challans", icon: 
 export const EWAY_BILLS: AppModule = { label: "e-Way Bills", icon: TruckIcon, href: "/eway-bills" };
 export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusIcon, href: "/credit-notes" };
 export const VENDORS: AppModule = { label: "Vendors", icon: StoreIcon, href: "/vendors" };
+export const PURCHASE_ORDERS: AppModule = { label: "Purchase Orders", icon: ShoppingCartIcon, href: "/purchase-orders" };
 export const BILLS: AppModule = { label: "Bills", icon: ReceiptTextIcon, href: "/bills" };
 export const PAYMENTS_MADE: AppModule = { label: "Payments Made", icon: CircleArrowUpIcon, href: "/payments-made" };
 export const PURCHASE_RETURNS: AppModule = { label: "Purchase Returns", icon: TagIcon, href: "/purchase-returns" };
@@ -95,7 +96,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     title: "Purchases",
     modules: [
       VENDORS,
-      soon("Purchase Orders", ShoppingCartIcon),
+      PURCHASE_ORDERS,
       BILLS,
       PAYMENTS_MADE,
       PURCHASE_RETURNS,

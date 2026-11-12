@@ -632,6 +632,80 @@ export const vendors = pgTable(
   ],
 );
 
+export const purchaseOrderStatus = pgEnum("purchase_order_status", ["open", "closed", "cancelled"]);
+
+/**
+ * An order we send to a vendor for parts we want. It never moves stock or
+ * money; the bill entered when the parts arrive does.
+ */
+export const purchaseOrders = pgTable(
+  "purchase_orders",
+  {
+    id: id(),
+    /** e.g. PO/26-27/0001 */
+    number: text("number").notNull().unique(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    vendorId: integer("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "restrict" }),
+    date: date("date", { mode: "string" }).notNull(),
+    /** When we want the parts to arrive. */
+    expectedDate: date("expected_date", { mode: "string" }),
+    taxType: taxType("tax_type").notNull(),
+    taxableTotal: money("taxable_total").notNull(),
+    cgstTotal: money("cgst_total").notNull(),
+    sgstTotal: money("sgst_total").notNull(),
+    igstTotal: money("igst_total").notNull(),
+    roundOff: money("round_off").notNull(),
+    grandTotal: money("grand_total").notNull(),
+    notes: text("notes"),
+    status: purchaseOrderStatus("status").notNull().default("open"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("purchase_orders_fy_seq_unique").on(t.fy, t.seq),
+    index("purchase_orders_date_idx").on(t.date.desc(), t.id.desc()),
+    index("purchase_orders_vendor_idx").on(t.vendorId),
+    check("purchase_orders_grand_total_check", sql`${t.grandTotal} >= 0`),
+  ],
+);
+
+export const purchaseOrderLines = pgTable(
+  "purchase_order_lines",
+  {
+    id: id(),
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "restrict" }),
+    partNo: text("part_no"),
+    description: text("description").notNull(),
+    hsn: text("hsn"),
+    unit: text("unit").notNull().default("Nos"),
+    qty: quantity("qty").notNull(),
+    /** The purchase rate we expect to pay, before discount. */
+    rate: cost("rate").notNull(),
+    discountPct: percent("discount_pct").notNull().default(0),
+    gstRate: percent("gst_rate").notNull(),
+    taxable: money("taxable").notNull(),
+    cgst: money("cgst").notNull(),
+    sgst: money("sgst").notNull(),
+    igst: money("igst").notNull(),
+    total: money("total").notNull(),
+  },
+  (t) => [
+    unique("purchase_order_lines_order_line_unique").on(t.orderId, t.lineNo),
+    index("purchase_order_lines_product_idx").on(t.productId),
+    check("purchase_order_lines_qty_check", sql`${t.qty} > 0`),
+    check("purchase_order_lines_rate_check", sql`${t.rate} >= 0`),
+    check("purchase_order_lines_discount_check", sql`${t.discountPct} BETWEEN 0 AND 100`),
+    check("purchase_order_lines_gst_check", sql`${t.gstRate} BETWEEN 0 AND 100`),
+  ],
+);
+
 /**
  * A purchase bill as received from a vendor. It adds the parts to stock and,
  * when asked, records their new purchase prices (which price lists follow).
@@ -657,6 +731,8 @@ export const bills = pgTable(
     grandTotal: money("grand_total").notNull(),
     /** Whether this bill's rates became the parts' current purchase prices. */
     updatePrices: boolean("update_prices").notNull().default(true),
+    /** The purchase order these parts were ordered on. */
+    purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
     notes: text("notes"),
     status: invoiceStatus("status").notNull().default("final"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
@@ -671,6 +747,7 @@ export const bills = pgTable(
       .where(sql`${t.status} = 'final'`),
     index("bills_date_idx").on(t.date.desc(), t.id.desc()),
     index("bills_vendor_idx").on(t.vendorId),
+    index("bills_purchase_order_idx").on(t.purchaseOrderId),
     check("bills_grand_total_check", sql`${t.grandTotal} >= 0`),
   ],
 );

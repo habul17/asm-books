@@ -9,9 +9,12 @@ export const metadata: Metadata = { title: "New bill" };
 export const maxDuration = 60;
 
 async function Form({ searchParams }: { searchParams: PageProps<"/bills/new">["searchParams"] }) {
-  const raw = (await searchParams).vendor;
-  const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return <NewBillForm vendorId={Number.isSafeInteger(n) && n > 0 ? n : null} />;
+  const query = await searchParams;
+  const id = (raw: string | string[] | undefined) => {
+    const n = Number(Array.isArray(raw) ? raw[0] : raw);
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
+  };
+  return <NewBillForm vendorId={id(query.vendor)} fromOrderId={id(query.from)} />;
 }
 
 export default function NewBillPage({ searchParams }: PageProps<"/bills/new">) {

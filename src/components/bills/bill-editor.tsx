@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 
 import { findBillItems, saveBill } from "@/app/(app)/bills/actions";
+import { savePurchaseOrder } from "@/app/(app)/purchase-orders/actions";
 import { Field } from "@/components/forms/save-form";
 import { ItemPicker } from "@/components/invoices/item-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -38,7 +39,10 @@ export interface BillDraft {
   vendor: PickedVendor | null;
   billNo: string;
   date: string;
+  /** On a purchase order this is the date the parts are expected. */
   dueDate: string;
+  /** The purchase order a new bill is for. */
+  fromOrderId: number | null;
   updatePrices: boolean;
   roundTotal: boolean;
   notes: string;
@@ -59,13 +63,18 @@ export function addDays(date: string, days: number) {
 let nextKey = 0;
 const newKey = () => `l${++nextKey}`;
 
-/** Enter a vendor's bill: parts go into stock and, if ticked, their purchase prices update. */
+/**
+ * Enter a vendor's bill: parts go into stock and, if ticked, their purchase prices update.
+ * With `kind="order"` it writes a purchase order instead, which changes nothing in stock.
+ */
 export function BillEditor({
   initial,
   sellerState,
   cancelHref,
   printedTotal = null,
+  kind = "bill",
 }: {
+  kind?: "bill" | "order";
   initial: BillDraft;
   sellerState: string | null;
   cancelHref: string;
@@ -83,6 +92,7 @@ export function BillEditor({
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
+  const isOrder = kind === "order";
 
   const taxType = taxTypeFor(sellerState, vendor?.stateCode || sellerState);
   const { lines: amounts, totals } = calcInvoice(
@@ -99,7 +109,7 @@ export function BillEditor({
   const chooseVendor = (v: PickedVendor | null) => {
     setVendor(v);
     // Fill the due date from the vendor's terms, unless the user already set one.
-    if (v?.paymentTermsDays != null && !dueDate) setDueDate(addDays(date, v.paymentTermsDays));
+    if (!isOrder && v?.paymentTermsDays != null && !dueDate) setDueDate(addDays(date, v.paymentTermsDays));
   };
 
   const update = (key: string, patch: Partial<BillLineDraft>) =>
@@ -150,24 +160,34 @@ export function BillEditor({
     if (noPart >= 0) return setError(`Item ${noPart + 1}: pick the part, or remove this row`);
     const bad = lines.findIndex((l) => num(l.qty) == null || num(l.rate) == null);
     if (bad >= 0) return setError(`Item ${bad + 1}: enter the quantity and rate`);
+    const items = lines.map((l) => ({
+      productId: l.productId,
+      description: l.description,
+      qty: num(l.qty) ?? 0,
+      rate: num(l.rate) ?? 0,
+      discountPct: num(l.discountPct) ?? 0,
+      gstRate: l.gstRate,
+    }));
     startSaving(async () => {
-      const result = await saveBill(initial.id, {
-        vendorId: vendor.id,
-        billNo,
-        date,
-        dueDate: dueDate || null,
-        updatePrices,
-        roundTotal,
-        notes,
-        lines: lines.map((l) => ({
-          productId: l.productId,
-          description: l.description,
-          qty: num(l.qty) ?? 0,
-          rate: num(l.rate) ?? 0,
-          discountPct: num(l.discountPct) ?? 0,
-          gstRate: l.gstRate,
-        })),
-      });
+      const result = isOrder
+        ? await savePurchaseOrder(initial.id, {
+            vendorId: vendor.id,
+            date,
+            expectedDate: dueDate || null,
+            notes,
+            lines: items,
+          })
+        : await saveBill(initial.id, {
+            vendorId: vendor.id,
+            billNo,
+            date,
+            dueDate: dueDate || null,
+            updatePrices,
+            roundTotal,
+            fromOrderId: initial.fromOrderId,
+            notes,
+            lines: items,
+          });
       if (result?.error) setError(result.error);
     });
   };
@@ -185,22 +205,24 @@ export function BillEditor({
         <VendorPicker value={vendor} onChange={chooseVendor} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Vendor's bill no" htmlFor="b-no">
-          <Input
-            id="b-no"
-            required
-            maxLength={50}
-            autoComplete="off"
-            value={billNo}
-            onChange={(e) => setBillNo(e.target.value)}
-            placeholder="As printed on their bill"
-          />
-        </Field>
-        <Field label="Bill date" htmlFor="b-date">
+      <div className={isOrder ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-3"}>
+        {!isOrder && (
+          <Field label="Vendor's bill no" htmlFor="b-no">
+            <Input
+              id="b-no"
+              required
+              maxLength={50}
+              autoComplete="off"
+              value={billNo}
+              onChange={(e) => setBillNo(e.target.value)}
+              placeholder="As printed on their bill"
+            />
+          </Field>
+        )}
+        <Field label={isOrder ? "Order date" : "Bill date"} htmlFor="b-date">
           <Input id="b-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
-        <Field label="Due date (optional)" htmlFor="b-due">
+        <Field label={isOrder ? "Expected by (optional)" : "Due date (optional)"} htmlFor="b-due">
           <Input id="b-due" type="date" min={date} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </Field>
       </div>
@@ -311,9 +333,15 @@ export function BillEditor({
           </ul>
         )}
         <ItemPicker search={findBillItems} onPick={addItem} inputRef={pickerRef} />
-        <p className="text-xs text-muted-foreground">The rate starts at the part&apos;s last purchase price; change it to match the bill.</p>
+        <p className="text-xs text-muted-foreground">
+          {isOrder
+            ? "The rate starts at the part's last purchase price; change it if the vendor quoted another rate."
+            : "The rate starts at the part's last purchase price; change it to match the bill."}
+        </p>
       </section>
 
+      {!isOrder && (
+        <>
       <label className="flex items-start gap-2 text-sm">
         <input
           type="checkbox"
@@ -344,6 +372,8 @@ export function BillEditor({
           </span>
         </span>
       </label>
+        </>
+      )}
 
       <Field label="Notes (optional)" htmlFor="b-notes">
         <Textarea id="b-notes" maxLength={2000} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -351,7 +381,7 @@ export function BillEditor({
 
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
         <div className="mr-auto text-sm">
-          <span className="text-muted-foreground">Bill total </span>
+          <span className="text-muted-foreground">{isOrder ? "Order total " : "Bill total "}</span>
           <span className="text-lg font-semibold tabular-nums">{formatMoney(totals.grandTotal)}</span>
           {lines.length > 0 && (
             <span className="block text-xs text-muted-foreground">
@@ -374,7 +404,7 @@ export function BillEditor({
           Cancel
         </Link>
         <Button type="submit" disabled={saving || lines.length === 0}>
-          {saving ? "Saving…" : initial.id == null ? "Save bill" : "Save changes"}
+          {saving ? "Saving…" : initial.id != null ? "Save changes" : isOrder ? "Save purchase order" : "Save bill"}
         </Button>
         {error && (
           <p role="alert" className="basis-full text-sm text-destructive">
