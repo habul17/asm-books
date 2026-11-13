@@ -18,9 +18,33 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 async function Body() {
   const [reminders, stock] = await Promise.all([getReminders(), lowStock(STOCK_PREVIEW)]);
-  const { late, lateAmount, days, businessName, recurring } = reminders;
+  const { late, lateAmount, days, businessName, recurring, tasks } = reminders;
   return (
     <>
+      {tasks.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">
+            <h2 className="text-sm font-semibold text-muted-foreground">Tasks due</h2>
+            <Link href="/tasks" className="text-sm font-medium hover:underline">
+              See all tasks
+            </Link>
+          </div>
+          <ul className="flex flex-col divide-y rounded-2xl border">
+            {tasks.map((t) => (
+              <li key={t.id}>
+                <Link href="/tasks" className="flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/60">
+                  <span className="font-medium break-words">{t.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Do by {formatDate(t.dueDate)}
+                    {t.assignedName && <> · For {t.assignedName}</>}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {recurring.length > 0 && (
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">

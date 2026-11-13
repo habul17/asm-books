@@ -43,10 +43,9 @@ export interface ModuleGroup {
   modules: AppModule[];
 }
 
-const soon = (label: string, icon: LucideIcon): AppModule => ({ label, icon, href: null });
-
 export const HOME: AppModule = { label: "Home", icon: HouseIcon, href: "/" };
 export const REMINDERS: AppModule = { label: "Reminders", icon: BellIcon, href: "/reminders" };
+export const TASKS: AppModule = { label: "Tasks", icon: CalendarCheckIcon, href: "/tasks" };
 export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking" };
 export const CUSTOMERS: AppModule = { label: "Customers", icon: UsersIcon, href: "/customers" };
 export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href: "/invoices" };
@@ -79,7 +78,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
 export const MODULE_GROUPS: ModuleGroup[] = [
-  { title: null, modules: [HOME, REMINDERS, BANKING] },
+  { title: null, modules: [HOME, REMINDERS, TASKS, BANKING] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
   { title: "Inventory", modules: [INVENTORY_ADJUSTMENTS] },
   {
@@ -116,7 +115,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       USERS,
       BACKUPS,
       ACCOUNT,
-      soon("Tasks", CalendarCheckIcon),
     ],
   },
 ];
