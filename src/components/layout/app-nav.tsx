@@ -53,7 +53,7 @@ export function SidebarLinks({ pathname }: { pathname: string | null }) {
         className={cn(sideLink, pathname === "/more" && "bg-muted text-foreground")}
       >
         <EllipsisIcon className="size-4 shrink-0" aria-hidden />
-        All modules
+        More
       </Link>
     </nav>
   );

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { UserMenu } from "@/components/auth/user-menu";
 import { BottomTabs, BottomTabsView, Sidebar, SidebarLinks } from "@/components/layout/app-nav";
 import { ReminderBell, ReminderBellView } from "@/components/layout/reminder-bell";
 
@@ -14,7 +13,7 @@ const Brand = () => (
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-svh md:grid md:grid-cols-[15rem_minmax(0,1fr)] print:block">
-      <aside className="sticky top-0 hidden h-svh flex-col gap-6 overflow-y-auto border-r px-3 py-4 md:flex print:hidden">
+      <aside className="sticky top-0 hidden h-svh flex-col gap-6 overflow-x-hidden overflow-y-auto border-r px-3 py-4 md:flex print:hidden">
         <div className="flex items-center justify-between gap-2 pr-1 pl-3">
           <Brand />
           <Suspense fallback={<ReminderBellView count={0} />}>
@@ -24,11 +23,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={<SidebarLinks pathname={null} />}>
           <Sidebar />
         </Suspense>
-        <div className="mt-auto flex px-1">
-          <Suspense fallback={null}>
-            <UserMenu />
-          </Suspense>
-        </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">
@@ -38,9 +32,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
             <div className="ml-auto flex items-center gap-1">
               <Suspense fallback={<ReminderBellView count={0} />}>
                 <ReminderBell />
-              </Suspense>
-              <Suspense fallback={null}>
-                <UserMenu />
               </Suspense>
             </div>
           </div>

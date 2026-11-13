@@ -1,11 +1,10 @@
 "use client";
 
-import { ALargeSmallIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import { nextTextSize, TEXT_SIZE_KEY, TEXT_SIZES, toTextSize, type TextSize } from "./theme";
+import { TEXT_SIZE_KEY, TEXT_SIZES, toTextSize, type TextSize } from "./theme";
 
 function read(): TextSize {
   try {
@@ -34,32 +33,12 @@ function save(size: TextSize) {
   window.dispatchEvent(new Event("textsizechange"));
 }
 
-const labelOf = (size: TextSize) => TEXT_SIZES.find((s) => s.value === size)?.label ?? "Normal";
-
 /** The chosen text size; "normal" on the server and until the page has loaded. */
 function useTextSize(): TextSize {
   return useSyncExternalStore(subscribe, read, () => null) ?? "normal";
 }
 
-/** One button that steps through the sizes. Remembered on this device. */
-export function TextSizeButton() {
-  const size = useTextSize();
-  const next = nextTextSize(size);
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      aria-label={`Text size: ${labelOf(size)}. Switch to ${labelOf(next)}`}
-      title={`Text size: ${labelOf(size)}`}
-      onClick={() => save(next)}
-    >
-      <ALargeSmallIcon />
-    </Button>
-  );
-}
-
-/** All the sizes side by side, for the My account screen. */
+/** All the sizes side by side, for the More screen. */
 export function TextSizePicker() {
   const size = useTextSize();
   return (

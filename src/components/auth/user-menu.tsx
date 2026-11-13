@@ -1,29 +1,24 @@
 import { LogOutIcon } from "lucide-react";
-import Link from "next/link";
 
 import { signOut } from "@/app/login/actions";
-import { TextSizeButton } from "@/components/layout/text-size";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/server/auth";
 
-export async function UserMenu() {
+/** Who is signed in on this device, with the Sign out button. Shown on the More screen. */
+export async function SignedInAs() {
   const user = await requireUser();
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
-      <Link
-        href="/account"
-        title="My account"
-        className="hidden max-w-40 truncate text-sm text-muted-foreground hover:text-foreground hover:underline md:inline"
-      >
-        {user.name}
-      </Link>
-      <TextSizeButton />
-      <ThemeToggle />
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="truncate font-medium">{user.name}</p>
+        <p className="text-sm text-muted-foreground">
+          {user.username} · {user.role === "owner" ? "Owner" : "Staff"}
+        </p>
+      </div>
       <form action={signOut}>
-        <Button type="submit" variant="ghost" size="sm" aria-label="Sign out" title="Sign out">
+        <Button type="submit" variant="outline">
           <LogOutIcon />
-          <span className="hidden md:inline">Sign out</span>
+          Sign out
         </Button>
       </form>
     </div>

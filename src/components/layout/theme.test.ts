@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nextTextSize, TEXT_SIZES, THEME_SCRIPT, toTextSize } from "./theme";
+import { TEXT_SIZES, THEME_SCRIPT, toTextSize } from "./theme";
 
 describe("text size", () => {
   it("falls back to normal for anything unknown", () => {
@@ -10,15 +10,8 @@ describe("text size", () => {
     expect(toTextSize("__proto__")).toBe("normal");
   });
 
-  it("steps through every size and comes back round", () => {
-    const seen = new Set<string>();
-    let size = toTextSize("normal");
-    for (let i = 0; i < TEXT_SIZES.length; i++) {
-      seen.add(size);
-      size = nextTextSize(size);
-    }
-    expect(seen.size).toBe(TEXT_SIZES.length);
-    expect(size).toBe("normal");
+  it("names the sizes small to extra large, with medium as the default", () => {
+    expect(TEXT_SIZES.map((s) => s.label)).toEqual(["Small", "Medium", "Large", "Extra large"]);
   });
 
   it("gives the page script every size except normal", () => {

@@ -127,6 +127,13 @@
   html {
     @apply font-sans;
   }
+  /* No scroll bars anywhere: pages and lists still scroll with the mouse wheel, trackpad or finger. */
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
 }
 /* Printed documents use bold typewriter letters, like the shop's paper bills. */
 .invoice-document {

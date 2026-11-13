@@ -9,7 +9,7 @@ export type TextSize = "small" | "normal" | "large" | "xlarge";
 export const TEXT_SIZE_KEY = "text-size";
 export const TEXT_SIZES: { value: TextSize; label: string; scale: string }[] = [
   { value: "small", label: "Small", scale: "87.5%" },
-  { value: "normal", label: "Normal", scale: "100%" },
+  { value: "normal", label: "Medium", scale: "100%" },
   { value: "large", label: "Large", scale: "112.5%" },
   { value: "xlarge", label: "Extra large", scale: "125%" },
 ];
@@ -17,12 +17,6 @@ export const TEXT_SIZES: { value: TextSize; label: string; scale: string }[] = [
 /** A stored value as a text size; anything unknown is "normal". */
 export function toTextSize(v: unknown): TextSize {
   return TEXT_SIZES.find((s) => s.value === v)?.value ?? "normal";
-}
-
-/** The next size up, going back to the smallest after the largest. */
-export function nextTextSize(size: TextSize): TextSize {
-  const i = TEXT_SIZES.findIndex((s) => s.value === size);
-  return TEXT_SIZES[(i + 1) % TEXT_SIZES.length].value;
 }
 
 const SCALES = JSON.stringify(Object.fromEntries(TEXT_SIZES.filter((s) => s.value !== "normal").map((s) => [s.value, s.scale])));
