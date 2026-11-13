@@ -40,7 +40,7 @@ async function Balances() {
       {!m.openingSet && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
           The opening cash and bank balances are ₹0. Enter what the shop had on the day it started using ASM Books in{" "}
-          <Link href="/settings/business" className="underline">
+          <Link href="/business" className="underline">
             Settings
           </Link>
           , so these figures match your cash box and your bank passbook.

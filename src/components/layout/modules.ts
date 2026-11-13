@@ -7,6 +7,7 @@ import {
   CircleArrowDownIcon,
   CircleArrowUpIcon,
   BellIcon,
+  Building2Icon,
   FileBoxIcon,
   FileMinusIcon,
   FileSpreadsheetIcon,
@@ -74,6 +75,7 @@ export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, hre
 export const USERS: AppModule = { label: "Users", icon: UserCogIcon, href: "/users" };
 export const BACKUPS: AppModule = { label: "Backups", icon: DatabaseBackupIcon, href: "/backup" };
 export const ACCOUNT: AppModule = { label: "My account", icon: KeyRoundIcon, href: "/account" };
+export const BUSINESS: AppModule = { label: "Business details", icon: Building2Icon, href: "/business" };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
@@ -111,6 +113,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     modules: [
       DOCUMENTS,
       REPORTS,
+      BUSINESS,
       SETTINGS,
       USERS,
       BACKUPS,

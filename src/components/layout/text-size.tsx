@@ -2,8 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import { Button } from "@/components/ui/button";
-
+import { ChoiceList } from "./choice-list";
 import { TEXT_SIZE_KEY, TEXT_SIZES, toTextSize, type TextSize } from "./theme";
 
 function read(): TextSize {
@@ -38,30 +37,16 @@ function useTextSize(): TextSize {
   return useSyncExternalStore(subscribe, read, () => null) ?? "normal";
 }
 
-/** All the sizes side by side, for the More screen. */
+/** All the sizes as a list, for the Settings screen. */
 export function TextSizePicker() {
   const size = useTextSize();
   return (
-    <div className="flex flex-col gap-3">
-      <div role="radiogroup" aria-label="Text size" className="flex flex-wrap gap-2">
-        {TEXT_SIZES.map((s) => (
-          <Button
-            key={s.value}
-            type="button"
-            role="radio"
-            aria-checked={size === s.value}
-            variant={size === s.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => save(s.value)}
-          >
-            {s.label}
-          </Button>
-        ))}
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Makes everything on screen bigger or smaller. It is remembered on this phone or computer only, and printed
-        invoices are not changed.
-      </p>
-    </div>
+    <ChoiceList
+      title="Text size"
+      note="Makes everything on screen bigger or smaller. Printed bills are not changed."
+      choices={TEXT_SIZES}
+      value={size}
+      onChange={save}
+    />
   );
 }

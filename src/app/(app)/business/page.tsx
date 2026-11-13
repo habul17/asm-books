@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { BusinessForm } from "@/components/settings/business-form";
@@ -18,12 +17,7 @@ async function Business() {
 export default function SettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <Link href="/settings" className="text-sm text-muted-foreground hover:underline">
-          ← Settings
-        </Link>
-        <h1 className="text-xl font-semibold">Business details</h1>
-      </div>
+      <h1 className="text-xl font-semibold">Business details</h1>
       <Card>
         <CardHeader>
           <CardTitle>Shop details, bill numbers and rules</CardTitle>
