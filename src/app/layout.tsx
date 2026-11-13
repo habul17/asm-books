@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { THEME_SCRIPT } from "@/components/layout/theme";
 
@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   },
   description: "Inventory, billing and accounting for an automobile spare-parts business.",
   robots: { index: false, follow: false },
+  // Home-screen shortcut on iPhone: opens full screen with this name.
+  appleWebApp: { capable: true, title: "ASM", statusBarStyle: "black" },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0b" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
