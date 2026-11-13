@@ -1,6 +1,6 @@
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { cn } from "cn";
 
 import { OwnerGate } from "@/components/layout/owner-gate";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/format";
 import { PERIOD_PRESETS, type Period } from "@/lib/reports/period";
+
+import { ReportTools } from "./report-tools";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -20,17 +22,25 @@ export const periodParams = (params: SearchParams) => ({
   to: first(params.to),
 });
 
-/** Page title with a back arrow to the Reports screen. */
+/** Page title with a back arrow to the Reports screen, and the download and print buttons. */
 export function ReportHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <Link href="/reports" className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Back to Reports">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href="/reports"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "print:hidden")}
+          aria-label="Back to Reports"
+        >
           <ChevronLeftIcon />
         </Link>
-        <h1 className="text-xl font-semibold">{title}</h1>
+        <h1 className="mr-auto text-xl font-semibold">{title}</h1>
+        {/* Reads the address bar, so it waits for the browser. */}
+        <Suspense fallback={null}>
+          <ReportTools />
+        </Suspense>
       </div>
-      {children && <p className="pl-11 text-sm text-muted-foreground">{children}</p>}
+      {children && <p className="pl-11 text-sm text-muted-foreground print:pl-0">{children}</p>}
     </div>
   );
 }

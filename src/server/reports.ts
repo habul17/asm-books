@@ -170,8 +170,11 @@ export async function salesByCustomer(period: Period) {
 
 export const ITEM_REPORT_LIMIT = 300;
 
-/** Quantity, sales (before GST), cost and profit per part for the period, less returns. */
-export async function salesByItem(period: Period) {
+/**
+ * Quantity, sales (before GST), cost and profit per part for the period, less returns.
+ * The screen shows the best sellers only; a download passes a higher `limit` to get every part.
+ */
+export async function salesByItem(period: Period, limit = ITEM_REPORT_LIMIT) {
   await requireOwner();
   const db = getDb();
   const [sold, returned] = await db.batch([
@@ -236,7 +239,7 @@ export async function salesByItem(period: Period) {
     .sort((a, b) => b.taxable - a.taxable || a.description.localeCompare(b.description));
   return {
     count: all.length,
-    items: all.slice(0, ITEM_REPORT_LIMIT),
+    items: all.slice(0, limit),
     totals: {
       taxable: round2(all.reduce((s, r) => s + r.taxable, 0)),
       cost: round2(all.reduce((s, r) => s + r.cost, 0)),
