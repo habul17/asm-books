@@ -91,7 +91,7 @@ async function Body() {
           <p className="px-1 text-xs text-muted-foreground">
             Shows bills unpaid for {plural(days, "day")} or more. Payments are counted against the oldest bills first.
             Change the days in{" "}
-            <Link href="/settings" className="underline">
+            <Link href="/settings/business" className="underline">
               Settings
             </Link>
             .
@@ -118,7 +118,7 @@ async function Body() {
         <p className="px-1 text-xs text-muted-foreground">
           Parts that are out of stock, or at their minimum. Set a part&rsquo;s minimum on its Items page, or one level
           for all parts in{" "}
-          <Link href="/settings" className="underline">
+          <Link href="/settings/business" className="underline">
             Settings
           </Link>
           .

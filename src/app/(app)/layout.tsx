@@ -5,8 +5,9 @@ import { BottomTabs, BottomTabsView, Sidebar, SidebarLinks } from "@/components/
 import { ReminderBell, ReminderBellView } from "@/components/layout/reminder-bell";
 
 const Brand = () => (
-  <Link href="/" className="shrink-0 font-semibold tracking-tight whitespace-nowrap">
-    ASM Books
+  <Link href="/" aria-label="Home" className="shrink-0">
+    {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 32px icon; no resizing needed */}
+    <img src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 rounded-lg ring-1 ring-border" />
   </Link>
 );
 

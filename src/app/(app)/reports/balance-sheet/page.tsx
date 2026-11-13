@@ -121,7 +121,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
             <>
               The opening cash and bank balances are ₹0. If the shop had money on the day it started using ASM Books,
               add it in{" "}
-              <Link href="/settings" className="underline">
+              <Link href="/settings/business" className="underline">
                 Settings
               </Link>{" "}
               so the cash and bank figures are right.{" "}
