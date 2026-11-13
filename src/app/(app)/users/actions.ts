@@ -74,6 +74,8 @@ export async function setUserPassword(id: number, _prev: ActionState, formData: 
 
 export async function changeMyPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const me = await requireUser();
+  // Only the owner sets passwords; staff ask the owner (Users → their name → Set new password).
+  if (me.role !== "owner") return { error: "Only the owner can change passwords. Ask the owner." };
   const parsed = parsePasswordChange(fields(formData), me.username);
   if (parsed.error !== undefined) return { error: parsed.error };
   try {

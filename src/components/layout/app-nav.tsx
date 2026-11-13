@@ -1,9 +1,11 @@
 "use client";
 
-import { EllipsisIcon } from "lucide-react";
+import { EllipsisIcon, LogOutIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
+
+import { signOut } from "@/app/login/actions";
 
 import { isActive, isFormPage, MODULE_GROUPS, TAB_MODULES } from "./modules";
 
@@ -47,14 +49,13 @@ export function SidebarLinks({ pathname }: { pathname: string | null }) {
           </div>
         );
       })}
-      <Link
-        href="/more"
-        aria-current={pathname === "/more" ? "page" : undefined}
-        className={cn(sideLink, pathname === "/more" && "bg-muted text-foreground")}
-      >
-        <EllipsisIcon className="size-4 shrink-0" aria-hidden />
-        More
-      </Link>
+      {/* On the computer, Sign out sits at the end of the menu (the phone has it under More). */}
+      <form action={signOut}>
+        <button type="submit" className={cn(sideLink, "w-full")}>
+          <LogOutIcon className="size-4 shrink-0" aria-hidden />
+          Sign out
+        </button>
+      </form>
     </nav>
   );
 }

@@ -25,6 +25,27 @@ async function Me() {
   );
 }
 
+/** The owner changes her own password here; staff passwords are set only by the owner. */
+async function Password() {
+  const me = await requireUser();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Password</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {me.role === "owner" ? (
+          <ChangePasswordForm />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Only the owner can change passwords. If you need a new one, ask the owner.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AccountPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
@@ -32,14 +53,9 @@ export default function AccountPage() {
       <Suspense fallback={<Skeleton className="h-20 rounded-xl" />}>
         <Me />
       </Suspense>
-      <Card>
-        <CardHeader>
-          <CardTitle>Change password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChangePasswordForm />
-        </CardContent>
-      </Card>
+      <Suspense fallback={null}>
+        <Password />
+      </Suspense>
     </div>
   );
 }
