@@ -6,7 +6,8 @@ import { z } from "zod";
 
 import { parseRecurringInput } from "@/lib/recurring/schedule";
 import { requireUser } from "@/server/auth";
-import { createRecurring, RecurringError, setRecurringActive, skipRecurring } from "@/server/recurring";
+import { todayInIndia } from "@/server/invoice-writes";
+import { createRecurring, RecurringError, setRecurringActive, skipRecurring } from "@/server/recurring-writes";
 
 export interface ActionState {
   ok?: boolean;
@@ -40,8 +41,8 @@ export async function changeRecurring(id: number, change: "skip" | "stop" | "sta
   if (!idSchema.safeParse(id).success) return { error: "Recurring invoice not found." };
   try {
     if (change === "skip") await skipRecurring(id);
-    else if (change === "stop") await setRecurringActive(id, false);
-    else if (change === "start") await setRecurringActive(id, true);
+    else if (change === "stop") await setRecurringActive(id, false, todayInIndia());
+    else if (change === "start") await setRecurringActive(id, true, todayInIndia());
     else return { error: "Please try again." };
   } catch (err) {
     return failure(change, err);

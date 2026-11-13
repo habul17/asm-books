@@ -42,7 +42,7 @@ cancelled, never deleted.
 
 - Table `recurring_invoices` (migration `0020`).
 - `src/lib/recurring/schedule.ts`: dates and form rules, with unit tests.
-- `src/server/recurring.ts`: reads, and `recordRecurringInvoice`, which
-  `createInvoice` calls inside its own transaction when the new invoice
-  carries a `repeatId`.
+- `src/server/recurring.ts`: reads. `src/server/recurring-writes.ts`: writes,
+  with `recordRecurringInvoice`, which `createInvoice` calls inside its own
+  transaction when the new invoice carries a `repeatId`.
 - `/invoices/new?repeat=<id>` opens the filled-in editor.

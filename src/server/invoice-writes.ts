@@ -18,7 +18,7 @@ import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/inv
 import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
 import { loadCustomFields } from "@/server/custom-fields";
-import { recordRecurringInvoice } from "@/server/recurring";
+import { recordRecurringInvoice } from "@/server/recurring-writes";
 import { loadBusiness } from "@/server/settings";
 
 import { purchasePriceAt } from "./product-search";
