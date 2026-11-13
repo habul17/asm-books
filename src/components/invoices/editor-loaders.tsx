@@ -105,6 +105,7 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     walkInName: inv.customerId ? "" : inv.customerName === "Cash Sale" ? "" : inv.customerName,
     walkInMobile: inv.customerId ? "" : (inv.customerMobile ?? ""),
     paymentType: inv.paymentType,
+    cashMode: inv.cashMode ?? "cash",
     priceListId: inv.priceListId,
     placeOfSupply: pickedSupply(inv.placeOfSupply, customer?.stateCode, options),
     notes: inv.notes ?? "",

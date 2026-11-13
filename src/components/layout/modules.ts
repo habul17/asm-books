@@ -47,6 +47,7 @@ const soon = (label: string, icon: LucideIcon): AppModule => ({ label, icon, hre
 
 export const HOME: AppModule = { label: "Home", icon: HouseIcon, href: "/" };
 export const REMINDERS: AppModule = { label: "Reminders", icon: BellIcon, href: "/reminders" };
+export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking" };
 export const CUSTOMERS: AppModule = { label: "Customers", icon: UsersIcon, href: "/customers" };
 export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href: "/invoices" };
 export const ITEMS: AppModule = { label: "Items", icon: PackageIcon, href: "/catalogue" };
@@ -77,7 +78,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
 export const MODULE_GROUPS: ModuleGroup[] = [
-  { title: null, modules: [HOME, REMINDERS, soon("Banking", LandmarkIcon)] },
+  { title: null, modules: [HOME, REMINDERS, BANKING] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
   { title: "Inventory", modules: [INVENTORY_ADJUSTMENTS] },
   {

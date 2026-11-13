@@ -27,6 +27,9 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
         rows={[
           { label: "Cash sales", hint: "Invoices paid on the spot", value: cf.cashSales },
           { label: "Received from customers", hint: "Payments against credit sales", value: cf.received },
+          ...(cf.otherIncome ? [{ label: "Other income", hint: "Interest, scrap, commission", value: cf.otherIncome }] : []),
+          ...(cf.ownerIn ? [{ label: "Owner put money in", value: cf.ownerIn }] : []),
+          ...(cf.loansTaken ? [{ label: "Loans received", value: cf.loansTaken }] : []),
           {
             label: (
               <Link href={withPeriod("/reports/sales")} className="hover:underline">
@@ -44,6 +47,10 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
           { label: "Paid to vendors", value: cf.paidToVendors, minus: true },
           { label: "Expenses", hint: "Including GST", value: cf.expenses, minus: true },
           ...(cf.refunds ? [{ label: "Refunds to customers", hint: "Cash given back for returns", value: cf.refunds, minus: true }] : []),
+          ...(cf.gstPaid ? [{ label: "GST paid to government", value: cf.gstPaid, minus: true }] : []),
+          ...(cf.equipment ? [{ label: "Equipment bought", value: cf.equipment, minus: true }] : []),
+          ...(cf.loansRepaid ? [{ label: "Loans repaid", value: cf.loansRepaid, minus: true }] : []),
+          ...(cf.ownerOut ? [{ label: "Owner took money out", value: cf.ownerOut, minus: true }] : []),
           { label: "Total money out", value: cf.out, minus: true, strong: true },
         ]}
       />
@@ -53,12 +60,18 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
           { label: "Net cash flow", hint: cf.net < 0 ? "More went out than came in" : "Money in less money out", value: cf.net },
           { label: `Balance at start (${formatDate(period.from)})`, value: cf.opening },
           { label: `Balance at end (${formatDate(period.to)})`, value: cf.closing, strong: true },
+          { label: "Of which cash in hand", value: cf.closingCash },
+          { label: "Of which in the bank", value: cf.closingBank },
         ]}
       />
       <p className="text-xs text-muted-foreground">
-        Shows money from running the shop, as entered in ASM Books. Money the owner puts in or takes out, loans,
-        equipment and GST paid to the government are not entered here, so the balance can be higher than what is really
-        in hand and in the bank. The balance counts from the opening cash and bank balance in{" "}
+        Shows money as entered in ASM Books. Enter the owner&apos;s own money, loans, equipment and GST paid to the
+        government in{" "}
+        <Link href="/banking" className="underline">
+          Banking
+        </Link>{" "}
+        so the balance matches what is really in hand and in the bank. The balance counts from the opening cash and bank
+        balances in{" "}
         <Link href="/settings" className="underline">
           Settings
         </Link>

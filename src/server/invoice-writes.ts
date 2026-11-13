@@ -170,6 +170,7 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     taxType,
     priceListId: input.priceListId,
     paymentType,
+    cashMode: paymentType === "cash" ? input.cashMode : null,
     notes: input.notes || null,
     extra: extra.value,
     ...totals,

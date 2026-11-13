@@ -58,12 +58,17 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
     );
 
   const assets: FigureRow[] = [
-    { label: "Cash and bank", hint: "Opening balance plus money in, less money out", value: b.assets.cash },
+    { label: linked("Cash in hand", "/banking"), hint: "Opening cash plus cash in, less cash out", value: b.assets.cashInHand },
+    { label: linked("Bank", "/banking"), hint: "Opening balance plus UPI, card, cheque and bank transfers", value: b.assets.bank },
     { label: linked("Customers owe you", "/reports/customer-balances"), value: b.assets.receivables },
     ...(b.assets.vendorAdvances ? [{ label: "Paid in advance to vendors", value: b.assets.vendorAdvances }] : []),
     { label: "Stock in hand", hint: "At purchase price, before GST", value: b.assets.stock },
+    ...(b.assets.equipment ? [{ label: "Equipment", hint: "At what was paid for it", value: b.assets.equipment }] : []),
     ...(b.assets.gstCredit
-      ? [{ label: "GST credit", hint: "GST paid on purchases beyond GST charged on sales", value: b.assets.gstCredit }]
+      ? [{ label: "GST credit", hint: "GST paid beyond GST charged on sales", value: b.assets.gstCredit }]
+      : []),
+    ...(b.assets.loansOverpaid
+      ? [{ label: "Loans paid back beyond what was entered", hint: "Check the loans in Banking", value: b.assets.loansOverpaid }]
       : []),
     { label: "Total assets", value: b.totalAssets, strong: true },
   ];
@@ -73,8 +78,9 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
       ? [{ label: "Advances from customers", value: b.liabilities.customerAdvances }]
       : []),
     ...(b.liabilities.gstPayable
-      ? [{ label: "GST to pay", hint: "GST charged on sales beyond GST paid on purchases", value: b.liabilities.gstPayable }]
+      ? [{ label: "GST to pay", hint: "GST charged on sales, less GST on purchases and GST already paid", value: b.liabilities.gstPayable }]
       : []),
+    ...(b.liabilities.loans ? [{ label: "Loans", hint: "Taken, less paid back", value: b.liabilities.loans }] : []),
     { label: "Total liabilities", value: b.totalLiabilities, strong: true },
   ];
   const capital: FigureRow[] = [
@@ -83,6 +89,9 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
       hint: `${formatDate(b.fyFrom)} to ${formatDate(asOf)}`,
       value: b.capital.profitThisYear,
     },
+    ...(b.capital.ownerMoney
+      ? [{ label: "Owner's money", hint: "Put in, less taken out", value: b.capital.ownerMoney }]
+      : []),
     { label: "Capital and earlier profit", hint: "The balancing figure", value: b.capital.earlier },
     { label: "Owner's capital", value: b.capital.total, strong: true },
   ];
@@ -106,16 +115,16 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
           },
         ]}
       />
-      {(b.openingCash === 0 || b.stockWithoutPrice > 0 || b.stockBelowZero > 0) && (
+      {(!b.openingSet || b.stockWithoutPrice > 0 || b.stockBelowZero > 0) && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
-          {b.openingCash === 0 && (
+          {!b.openingSet && (
             <>
-              The opening cash and bank balance is ₹0. If the shop had money on the day it started using ASM Books, add
-              it in{" "}
+              The opening cash and bank balances are ₹0. If the shop had money on the day it started using ASM Books,
+              add it in{" "}
               <Link href="/settings" className="underline">
                 Settings
               </Link>{" "}
-              so the cash figure is right.{" "}
+              so the cash and bank figures are right.{" "}
             </>
           )}
           {b.stockWithoutPrice > 0 && (
@@ -133,9 +142,13 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        Built from what is entered in ASM Books. Money the owner puts in or takes out, loans, equipment and GST paid to
-        the government are not entered here, so they are not shown; until they are, cash and GST to pay both show
-        higher than in the bank and on the GST portal. Ask your accountant before using this for tax or a loan.
+        Built from what is entered in ASM Books. Enter the owner&apos;s own money, loans, equipment and GST paid to the
+        government in{" "}
+        <Link href="/banking" className="underline">
+          Banking
+        </Link>
+        ; until they are entered, cash, bank and GST to pay can differ from the real figures. Equipment is shown at what
+        was paid, with no wear taken off. Ask your accountant before using this for tax or a loan.
       </p>
     </>
   );

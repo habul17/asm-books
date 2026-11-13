@@ -295,12 +295,11 @@ export function BusinessForm({
       </fieldset>
 
       <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 text-sm font-medium text-muted-foreground">Reports</legend>
+        <legend className="mb-3 text-sm font-medium text-muted-foreground">Opening balances</legend>
         <Field
-          label="Opening cash and bank balance (₹)"
+          label="Opening cash in hand (₹)"
           htmlFor="b-opencash"
-          hint="Cash in hand and in the bank on the day you started using ASM Books. The Balance Sheet and Cash Flow count from it."
-          className="sm:col-span-2"
+          hint="Cash in the shop on the day you started using ASM Books."
         >
           <Input
             id="b-opencash"
@@ -309,7 +308,20 @@ export function BusinessForm({
             inputMode="decimal"
             step="0.01"
             defaultValue={b.openingCash}
-            className="sm:max-w-60"
+          />
+        </Field>
+        <Field
+          label="Opening bank balance (₹)"
+          htmlFor="b-openbank"
+          hint="Money in the bank on that same day. Banking and the reports count from these two."
+        >
+          <Input
+            id="b-openbank"
+            name="openingBank"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            defaultValue={b.openingBank}
           />
         </Field>
       </fieldset>

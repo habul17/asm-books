@@ -55,7 +55,12 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/profit
           },
         ]}
       />
-      <Figures rows={[{ label: "Net profit", hint: pl.net < 0 ? "A loss for this period" : undefined, value: pl.net, strong: true }]} />
+      <Figures
+        rows={[
+          ...(pl.otherIncome ? [{ label: "Other income", hint: "Interest, scrap, commission (from Banking)", value: pl.otherIncome }] : []),
+          { label: "Net profit", hint: pl.net < 0 ? "A loss for this period" : undefined, value: pl.net, strong: true },
+        ]}
+      />
       {(pl.salesWithoutCost > 0 || pl.adjustmentLinesWithoutCost > 0) && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
           {pl.salesWithoutCost > 0 && (

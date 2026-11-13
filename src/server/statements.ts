@@ -12,6 +12,7 @@ import {
   customers,
   expenses,
   invoices,
+  moneyEntries,
   payments,
   products,
   purchasePrices,
@@ -21,7 +22,16 @@ import {
   vendors,
 } from "@/db/schema";
 import type { Period } from "@/lib/reports/period";
-import { buildBalanceSheet, buildCashFlow, cashTotals, fyStart, parseAsOf, type CashMoves } from "@/lib/reports/statements";
+import { kindTotals } from "@/lib/banking/entries";
+import {
+  buildBalanceSheet,
+  buildCashFlow,
+  fyStart,
+  moneyAfter,
+  parseAsOf,
+  type CashMoves,
+  type Money,
+} from "@/lib/reports/statements";
 import { requireOwner } from "@/server/auth";
 
 import { todayInIndia } from "./invoice-writes";
@@ -38,43 +48,81 @@ export async function readAsOf(raw: string | undefined) {
   return { asOf: parseAsOf(raw, today), today };
 }
 
+/** Sum of an amount, and of the part of it that was cash. */
+const split = (amount: SQL, isCash: SQL) => ({
+  value: total(amount),
+  cash: sql<number>`coalesce(sum(${amount}) FILTER (WHERE ${isCash}), 0)`.mapWith(Number),
+});
+const first = (rows: { value: number; cash: number }[]) => rows[0] ?? { value: 0, cash: 0 };
+
 /** Money in and out on the dates `when` accepts. No auth check: callers have checked the owner. */
-async function cashMoves(when: (date: PgColumn) => SQL | undefined): Promise<CashMoves> {
+export async function cashMoves(when: (date: PgColumn) => SQL | undefined): Promise<CashMoves> {
   const db = getDb();
-  const [cashSales, received, paid, spent, refunds] = await db.batch([
+  const [cashSales, received, paid, spent, refunds, entries] = await db.batch([
     db
-      .select({ value: total(sql`${invoices.grandTotal}`) })
+      // A cash invoice saved before the mode was recorded counts as cash.
+      .select(split(sql`${invoices.grandTotal}`, sql`coalesce(${invoices.cashMode}, 'cash') = 'cash'`))
       .from(invoices)
       .where(and(eq(invoices.status, "final"), eq(invoices.paymentType, "cash"), when(invoices.date))),
     db
-      .select({ value: total(sql`${payments.amount}`) })
+      .select(split(sql`${payments.amount}`, sql`${payments.mode} = 'cash'`))
       .from(payments)
       .where(and(eq(payments.status, "final"), when(payments.date))),
     db
-      .select({ value: total(sql`${vendorPayments.amount}`) })
+      .select(split(sql`${vendorPayments.amount}`, sql`${vendorPayments.mode} = 'cash'`))
       .from(vendorPayments)
       .where(and(eq(vendorPayments.status, "final"), when(vendorPayments.date))),
     db
-      .select({ value: total(sql`${expenses.amount}`) })
+      .select(split(sql`${expenses.amount}`, sql`${expenses.mode} = 'cash'`))
       .from(expenses)
       .where(and(eq(expenses.status, "final"), when(expenses.date))),
     db
+      // Refunds for returned goods are handed back from the cash drawer.
       .select({ value: total(sql`${creditNotes.grandTotal}`) })
       .from(creditNotes)
       .where(and(eq(creditNotes.status, "final"), eq(creditNotes.refundType, "cash"), when(creditNotes.date))),
+    db
+      .select({
+        kind: moneyEntries.kind,
+        amount: total(sql`${moneyEntries.amount}`),
+        cash: sql<number>`coalesce(sum(${moneyEntries.amount}) FILTER (WHERE ${moneyEntries.mode} = 'cash'), 0)`.mapWith(Number),
+      })
+      .from(moneyEntries)
+      .where(and(eq(moneyEntries.status, "final"), when(moneyEntries.date)))
+      .groupBy(moneyEntries.kind),
   ]);
+  const k = kindTotals(entries);
+  const sales = first(cashSales);
+  const receipts = first(received);
+  const toVendors = first(paid);
+  const costs = first(spent);
+  const refunded = sumOf(refunds);
+  const cashIn = sales.cash + receipts.cash + k.owner_in.cash + k.loan_in.cash + k.other_in.cash;
+  const cashOut =
+    toVendors.cash + costs.cash + refunded + k.owner_out.cash + k.loan_out.cash + k.gst_paid.cash + k.asset_buy.cash;
   return {
-    cashSales: sumOf(cashSales),
-    received: sumOf(received),
-    paidToVendors: sumOf(paid),
-    expenses: sumOf(spent),
-    refunds: sumOf(refunds),
+    cashSales: sales.value,
+    received: receipts.value,
+    paidToVendors: toVendors.value,
+    expenses: costs.value,
+    refunds: refunded,
+    ownerIn: k.owner_in.amount,
+    ownerOut: k.owner_out.amount,
+    loansTaken: k.loan_in.amount,
+    loansRepaid: k.loan_out.amount,
+    gstPaid: k.gst_paid.amount,
+    equipment: k.asset_buy.amount,
+    otherIncome: k.other_in.amount,
+    drawer: cashIn - cashOut - k.deposit.amount + k.withdraw.amount,
   };
 }
 
+/** The opening cash and bank figures from Settings. */
+const openingMoney = (b: { openingCash: number; openingBank: number }): Money => ({ cash: b.openingCash, bank: b.openingBank });
+
 /**
  * Money that came in and went out in the period, with the cash and bank balance
- * before and after. The balance counts from the opening figure in Settings.
+ * before and after. The balance counts from the opening figures in Settings.
  */
 export async function cashFlow(period: Period) {
   await requireOwner();
@@ -83,7 +131,17 @@ export async function cashFlow(period: Period) {
     cashMoves((date) => lt(date, period.from)),
     cashMoves((date) => between(date, period.from, period.to)),
   ]);
-  return buildCashFlow(during, business.openingCash + cashTotals(before).net);
+  return buildCashFlow(during, moneyAfter(openingMoney(business), before));
+}
+
+/** Cash in hand and money in the bank right now. Owner only. */
+export async function moneyToday() {
+  await connection(); // "Today" must be read at request time.
+  await requireOwner();
+  const today = todayInIndia();
+  const [business, moves] = await Promise.all([loadBusiness(), cashMoves((date) => lte(date, today))]);
+  const money = moneyAfter(openingMoney(business), moves);
+  return { today, ...money, total: Math.round((money.cash + money.bank) * 100) / 100, openingSet: business.openingCash !== 0 || business.openingBank !== 0 };
 }
 
 /** What a customer owed on a date: opening balance, credit invoices, less payments and credited returns. */
@@ -191,23 +249,31 @@ export async function balanceSheet(asOf: string) {
   const [customerRows, vendorRows, stockRows, gstSales, gstReturns, gstBills, gstSentBack, gstExpenses] = rows;
   const stock = stockRows[0] ?? { value: 0, withoutPrice: 0, belowZero: 0 };
 
+  const money = moneyAfter(openingMoney(business), moves);
+
   return {
     asOf,
     fyFrom: fyStart(asOf),
-    openingCash: business.openingCash,
+    /** False while both opening balances in Settings are still ₹0. */
+    openingSet: business.openingCash !== 0 || business.openingBank !== 0,
     /** Parts in stock that have no purchase price, so they are valued at ₹0. */
     stockWithoutPrice: stock.withoutPrice,
     /** Parts whose stock is below zero; they are valued at ₹0. */
     stockBelowZero: stock.belowZero,
     ...buildBalanceSheet({
-      cash: business.openingCash + cashTotals(moves).net,
+      cashInHand: money.cash,
+      bank: money.bank,
       receivables: customerRows[0]?.owed ?? 0,
       customerAdvances: customerRows[0]?.advances ?? 0,
       payables: vendorRows[0]?.owing ?? 0,
       vendorAdvances: vendorRows[0]?.advances ?? 0,
       stock: stock.value,
+      equipment: moves.equipment,
+      loans: moves.loansTaken - moves.loansRepaid,
       gstOutput: sumOf(gstSales) - sumOf(gstReturns),
       gstInput: sumOf(gstBills) - sumOf(gstSentBack) + sumOf(gstExpenses),
+      gstPaid: moves.gstPaid,
+      ownerMoney: moves.ownerIn - moves.ownerOut,
       profitThisYear: profit.net,
     }),
   };

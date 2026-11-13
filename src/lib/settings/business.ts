@@ -61,8 +61,10 @@ export interface BusinessSettings {
   paymentReminderDays: number;
   /** Low-stock level for parts that have no minimum of their own; 0 turns it off. */
   defaultMinStock: number;
-  /** Cash in hand and in the bank on the day the shop started using the app; reports count from it. */
+  /** Cash in hand on the day the shop started using the app; reports count from it. */
   openingCash: number;
+  /** Money in the bank on that same day. */
+  openingBank: number;
 }
 
 export const DEFAULT_BUSINESS: BusinessSettings = {
@@ -98,6 +100,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   paymentReminderDays: DEFAULT_REMINDER_DAYS,
   defaultMinStock: 0,
   openingCash: 0,
+  openingBank: 0,
 };
 
 /** Largest opening cash figure accepted, either way; it only stops typing mistakes. */
@@ -121,6 +124,7 @@ export function readBusiness(raw: unknown): BusinessSettings {
   if (!validReminderDays(out.paymentReminderDays)) out.paymentReminderDays = DEFAULT_BUSINESS.paymentReminderDays;
   if (!validMinStock(out.defaultMinStock)) out.defaultMinStock = DEFAULT_BUSINESS.defaultMinStock;
   if (!validOpeningCash(out.openingCash)) out.openingCash = DEFAULT_BUSINESS.openingCash;
+  if (!validOpeningCash(out.openingBank)) out.openingBank = DEFAULT_BUSINESS.openingBank;
   return out;
 }
 
@@ -128,6 +132,16 @@ const text = (max: number, label: string) =>
   z.preprocess(
     (v) => (typeof v === "string" ? v.trim() : ""),
     z.string().max(max, `${label} can be at most ${max} characters`),
+  );
+
+/** An opening balance in rupees; empty is 0, and it may be below zero (an overdraft). */
+const openingBalance = (label: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v.replace(/[,\s₹]/g, "")) : 0),
+    z
+      .number({ error: `${label} should be a number` })
+      .refine(validOpeningCash, `${label} is too large`)
+      .transform((n) => Math.round(n * 100) / 100),
   );
 
 /** A number prefix that falls back to `fallback` when the box is left empty. */
@@ -235,13 +249,8 @@ const businessSchema = z.object({
       .refine(validMinStock, "Low stock level should be 0 or more")
       .refine((n) => Number.isInteger(n * 1000), "Low stock level can have at most 3 decimals"),
   ),
-  openingCash: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : 0),
-    z
-      .number({ error: "Opening cash and bank balance should be a number" })
-      .refine(validOpeningCash, "Opening cash and bank balance is too large")
-      .transform((n) => Math.round(n * 100) / 100),
-  ),
+  openingCash: openingBalance("Opening cash in hand"),
+  openingBank: openingBalance("Opening bank balance"),
 });
 
 /** Checks the settings form. A valid GSTIN sets the state. */

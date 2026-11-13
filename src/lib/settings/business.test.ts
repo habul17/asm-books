@@ -95,5 +95,10 @@ describe("opening cash", () => {
     expect(parseBusiness(form({ openingCash: "-1200" })).value?.openingCash).toBe(-1200);
     expect(parseBusiness(form({ openingCash: "abc" })).error).toBeTruthy();
     expect(readBusiness({ openingCash: "5" }).openingCash).toBe(0);
+    expect(parseBusiness(form({})).value?.openingBank).toBe(0);
+    expect(parseBusiness(form({ openingBank: "1,50,000.5" })).value?.openingBank).toBe(150000.5);
+    expect(parseBusiness(form({ openingBank: "-800" })).value?.openingBank).toBe(-800);
+    expect(parseBusiness(form({ openingBank: "lots" })).error).toBeTruthy();
+    expect(readBusiness({ openingBank: 1e12 }).openingBank).toBe(0);
   });
 });

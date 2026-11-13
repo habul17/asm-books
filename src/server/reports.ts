@@ -13,6 +13,7 @@ import {
   expenses,
   invoiceLines,
   invoices,
+  moneyEntries,
   payments,
   products,
   purchaseReturns,
@@ -272,14 +273,25 @@ export async function expensesByCategory(period: Period) {
 
 /**
  * Profit and loss for the period, all before GST:
- * sales − returns − cost of parts sold = gross profit; then − expenses ± stock written off or found.
+ * sales − returns − cost of parts sold = gross profit; then − expenses ± stock written off or found,
+ * plus other income entered in Banking.
  */
 export async function profitAndLoss(period: Period) {
   await requireOwner();
   const db = getDb();
-  const [items, spent, adjRows] = await Promise.all([
+  const [items, spent, incomeRows, adjRows] = await Promise.all([
     salesByItem(period),
     expensesByCategory(period),
+    db
+      .select({ value: total(sql`${moneyEntries.amount}`) })
+      .from(moneyEntries)
+      .where(
+        and(
+          eq(moneyEntries.status, "final"),
+          eq(moneyEntries.kind, "other_in"),
+          between(moneyEntries.date, period.from, period.to),
+        ),
+      ),
     db
       .select({
         lost: totalWhere(sql`${stockAdjustmentLines.qty} * ${stockAdjustmentLines.cost}`, sql`${stockAdjustmentLines.qty} < 0`),
@@ -302,6 +314,7 @@ export async function profitAndLoss(period: Period) {
   const gross = round2(sales - costOfSales);
   const stockLost = round2(-adj.lost);
   const stockFound = round2(adj.found);
+  const otherIncome = round2(incomeRows[0]?.value ?? 0);
   return {
     sales,
     costOfSales,
@@ -313,7 +326,9 @@ export async function profitAndLoss(period: Period) {
     stockLost,
     stockFound,
     adjustmentLinesWithoutCost: adj.noCostLines,
-    net: round2(gross - spent.total - stockLost + stockFound),
+    /** Income entered in Banking that is not a sale: interest, scrap, commission. */
+    otherIncome,
+    net: round2(gross - spent.total - stockLost + stockFound + otherIncome),
   };
 }
 

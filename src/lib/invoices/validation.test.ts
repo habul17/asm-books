@@ -45,6 +45,7 @@ describe("parseInvoiceInput", () => {
     expect(parseInvoiceInput({ ...base, lines: [] }).error).toBe("Add at least one item");
     expect(parseInvoiceInput({ ...base, date: "2026-02-30" }).error).toMatch(/date/);
     expect(parseInvoiceInput({ ...base, paymentType: "upi" }).error).toMatch(/credit or cash/);
+    expect(parseInvoiceInput({ ...base, cashMode: "barter" }).error).toMatch(/how it was paid/);
     expect(parseInvoiceInput({ ...base, lines: [{ ...line, qty: "2" }] }).error).toMatch(/quantity/);
     expect(parseInvoiceInput(null).error).toBeTruthy();
   });

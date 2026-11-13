@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import { invoiceInputSchema } from "@/lib/invoices/validation";
 
-export const salesDocInputSchema = invoiceInputSchema.omit({ paymentType: true, extra: true, fromDocId: true }).extend({
+export const salesDocInputSchema = invoiceInputSchema
+  .omit({ paymentType: true, cashMode: true, extra: true, fromDocId: true })
+  .extend({
   /** Quote: valid until. Order: deliver by. Challan: not used. */
   secondDate: z.iso.date("The second date is not valid").nullable().default(null),
   /** Challan: why the goods are moving without an invoice. */

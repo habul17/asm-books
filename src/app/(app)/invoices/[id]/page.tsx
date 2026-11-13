@@ -12,6 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransportForm } from "@/components/transport/transport-form";
 import { formatDate, formatMoney } from "@/lib/format";
+import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 import { needsEwayBill, transportRows } from "@/lib/transport";
 import { getInvoice } from "@/server/invoices";
 import { getBusiness } from "@/server/settings";
@@ -68,7 +69,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         invoice={inv}
         business={business}
         extra={inv.shownExtra}
-        paymentTerms={inv.paymentType === "cash" ? "Cash" : "Credit"}
+        paymentTerms={inv.paymentType === "cash" ? PAYMENT_MODE_LABELS[inv.cashMode ?? "cash"] : "Credit"}
         user={inv.createdByName}
         createdAt={inv.createdAt}
         details={[

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
 import { GST_STATES } from "@/lib/gst";
+import { PAYMENT_MODES } from "@/lib/payments/validation";
 import { isGstRate } from "@/lib/settings/business";
 
 export const MAX_LINES = 300;
@@ -28,6 +29,8 @@ export const invoiceInputSchema = z.object({
   walkInName: z.string().trim().max(200, "Name can be at most 200 characters"),
   walkInMobile: z.string().trim().max(40, "Mobile can be at most 40 characters"),
   paymentType: z.enum(["credit", "cash"], "Choose credit or cash"),
+  /** How a cash invoice was paid; ignored on a credit invoice. */
+  cashMode: z.enum(PAYMENT_MODES, "Choose how it was paid").default("cash"),
   priceListId: z.number().int().positive().nullable(),
   /** State code the sale is supplied to, when the user chose it; null follows the customer's state. */
   placeOfSupply: z

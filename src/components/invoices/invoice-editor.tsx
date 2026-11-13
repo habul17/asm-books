@@ -16,6 +16,7 @@ import { FIELD_VALUE_MAX } from "@/lib/custom-fields";
 import { formatMoney, formatQty } from "@/lib/format";
 import { GST_STATES } from "@/lib/gst";
 import { amountInWords, calcInvoice, taxTypeFor } from "@/lib/invoices/math";
+import { PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/payments/validation";
 import { CHALLAN_REASONS, SALES_DOC_KIND, salesDocHref, salesDocsHref, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { GST_RATES } from "@/lib/settings/business";
 import type { EditorOptions, PickedCustomer, PickedItem } from "@/server/invoices";
@@ -47,6 +48,8 @@ export interface EditorInitial {
   walkInName: string;
   walkInMobile: string;
   paymentType: "credit" | "cash";
+  /** How a cash invoice was paid; cash when not given. */
+  cashMode?: PaymentMode;
   priceListId: number | null;
   /** State code picked for this sale; null follows the customer's state. */
   placeOfSupply: string | null;
@@ -118,6 +121,7 @@ export function InvoiceEditor({
   const [walkInName, setWalkInName] = useState(initial.walkInName);
   const [walkInMobile, setWalkInMobile] = useState(initial.walkInMobile);
   const [paymentType, setPaymentType] = useState(initial.paymentType);
+  const [cashMode, setCashMode] = useState<PaymentMode>(initial.cashMode ?? "cash");
   const [priceListId, setPriceListId] = useState(initial.priceListId);
   // null follows the customer's state; "" is a sale to another state whose state is not chosen yet.
   const [supply, setSupply] = useState(initial.placeOfSupply);
@@ -284,6 +288,7 @@ export function InvoiceEditor({
           ? await saveInvoice(initial.id, {
               ...payload,
               paymentType: effectivePayment,
+              cashMode,
               extra,
               fromDocId: initial.fromDocId ?? null,
             })
@@ -402,6 +407,26 @@ export function InvoiceEditor({
                 >
                   <NativeSelectOption value="credit">Credit</NativeSelectOption>
                   <NativeSelectOption value="cash">Cash / paid now</NativeSelectOption>
+                </NativeSelect>
+              </div>
+            )}
+            {!doc && effectivePayment === "cash" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="inv-cash-mode">Paid by</Label>
+                <NativeSelect
+                  id="inv-cash-mode"
+                  className="w-full"
+                  value={cashMode}
+                  onChange={(e) => {
+                    touch();
+                    setCashMode(PAYMENT_MODES.find((m) => m === e.target.value) ?? "cash");
+                  }}
+                >
+                  {PAYMENT_MODES.map((m) => (
+                    <NativeSelectOption key={m} value={m}>
+                      {PAYMENT_MODE_LABELS[m]}
+                    </NativeSelectOption>
+                  ))}
                 </NativeSelect>
               </div>
             )}
