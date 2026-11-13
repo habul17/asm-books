@@ -134,6 +134,27 @@
       "when": 1794487001028,
       "tag": "0018_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794546835568,
+      "tag": "0019_banking",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794546849971,
+      "tag": "0020_recurring_invoices",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794546851379,
+      "tag": "0021_tasks",
+      "breakpoints": true
     }
   ]
 }

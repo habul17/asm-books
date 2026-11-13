@@ -334,6 +334,8 @@ export const sessions = pgTable(
 export const taxType = pgEnum("tax_type", ["intra", "inter"]);
 export const paymentType = pgEnum("payment_type", ["credit", "cash"]);
 export const invoiceStatus = pgEnum("invoice_status", ["final", "cancelled"]);
+/** How money changed hands. Cash is the drawer; every other mode lands in the bank. */
+export const paymentMode = pgEnum("payment_mode", ["cash", "upi", "bank", "cheque", "card"]);
 
 /**
  * Sales invoices. Customer details are copied in, so an old invoice never
@@ -361,6 +363,11 @@ export const invoices = pgTable(
     taxType: taxType("tax_type").notNull(),
     priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
     paymentType: paymentType("payment_type").notNull().default("credit"),
+    /**
+     * How a cash invoice was paid. Null on credit invoices, and on cash
+     * invoices saved before this was recorded; those count as cash.
+     */
+    cashMode: paymentMode("cash_mode"),
     taxableTotal: money("taxable_total").notNull(),
     cgstTotal: money("cgst_total").notNull(),
     sgstTotal: money("sgst_total").notNull(),
@@ -384,6 +391,7 @@ export const invoices = pgTable(
     index("invoices_customer_idx").on(t.customerId),
     check("invoices_grand_total_check", sql`${t.grandTotal} >= 0`),
     check("invoices_walk_in_cash_check", sql`${t.customerId} IS NOT NULL OR ${t.paymentType} = 'cash'`),
+    check("invoices_cash_mode_check", sql`${t.cashMode} IS NULL OR ${t.paymentType} = 'cash'`),
   ],
 );
 
@@ -476,8 +484,6 @@ export const stockMovements = pgTable(
 // ---------------------------------------------------------------------------
 // Payments received
 // ---------------------------------------------------------------------------
-
-export const paymentMode = pgEnum("payment_mode", ["cash", "upi", "bank", "cheque", "card"]);
 
 /**
  * Money received from a customer. It lowers what they owe as a whole
@@ -1144,3 +1150,122 @@ export const documentFiles = pgTable("document_files", {
     .references(() => documents.id, { onDelete: "cascade" }),
   data: bytea("data").notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Banking: money that is not a sale, a purchase or an expense
+// ---------------------------------------------------------------------------
+
+export const moneyEntryKind = pgEnum("money_entry_kind", [
+  "owner_in",
+  "owner_out",
+  "loan_in",
+  "loan_out",
+  "gst_paid",
+  "asset_buy",
+  "other_in",
+  "deposit",
+  "withdraw",
+]);
+
+/**
+ * Money the owner puts in or takes out, loans, GST paid to the government,
+ * equipment bought, other income, and cash moved to or from the bank. With
+ * these the cash and bank balances match what is really there. Never deleted;
+ * a wrong entry is cancelled.
+ */
+export const moneyEntries = pgTable(
+  "money_entries",
+  {
+    id: id(),
+    date: date("date", { mode: "string" }).notNull(),
+    kind: moneyEntryKind("kind").notNull(),
+    amount: money("amount").notNull(),
+    /** Null for cash moved to or from the bank, which touches both. */
+    mode: paymentMode("mode"),
+    /** Who the money came from or went to, e.g. the bank that gave the loan. */
+    party: text("party"),
+    reference: text("reference"),
+    notes: text("notes"),
+    status: invoiceStatus("status").notNull().default("final"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("money_entries_date_idx").on(t.date.desc(), t.id.desc()),
+    check("money_entries_amount_check", sql`${t.amount} > 0`),
+    check("money_entries_mode_check", sql`(${t.kind} IN ('deposit', 'withdraw')) = (${t.mode} IS NULL)`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Recurring invoices
+// ---------------------------------------------------------------------------
+
+export const recurringFrequency = pgEnum("recurring_frequency", ["weekly", "monthly", "quarterly", "half_yearly", "yearly"]);
+
+/**
+ * An invoice to bill again at a steady interval. Nothing is created on its
+ * own: when the next date arrives it shows as due, and a person opens a new
+ * invoice filled in from the one being repeated, checks it and saves it.
+ */
+export const recurringInvoices = pgTable(
+  "recurring_invoices",
+  {
+    id: id(),
+    /** The invoice whose customer, items and rates are repeated. */
+    invoiceId: integer("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    customerId: integer("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    frequency: recurringFrequency("frequency").notNull(),
+    /** Day of the month to bill on (1–31); shorter months use their last day. */
+    anchorDay: integer("anchor_day").notNull(),
+    /** When the next invoice is due. */
+    nextDate: date("next_date", { mode: "string" }).notNull(),
+    /** No invoices are due after this date; null repeats until stopped. */
+    endDate: date("end_date", { mode: "string" }),
+    active: boolean("active").notNull().default(true),
+    /** Invoices made so far. */
+    made: integer("made").notNull().default(0),
+    lastInvoiceId: integer("last_invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("recurring_invoices_due_idx").on(t.active, t.nextDate),
+    index("recurring_invoices_customer_idx").on(t.customerId),
+    check("recurring_invoices_anchor_check", sql`${t.anchorDay} BETWEEN 1 AND 31`),
+    check("recurring_invoices_made_check", sql`${t.made} >= 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
+
+/** A to-do for the shop: call a customer, pay a bill, order a part. */
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    dueDate: date("due_date", { mode: "string" }),
+    /** Who should do it; null is anyone. */
+    assignedTo: integer("assigned_to").references(() => users.id, { onDelete: "set null" }),
+    done: boolean("done").notNull().default(false),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    doneBy: integer("done_by").references(() => users.id, { onDelete: "set null" }),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("tasks_open_idx").on(t.done, t.dueDate),
+    check("tasks_done_check", sql`${t.done} = (${t.doneAt} IS NOT NULL)`),
+  ],
+);
