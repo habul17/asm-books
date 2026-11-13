@@ -24,7 +24,7 @@ export default function LowStockPage() {
   return (
     <ReportPage staffAllowed>
       <ReportHeader title="Low Stock">
-        Parts out of stock (that you have stocked or sold before) or at their minimum level. Set a part&rsquo;s minimum on its Items page, or one level for all parts in Settings.
+        Parts out of stock (that you have stocked or sold before) or at their minimum level. Set a part&rsquo;s minimum on its Items page, or one level for all parts under Reminders → Reminder settings.
       </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body />

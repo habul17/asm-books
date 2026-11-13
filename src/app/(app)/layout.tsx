@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { BottomTabs, BottomTabsView, Sidebar, SidebarLinks } from "@/components/layout/app-nav";
 import { ReminderBell, ReminderBellView } from "@/components/layout/reminder-bell";
+import { viewerIsOwner } from "@/server/auth";
 
 const Brand = () => (
   <Link href="/" aria-label="Home" className="shrink-0">
@@ -10,6 +11,11 @@ const Brand = () => (
     <img src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 rounded-lg ring-1 ring-border" />
   </Link>
 );
+
+/** The side menu, without owner-only screens for staff. */
+async function SidebarForViewer() {
+  return <Sidebar isOwner={await viewerIsOwner()} />;
+}
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -21,8 +27,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
             <ReminderBell />
           </Suspense>
         </div>
-        <Suspense fallback={<SidebarLinks pathname={null} />}>
-          <Sidebar />
+        <Suspense fallback={<SidebarLinks pathname={null} isOwner={false} />}>
+          <SidebarForViewer />
         </Suspense>
       </aside>
 

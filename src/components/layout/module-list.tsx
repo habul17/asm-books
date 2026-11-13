@@ -8,6 +8,8 @@ export interface ListRow {
   icon?: LucideIcon;
   /** null shows the row dimmed with a "Soon" badge. */
   href: string | null;
+  /** A short line under the label, e.g. what is filled in. */
+  note?: string;
 }
 
 /** A rounded card of tappable rows with a chevron, like a phone settings screen. */
@@ -20,7 +22,10 @@ export function ModuleList({ title, rows }: { title?: string | null; rows: ListR
           const body = (
             <>
               {row.icon && <row.icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />}
-              <span className="flex-1 truncate">{row.label}</span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate">{row.label}</span>
+                {row.note && <span className="truncate text-sm font-normal text-muted-foreground">{row.note}</span>}
+              </span>
               {row.href == null ? (
                 <Badge variant="outline">Soon</Badge>
               ) : (

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { MoneyEntryList, MoneyEntryListSkeleton } from "@/components/banking/money-entry-list";
+import { OpeningBalancesForm } from "@/components/business/business-forms";
 import { ListToolbar } from "@/components/forms/list-toolbar";
 import { OwnerGate } from "@/components/layout/owner-gate";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { MoneyEntryStatusFilter } from "@/server/money-entries";
+import { getBusiness } from "@/server/settings";
 import { moneyToday } from "@/server/statements";
 
 export const metadata: Metadata = { title: "Banking" };
@@ -39,15 +41,19 @@ async function Balances() {
       </dl>
       {!m.openingSet && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm dark:text-amber-100">
-          The opening cash and bank balances are ₹0. Enter what the shop had on the day it started using ASM Books in{" "}
-          <Link href="/business" className="underline">
-            Settings
-          </Link>
-          , so these figures match your cash box and your bank passbook.
+          The opening cash and bank balances are ₹0. Enter what the shop had on the day it started using the app under{" "}
+          <a href="#opening" className="underline">
+            Opening balances
+          </a>{" "}
+          at the bottom of this page, so these figures match your cash box and your bank passbook.
         </p>
       )}
     </>
   );
+}
+
+async function Opening() {
+  return <OpeningBalancesForm b={await getBusiness()} />;
 }
 
 async function List({ searchParams }: { searchParams: Promise<Params> }) {
@@ -95,6 +101,17 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
         <Suspense fallback={<MoneyEntryListSkeleton />}>
           <List searchParams={searchParams} />
         </Suspense>
+        <section id="opening" className="flex scroll-mt-20 flex-col gap-2 pt-2">
+          <h2 className="px-1 text-sm font-semibold text-muted-foreground">Opening balances</h2>
+          <div className="rounded-2xl border bg-card p-4 sm:p-6">
+            <Suspense fallback={<Skeleton className="h-24" />}>
+              <Opening />
+            </Suspense>
+          </div>
+          <p className="px-1 text-xs text-muted-foreground">
+            Banking and the reports count from these two figures. Set them once, when you start using the app.
+          </p>
+        </section>
       </OwnerGate>
     </div>
   );

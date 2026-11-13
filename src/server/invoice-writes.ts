@@ -67,7 +67,7 @@ export async function loadSaleCustomer(tx: Tx, customerId: number | null, keepId
 /** Where the sale is supplied and which GST follows. The state picked on the document wins; otherwise the customer's state, then our own. */
 export function saleSupply(business: Business, customer: Customer | null, chosen: string | null) {
   if (chosen && !business.stateCode) {
-    throw new InvoiceInputError("Set your own state in Settings before billing another state.");
+    throw new InvoiceInputError("Set your own state in Business details → Shop details before billing another state.");
   }
   const placeOfSupply = chosen ?? (customer?.stateCode || business.stateCode || null);
   return { placeOfSupply, taxType: taxTypeFor(business.stateCode || null, placeOfSupply) };
@@ -125,10 +125,10 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
 
   // Customer: a saved customer, or a walk-in who pays on the spot.
   const customer = await loadSaleCustomer(tx, input.customerId, existing?.customerId);
-  // Walk-ins can be switched off in Settings; an existing walk-in invoice can still be edited.
+  // Walk-ins can be switched off in Business details → Bills; an existing walk-in invoice can still be edited.
   const wasWalkIn = existing != null && existing.customerId == null;
   if (!customer && !business.allowWalkIn && !wasWalkIn) {
-    throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Settings.");
+    throw new InvoiceInputError("Choose a customer. Walk-in sales are switched off in Business details → Bills.");
   }
   const paymentType = customer ? input.paymentType : "cash";
   const { placeOfSupply, taxType } = saleSupply(business, customer, input.placeOfSupply);
@@ -216,7 +216,7 @@ export async function assertStockAvailable(tx: Tx, changes: Map<number, number>)
     .join(", ");
   throw new InvoiceInputError(
     `Not enough stock: ${list}${short.length > 5 ? ` and ${short.length - 5} more` : ""}. ` +
-      "Enter the stock first, or ask the owner to allow selling more than stock in Settings.",
+      "Enter the stock first, or ask the owner to allow selling more than stock in Business details → Bills.",
   );
 }
 

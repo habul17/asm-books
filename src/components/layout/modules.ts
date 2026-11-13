@@ -36,6 +36,8 @@ export interface AppModule {
   icon: LucideIcon;
   /** Where the module lives; null while it is not built yet ("coming soon"). */
   href: string | null;
+  /** Hidden from staff menus; the screen itself also refuses staff. */
+  ownerOnly?: boolean;
 }
 
 export interface ModuleGroup {
@@ -47,7 +49,7 @@ export interface ModuleGroup {
 export const HOME: AppModule = { label: "Home", icon: HouseIcon, href: "/" };
 export const REMINDERS: AppModule = { label: "Reminders", icon: BellIcon, href: "/reminders" };
 export const TASKS: AppModule = { label: "Tasks", icon: CalendarCheckIcon, href: "/tasks" };
-export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking" };
+export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking", ownerOnly: true };
 export const CUSTOMERS: AppModule = { label: "Customers", icon: UsersIcon, href: "/customers" };
 export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href: "/invoices" };
 export const ITEMS: AppModule = { label: "Items", icon: PackageIcon, href: "/catalogue" };
@@ -72,10 +74,10 @@ export const INVENTORY_ADJUSTMENTS: AppModule = {
 export const EXPENSES: AppModule = { label: "Expenses", icon: WalletIcon, href: "/expenses" };
 export const DOCUMENTS: AppModule = { label: "Documents", icon: FolderIcon, href: "/documents" };
 export const REPORTS: AppModule = { label: "Reports", icon: ChartColumnIcon, href: "/reports" };
-export const USERS: AppModule = { label: "Users", icon: UserCogIcon, href: "/users" };
-export const BACKUPS: AppModule = { label: "Backups", icon: DatabaseBackupIcon, href: "/backup" };
+export const USERS: AppModule = { label: "Users", icon: UserCogIcon, href: "/users", ownerOnly: true };
+export const BACKUPS: AppModule = { label: "Backups", icon: DatabaseBackupIcon, href: "/backup", ownerOnly: true };
 export const ACCOUNT: AppModule = { label: "My account", icon: KeyRoundIcon, href: "/account" };
-export const BUSINESS: AppModule = { label: "Business details", icon: Building2Icon, href: "/business" };
+export const BUSINESS: AppModule = { label: "Business details", icon: Building2Icon, href: "/business", ownerOnly: true };
 export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href: "/settings" };
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
@@ -121,6 +123,13 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     ],
   },
 ];
+
+/** The menu groups this person may use: staff do not see owner-only screens. */
+export function moduleGroupsFor(isOwner: boolean): ModuleGroup[] {
+  return MODULE_GROUPS.map((g) => ({ ...g, modules: g.modules.filter((m) => isOwner || !m.ownerOnly) })).filter(
+    (g) => g.modules.length > 0,
+  );
+}
 
 /** The phone's bottom tabs (the fifth tab is "More"). */
 export const TAB_MODULES: AppModule[] = [HOME, CUSTOMERS, INVOICES, ITEMS];

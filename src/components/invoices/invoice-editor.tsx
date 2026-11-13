@@ -312,8 +312,8 @@ export function InvoiceEditor({
           <TriangleAlertIcon className="size-4 shrink-0" />
           <span>
             Your business details are empty, so invoices will print without them.{" "}
-            <Link href="/business" className="font-medium underline underline-offset-4">
-              Fill them in Settings
+            <Link href="/business/shop" className="font-medium underline underline-offset-4">
+              Fill them in Business details
             </Link>
           </span>
         </p>
@@ -494,8 +494,8 @@ export function InvoiceEditor({
               {!options.sellerState && (
                 <p className="text-xs text-muted-foreground">
                   To bill another state, first set your own state in{" "}
-                  <Link href="/business" className="underline underline-offset-4">
-                    Settings
+                  <Link href="/business/shop" className="underline underline-offset-4">
+                    Business details
                   </Link>
                   .
                 </p>

@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { ReminderSettingsForm } from "@/components/business/business-forms";
+import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 import { LatePayerList, LowStockRows } from "@/components/reminders/reminder-lists";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getReminders } from "@/server/reminders";
 import { lowStock } from "@/server/reports";
+import { getBusiness } from "@/server/settings";
 
 export const metadata: Metadata = { title: "Reminders" };
 
@@ -90,11 +93,11 @@ async function Body() {
           )}
           <p className="px-1 text-xs text-muted-foreground">
             Shows bills unpaid for {plural(days, "day")} or more. Payments are counted against the oldest bills first.
-            Change the days in{" "}
-            <Link href="/business" className="underline">
-              Settings
-            </Link>
-            .
+            Change the days under{" "}
+            <a href="#reminder-settings" className="underline">
+              Reminder settings
+            </a>{" "}
+            at the bottom of this page.
           </p>
         </section>
       )}
@@ -116,16 +119,16 @@ async function Body() {
           <LowStockRows items={stock.items} />
         )}
         <p className="px-1 text-xs text-muted-foreground">
-          Parts that are out of stock, or at their minimum. Set a part&rsquo;s minimum on its Items page, or one level
-          for all parts in{" "}
-          <Link href="/business" className="underline">
-            Settings
-          </Link>
-          .
+          Parts that are out of stock, or at their minimum. Set a part&rsquo;s minimum on its Items page. The owner can
+          set one level for all parts under Reminder settings at the bottom of this page.
         </p>
       </section>
     </>
   );
+}
+
+async function ReminderSettings() {
+  return <ReminderSettingsForm b={await getBusiness()} />;
 }
 
 function BodySkeleton() {
@@ -147,6 +150,16 @@ export default function RemindersPage() {
       <Suspense fallback={<BodySkeleton />}>
         <Body />
       </Suspense>
+      <OwnerOnlyBlock>
+        <section id="reminder-settings" className="flex scroll-mt-20 flex-col gap-2">
+          <h2 className="px-1 text-sm font-semibold text-muted-foreground">Reminder settings</h2>
+          <div className="rounded-2xl border bg-card p-4 sm:p-6">
+            <Suspense fallback={<Skeleton className="h-24" />}>
+              <ReminderSettings />
+            </Suspense>
+          </div>
+        </section>
+      </OwnerOnlyBlock>
     </div>
   );
 }

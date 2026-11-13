@@ -7,7 +7,7 @@ import { cn } from "cn";
 
 import { signOut } from "@/app/login/actions";
 
-import { isActive, isFormPage, MODULE_GROUPS, TAB_MODULES } from "./modules";
+import { isActive, isFormPage, moduleGroupsFor, TAB_MODULES } from "./modules";
 
 /** Pages reached from the "More" tab, so that tab lights up on them. */
 const MORE_PATHS = ["/more", "/reminders", "/tasks", "/banking", "/reports", "/business", "/settings", "/price-lists", "/payments", "/recurring", "/credit-notes", "/sales", "/eway-bills", "/vendors", "/purchase-orders", "/bills", "/payments-made", "/purchase-returns", "/expenses", "/inventory-adjustments", "/users", "/documents", "/backup", "/account"];
@@ -19,10 +19,10 @@ const sideLink =
  * Desktop sidebar: the built modules, grouped. `pathname` marks the current
  * page (null while it is not known yet, e.g. as a Suspense fallback).
  */
-export function SidebarLinks({ pathname }: { pathname: string | null }) {
+export function SidebarLinks({ pathname, isOwner }: { pathname: string | null; isOwner: boolean }) {
   return (
     <nav aria-label="Main" className="flex flex-col gap-4">
-      {MODULE_GROUPS.map((group) => {
+      {moduleGroupsFor(isOwner).map((group) => {
         const ready = group.modules.filter((m) => m.href != null);
         if (ready.length === 0) return null;
         return (
@@ -60,9 +60,9 @@ export function SidebarLinks({ pathname }: { pathname: string | null }) {
   );
 }
 
-/** Reads the current URL, so render it inside <Suspense> with `<SidebarLinks pathname={null} />` as the fallback. */
-export function Sidebar() {
-  return <SidebarLinks pathname={usePathname()} />;
+/** Reads the current URL, so render it inside <Suspense> with `<SidebarLinks pathname={null} isOwner={false} />` as the fallback. */
+export function Sidebar({ isOwner }: { isOwner: boolean }) {
+  return <SidebarLinks pathname={usePathname()} isOwner={isOwner} />;
 }
 
 const TABS = [...TAB_MODULES, { label: "More", icon: EllipsisIcon, href: "/more" }];

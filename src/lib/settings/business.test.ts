@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { withCheckChar } from "@/lib/gst";
 
-import { DEFAULT_BUSINESS, parseBusiness, readBusiness } from "./business";
+import {
+  BUSINESS_SECTIONS,
+  DEFAULT_BUSINESS,
+  isBusinessSection,
+  parseBusiness,
+  parseBusinessSection,
+  readBusiness,
+} from "./business";
 
 const form = (values: Record<string, string>) => {
   const f = new FormData();
@@ -100,5 +107,50 @@ describe("opening cash", () => {
     expect(parseBusiness(form({ openingBank: "-800" })).value?.openingBank).toBe(-800);
     expect(parseBusiness(form({ openingBank: "lots" })).error).toBeTruthy();
     expect(readBusiness({ openingBank: 1e12 }).openingBank).toBe(0);
+  });
+});
+
+describe("parseBusinessSection", () => {
+  const fd = (o: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(o)) f.set(k, v);
+    return f;
+  };
+
+  it("returns only the keys of its own part", () => {
+    const r = parseBusinessSection("bank", fd({ bankIfsc: "sbin0001234", name: "Ignored", openingCash: "5" }));
+    expect(r.value).toEqual({ bankName: "", bankAccount: "", bankIfsc: "SBIN0001234", upiId: "" });
+  });
+
+  it("does not need the business name outside the shop part", () => {
+    expect(parseBusinessSection("reminders", fd({ paymentReminderDays: "20" })).value).toEqual({
+      paymentReminderDays: 20,
+      defaultMinStock: 0,
+    });
+    expect(parseBusinessSection("shop", fd({ name: " " })).error).toMatch(/name is required/);
+  });
+
+  it("takes the state from a valid GSTIN in the shop part", () => {
+    const gstin = withCheckChar("33ABCDE1234F1Z");
+    const r = parseBusinessSection("shop", fd({ name: "Shop", gstin: gstin.toLowerCase(), stateCode: "29" }));
+    expect(r.value).toMatchObject({ gstin, stateCode: "33" });
+  });
+
+  it("reads tick boxes as off when they are missing", () => {
+    expect(parseBusinessSection("bills", fd({ defaultGstRate: "18" })).value).toMatchObject({
+      allowWalkIn: false,
+      allowShortStock: false,
+    });
+  });
+
+  it("covers every setting exactly once", () => {
+    const all = Object.values(BUSINESS_SECTIONS).flat();
+    expect(new Set(all).size).toBe(all.length);
+    expect([...all].sort()).toEqual(Object.keys(DEFAULT_BUSINESS).sort());
+  });
+
+  it("knows its part names", () => {
+    expect(isBusinessSection("shop")).toBe(true);
+    expect(isBusinessSection("toString")).toBe(false);
   });
 });

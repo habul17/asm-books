@@ -122,7 +122,7 @@ const openingMoney = (b: { openingCash: number; openingBank: number }): Money =>
 
 /**
  * Money that came in and went out in the period, with the cash and bank balance
- * before and after. The balance counts from the opening figures in Settings.
+ * before and after. The balance counts from the opening figures (Banking → Opening balances).
  */
 export async function cashFlow(period: Period) {
   await requireOwner();
@@ -254,7 +254,7 @@ export async function balanceSheet(asOf: string) {
   return {
     asOf,
     fyFrom: fyStart(asOf),
-    /** False while both opening balances in Settings are still ₹0. */
+    /** False while both opening balances (Banking → Opening balances) are still ₹0. */
     openingSet: business.openingCash !== 0 || business.openingBank !== 0,
     /** Parts in stock that have no purchase price, so they are valued at ₹0. */
     stockWithoutPrice: stock.withoutPrice,

@@ -70,12 +70,11 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
         <Link href="/banking" className="underline">
           Banking
         </Link>{" "}
-        so the balance matches what is really in hand and in the bank. The balance counts from the opening cash and bank
-        balances in{" "}
-        <Link href="/business" className="underline">
-          Settings
-        </Link>
-        .
+        so the balance matches what is really in hand and in the bank. The balance counts from the{" "}
+        <Link href="/banking#opening" className="underline">
+          opening balances
+        </Link>{" "}
+        at the bottom of Banking.
       </p>
     </>
   );

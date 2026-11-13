@@ -266,3 +266,52 @@ export function parseBusiness(form: FormData): { value: BusinessSettings; error?
   }
   return { value };
 }
+
+/**
+ * The parts of the business settings, each saved on its own screen. A save
+ * only touches its own keys, so the other parts keep what was typed there.
+ */
+export const BUSINESS_SECTIONS = {
+  shop: ["name", "address", "city", "pincode", "stateCode", "gstin", "phone", "email"],
+  bills: ["invoiceTitle", "defaultGstRate", "defaultPriceListId", "terms", "allowWalkIn", "allowShortStock"],
+  numbers: [
+    "invoicePrefix",
+    "receiptPrefix",
+    "creditNotePrefix",
+    "vendorPaymentPrefix",
+    "expensePrefix",
+    "adjustmentPrefix",
+    "debitNotePrefix",
+    "quotePrefix",
+    "orderPrefix",
+    "challanPrefix",
+    "purchaseOrderPrefix",
+  ],
+  bank: ["bankName", "bankAccount", "bankIfsc", "upiId"],
+  reminders: ["paymentReminderDays", "defaultMinStock"],
+  opening: ["openingCash", "openingBank"],
+} as const satisfies Record<string, readonly (keyof BusinessSettings)[]>;
+
+export type BusinessSection = keyof typeof BUSINESS_SECTIONS;
+
+export const isBusinessSection = (s: unknown): s is BusinessSection =>
+  typeof s === "string" && Object.hasOwn(BUSINESS_SECTIONS, s);
+
+/** Checks one part's form. Only that part's keys are read and returned. */
+export function parseBusinessSection(
+  section: BusinessSection,
+  form: FormData,
+): { value: Partial<BusinessSettings>; error?: never } | { error: string; value?: never } {
+  const keys = BUSINESS_SECTIONS[section];
+  const mask = Object.fromEntries(keys.map((k) => [k, true])) as { [K in keyof BusinessSettings]?: true };
+  const parsed = businessSchema.pick(mask).safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
+  const value = parsed.data as Partial<BusinessSettings>;
+  if (section === "shop" && value.gstin) {
+    const g = checkGstin(value.gstin);
+    if (!g.ok) return { error: g.error };
+    value.gstin = g.gstin;
+    value.stateCode = g.stateCode;
+  }
+  return { value };
+}
