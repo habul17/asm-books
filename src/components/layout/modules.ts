@@ -57,6 +57,7 @@ export const QUOTES: AppModule = { label: "Quotes", icon: FileSpreadsheetIcon, h
 export const SALES_ORDERS: AppModule = { label: "Sales Orders", icon: FileBoxIcon, href: "/sales/orders" };
 export const DELIVERY_CHALLANS: AppModule = { label: "Delivery Challans", icon: PackageCheckIcon, href: "/sales/challans" };
 export const EWAY_BILLS: AppModule = { label: "e-Way Bills", icon: TruckIcon, href: "/eway-bills" };
+export const RECURRING_INVOICES: AppModule = { label: "Recurring Invoices", icon: RepeatIcon, href: "/recurring" };
 export const CREDIT_NOTES: AppModule = { label: "Credit Notes", icon: FileMinusIcon, href: "/credit-notes" };
 export const VENDORS: AppModule = { label: "Vendors", icon: StoreIcon, href: "/vendors" };
 export const PURCHASE_ORDERS: AppModule = { label: "Purchase Orders", icon: ShoppingCartIcon, href: "/purchase-orders" };
@@ -90,7 +91,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       DELIVERY_CHALLANS,
       INVOICES,
       PAYMENTS_RECEIVED,
-      soon("Recurring Invoices", RepeatIcon),
+      RECURRING_INVOICES,
       CREDIT_NOTES,
       EWAY_BILLS,
     ],

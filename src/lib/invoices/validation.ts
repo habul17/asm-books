@@ -46,6 +46,8 @@ export const invoiceInputSchema = z.object({
     .default({}),
   /** The quote, sales order or delivery challan this invoice is made from. */
   fromDocId: z.number().int().positive().nullable().default(null),
+  /** The recurring invoice this one is made for; saving moves it on to its next date. */
+  repeatId: z.number().int().positive().nullable().default(null),
   lines: z.array(lineSchema).min(1, "Add at least one item").max(MAX_LINES, `An invoice can have at most ${MAX_LINES} items`),
 });
 

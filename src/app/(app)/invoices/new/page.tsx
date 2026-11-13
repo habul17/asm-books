@@ -11,8 +11,14 @@ async function Editor({ searchParams }: { searchParams: PageProps<"/invoices/new
     const n = Number(Array.isArray(raw) ? raw[0] : raw);
     return Number.isSafeInteger(n) && n > 0 ? n : null;
   };
-  // `from` starts the invoice from a quote, sales order or delivery challan.
-  return <NewInvoiceEditor customerId={positive(query.customer)} fromDocId={positive(query.from)} />;
+  // `from` starts the invoice from a quote, sales order or delivery challan; `repeat` from a recurring invoice.
+  return (
+    <NewInvoiceEditor
+      customerId={positive(query.customer)}
+      fromDocId={positive(query.from)}
+      repeatId={positive(query.repeat)}
+    />
+  );
 }
 
 export default function NewInvoicePage({ searchParams }: PageProps<"/invoices/new">) {

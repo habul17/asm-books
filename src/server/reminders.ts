@@ -11,6 +11,7 @@ import { isOwner, requireUser } from "@/server/auth";
 
 import { todayInIndia } from "./invoice-writes";
 import { loadUnpaid } from "./receivables";
+import { loadDueRecurring } from "./recurring";
 import { lowStockWhere } from "./reports";
 import { loadBusiness } from "./settings";
 
@@ -25,7 +26,7 @@ export async function loadLatePayers(today: string, days: number): Promise<LateP
 
 /**
  * What needs attention today. Late payers are for the owner only (`late` is null
- * for staff); low stock is for everyone. Shared by the bell, Home and the
+ * for staff); low stock and recurring invoices that are due are for everyone. Shared by the bell, Home and the
  * Reminders screen, so one page load reads it once.
  */
 export const getReminders = cache(async () => {
@@ -33,8 +34,10 @@ export const getReminders = cache(async () => {
   const user = await requireUser();
   const business = await loadBusiness();
   const days = business.paymentReminderDays;
-  const [late, stockRows] = await Promise.all([
-    isOwner(user) ? loadLatePayers(todayInIndia(), days) : null,
+  const today = todayInIndia();
+  const [late, recurring, stockRows] = await Promise.all([
+    isOwner(user) ? loadLatePayers(today, days) : null,
+    loadDueRecurring(today),
     getDb()
       .select({ count: sql<number>`count(*)`.mapWith(Number) })
       .from(products)
@@ -47,7 +50,9 @@ export const getReminders = cache(async () => {
     late,
     lateAmount: late ? Math.round(late.reduce((sum, p) => sum + p.lateAmount, 0) * 100) / 100 : 0,
     lowStock,
+    /** Recurring invoices whose next date has come. */
+    recurring,
     /** The number shown on the bell. */
-    count: (late?.length ?? 0) + lowStock,
+    count: (late?.length ?? 0) + lowStock + recurring.length,
   };
 });

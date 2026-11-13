@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { LatePayerList, LowStockRows } from "@/components/reminders/reminder-lists";
+import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { getReminders } from "@/server/reminders";
 import { lowStock } from "@/server/reports";
 
@@ -17,9 +18,35 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 async function Body() {
   const [reminders, stock] = await Promise.all([getReminders(), lowStock(STOCK_PREVIEW)]);
-  const { late, lateAmount, days, businessName } = reminders;
+  const { late, lateAmount, days, businessName, recurring } = reminders;
   return (
     <>
+      {recurring.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">
+            <h2 className="text-sm font-semibold text-muted-foreground">Recurring invoices due</h2>
+            <Link href="/recurring" className="text-sm font-medium hover:underline">
+              See all
+            </Link>
+          </div>
+          <ul className="flex flex-col divide-y rounded-2xl border">
+            {recurring.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                <span className="mr-auto flex min-w-0 flex-col">
+                  <span className="truncate font-medium">{r.customerName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Due {formatDate(r.nextDate)} · {formatMoney(r.grandTotal)}
+                  </span>
+                </span>
+                <Link href={`/invoices/new?repeat=${r.id}`} className={buttonVariants({ size: "sm" })}>
+                  Create invoice
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {late && (
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">

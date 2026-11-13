@@ -18,6 +18,7 @@ import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/inv
 import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
 import { loadCustomFields } from "@/server/custom-fields";
+import { recordRecurringInvoice } from "@/server/recurring";
 import { loadBusiness } from "@/server/settings";
 
 import { purchasePriceAt } from "./product-search";
@@ -300,6 +301,7 @@ export async function createInvoice(input: InvoiceInput, userId: number): Promis
     await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
     await moveStock(tx, sold, { kind: "sale", invoiceId: id, date: header.date, note: number, userId });
     if (input.fromDocId != null) await closeInvoicedDoc(tx, input.fromDocId, id);
+    if (input.repeatId != null) await recordRecurringInvoice(tx, input.repeatId, id);
     return id;
   });
 }

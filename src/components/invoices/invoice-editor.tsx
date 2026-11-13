@@ -61,6 +61,8 @@ export interface EditorInitial {
   originalCredit: number;
   /** New invoice: the quote, order or challan it is made from. */
   fromDocId?: number | null;
+  /** New invoice: the recurring invoice it is made for. */
+  repeatId?: number | null;
   /** Quote: valid until. Order: deliver by. */
   secondDate?: string;
   /** Challan: why the goods move without an invoice. */
@@ -291,6 +293,7 @@ export function InvoiceEditor({
               cashMode,
               extra,
               fromDocId: initial.fromDocId ?? null,
+              repeatId: initial.repeatId ?? null,
             })
           : await saveSalesDoc(kind, initial.id, {
               ...payload,

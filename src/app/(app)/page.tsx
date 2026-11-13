@@ -27,10 +27,13 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** What needs attention today; nothing is shown when all is well. */
 async function Reminders() {
-  const { late, lateAmount, lowStock, days } = await getReminders();
+  const { late, lateAmount, lowStock, days, recurring } = await getReminders();
   const lines = [
     late && late.length > 0
       ? `${plural(late.length, "customer")} ${late.length === 1 ? "has" : "have"} not paid for ${plural(days, "day")} or more · ${formatMoney(lateAmount)}`
+      : null,
+    recurring.length > 0
+      ? `${plural(recurring.length, "recurring invoice")} ${recurring.length === 1 ? "is" : "are"} due`
       : null,
     lowStock > 0 ? `${plural(lowStock, "part")} ${lowStock === 1 ? "is" : "are"} low on stock` : null,
   ].filter((line) => line != null);

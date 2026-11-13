@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CopyPlusIcon, PencilIcon, Undo2Icon } from "lucide-react";
+import { ArrowLeftIcon, CopyPlusIcon, PencilIcon, RepeatIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,6 +43,11 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         {final && (
           <Link href={`/credit-notes/new?invoice=${inv.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <Undo2Icon /> Return items
+          </Link>
+        )}
+        {final && inv.customerId != null && (
+          <Link href={`/recurring/new?invoice=${inv.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <RepeatIcon /> Repeat
           </Link>
         )}
         <Link

@@ -5,6 +5,7 @@ import { formatQty } from "@/lib/format";
 import { SALES_DOC_KINDS, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { getEditorOptions, getInvoice, pickCustomerById, type EditorOptions } from "@/server/invoices";
 import { todayInIndia } from "@/server/invoice-writes";
+import { getActiveRecurring } from "@/server/recurring";
 import { getSalesDoc, type SalesDocDetail } from "@/server/sales-docs";
 
 import { InvoiceEditor, type EditorInitial } from "./invoice-editor";
@@ -53,12 +54,51 @@ async function findOpenDoc(id: number | null, kinds: readonly SalesDocKind[] = S
   return doc && doc.status === "open" ? doc : null;
 }
 
-export async function NewInvoiceEditor({ customerId, fromDocId }: { customerId: number | null; fromDocId?: number | null }) {
+/** A new invoice filled in from the one a recurring invoice repeats: same customer, items and rates, today's date. */
+async function fromRecurring(repeatId: number, options: EditorOptions): Promise<EditorInitial | null> {
+  const recurring = await getActiveRecurring(repeatId);
+  const inv = recurring ? await getInvoice(recurring.invoiceId) : null;
+  if (!recurring || !inv || inv.customerId == null) return null;
+  const customer = await pickCustomerById(inv.customerId);
+  if (!customer) return null;
+  return {
+    id: null,
+    date: todayInIndia(),
+    mode: "customer",
+    customer,
+    walkInName: "",
+    walkInMobile: "",
+    paymentType: inv.paymentType,
+    cashMode: inv.cashMode ?? "cash",
+    priceListId: inv.priceListId,
+    placeOfSupply: pickedSupply(inv.placeOfSupply, customer.stateCode, options),
+    notes: inv.notes ?? "",
+    extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
+    lines: inv.lines.map((l) => editorLine(l, l.productId != null ? l.stockQty : null)),
+    originalCredit: 0,
+    repeatId: recurring.id,
+  };
+}
+
+export async function NewInvoiceEditor({
+  customerId,
+  fromDocId,
+  repeatId,
+}: {
+  customerId: number | null;
+  fromDocId?: number | null;
+  /** A recurring invoice that is due: the new invoice starts as a copy of the one it repeats. */
+  repeatId?: number | null;
+}) {
   const [options, picked, source] = await Promise.all([
     getEditorOptions(),
     customerId ? pickCustomerById(customerId) : Promise.resolve(null),
     findOpenDoc(fromDocId ?? null),
   ]);
+  if (repeatId != null) {
+    const repeated = await fromRecurring(repeatId, options);
+    if (repeated) return <InvoiceEditor initial={repeated} options={options} />;
+  }
   if (source) {
     const initial: EditorInitial = {
       id: null,
