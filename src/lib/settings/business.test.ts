@@ -119,7 +119,7 @@ describe("parseBusinessSection", () => {
 
   it("returns only the keys of its own part", () => {
     const r = parseBusinessSection("bank", fd({ bankIfsc: "sbin0001234", name: "Ignored", openingCash: "5" }));
-    expect(r.value).toEqual({ bankName: "", bankAccount: "", bankIfsc: "SBIN0001234", upiId: "" });
+    expect(r.value).toEqual({ bankName: "", bankAccount: "", bankBranch: "", bankIfsc: "SBIN0001234" });
   });
 
   it("does not need the business name outside the shop part", () => {
@@ -143,10 +143,11 @@ describe("parseBusinessSection", () => {
     });
   });
 
-  it("covers every setting exactly once", () => {
+  it("covers every setting exactly once, apart from the retired UPI ID", () => {
     const all = Object.values(BUSINESS_SECTIONS).flat();
     expect(new Set(all).size).toBe(all.length);
-    expect([...all].sort()).toEqual(Object.keys(DEFAULT_BUSINESS).sort());
+    const editable = Object.keys(DEFAULT_BUSINESS).filter((k) => k !== "upiId");
+    expect([...all].sort()).toEqual(editable.sort());
   });
 
   it("knows its part names", () => {

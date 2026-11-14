@@ -29,10 +29,10 @@ async function Parts() {
           note: join(b.invoiceTitle, `GST ${b.defaultGstRate}%`, `Numbers ${b.invoicePrefix}/…`),
         },
         {
-          label: "Bank and UPI",
+          label: "Bank details",
           icon: BanknoteIcon,
           href: "/business/bank",
-          note: join(b.bankName, b.upiId) || "Printed on bills so customers can pay",
+          note: join(b.bankName, b.bankBranch) || "Printed on bills so customers can pay",
         },
       ]}
     />

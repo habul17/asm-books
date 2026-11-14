@@ -216,11 +216,11 @@ export function BankForm({ b }: { b: BusinessSettings }) {
         <Field label="Account number" htmlFor="b-acc">
           <Input id="b-acc" name="bankAccount" inputMode="numeric" defaultValue={b.bankAccount} maxLength={24} />
         </Field>
+        <Field label="Branch" htmlFor="b-branch">
+          <Input id="b-branch" name="bankBranch" defaultValue={b.bankBranch} maxLength={100} />
+        </Field>
         <Field label="IFSC" htmlFor="b-ifsc">
           <Input id="b-ifsc" name="bankIfsc" defaultValue={b.bankIfsc} maxLength={11} className="uppercase" />
-        </Field>
-        <Field label="UPI ID" htmlFor="b-upi">
-          <Input id="b-upi" name="upiId" defaultValue={b.upiId} maxLength={300} placeholder="name@bank" />
         </Field>
       </div>
     </SectionForm>

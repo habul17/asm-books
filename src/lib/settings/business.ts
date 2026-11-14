@@ -23,6 +23,9 @@ export interface BusinessSettings {
   bankName: string;
   bankAccount: string;
   bankIfsc: string;
+  /** Branch name, printed with the IFSC as on the shop's own bills. */
+  bankBranch: string;
+  /** No longer printed on bills; kept so nothing typed earlier is lost. */
   upiId: string;
   /** Start of every invoice number, e.g. INV → INV/26-27/0001. */
   invoicePrefix: string;
@@ -79,6 +82,7 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   bankName: "",
   bankAccount: "",
   bankIfsc: "",
+  bankBranch: "",
   upiId: "",
   invoicePrefix: "INV",
   invoiceTitle: "Tax Invoice",
@@ -181,6 +185,7 @@ const businessSchema = z.object({
     (v) => (typeof v === "string" ? v.trim().toUpperCase() : ""),
     z.string().regex(/^([A-Z]{4}0[A-Z0-9]{6})?$/, "IFSC should look like SBIN0001234"),
   ),
+  bankBranch: text(100, "Branch"),
   upiId: z.preprocess(
     (v) => (typeof v === "string" ? v.trim() : ""),
     z.string().regex(/^([\w.-]{2,256}@[a-zA-Z]{2,64})?$/, "UPI ID should look like name@bank"),
@@ -287,7 +292,7 @@ export const BUSINESS_SECTIONS = {
     "challanPrefix",
     "purchaseOrderPrefix",
   ],
-  bank: ["bankName", "bankAccount", "bankIfsc", "upiId"],
+  bank: ["bankName", "bankAccount", "bankBranch", "bankIfsc"],
   reminders: ["paymentReminderDays", "defaultMinStock"],
   opening: ["openingCash", "openingBank"],
 } as const satisfies Record<string, readonly (keyof BusinessSettings)[]>;

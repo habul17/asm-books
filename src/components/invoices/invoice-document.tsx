@@ -124,11 +124,12 @@ export function InvoiceDocument({
     ...details,
     ...extra.map((x) => ({ label: x.label, value: x.value })),
   ];
+  // Laid out as on the shop's own bills; the labels are padded so the colons line up.
+  const branchIfsc = [b.bankBranch, b.bankIfsc].filter(Boolean).join(" & ");
   const bankLines = [
-    b.bankName && `BANK NAME : ${b.bankName}`,
-    b.bankAccount && `A/C NO    : ${b.bankAccount}`,
-    b.bankIfsc && `IFSC      : ${b.bankIfsc}`,
-    b.upiId && `UPI       : ${b.upiId}`,
+    b.bankName && `BANK NAME    : ${b.bankName}`,
+    b.bankAccount && `A/C NO       : ${b.bankAccount}`,
+    branchIfsc && `${b.bankBranch ? "BRANCH&IFSC " : "IFSC        "} : ${branchIfsc}`,
   ].filter((l): l is string => showBank && Boolean(l));
   const terms = showBank ? b.terms : "";
   // Column widths in percent; the description gives up room for the discount column.
@@ -160,7 +161,6 @@ export function InvoiceDocument({
             {(b.city || b.pincode) && <p>{[b.city, b.pincode].filter(Boolean).join(" - ")}</p>}
             {GST_STATES[b.stateCode] && <p>{GST_STATES[b.stateCode]}</p>}
           </div>
-          {b.email && <p className="text-[11px]">{b.email}</p>}
           <p className="mt-3 text-[13px] uppercase">{title ?? b.invoiceTitle}</p>
         </header>
 
@@ -239,7 +239,7 @@ export function InvoiceDocument({
               {inv.lines.map((l) => (
                 <tr key={l.id} className="break-inside-avoid">
                   <td className={right}>{l.lineNo}</td>
-                  <td className={`${cell} break-all`}>{l.partNo ?? ""}</td>
+                  <td className={`${cell} pt-0.5 text-[10px] break-all`}>{l.partNo ?? ""}</td>
                   <td className={`${cell} break-words`}>{l.description}</td>
                   <td className={`${cell} break-all`}>{l.hsn ?? ""}</td>
                   <td className={right}>
@@ -284,18 +284,18 @@ export function InvoiceDocument({
                   <th className="pr-3 text-left whitespace-nowrap">Taxable Value</th>
                   {inter ? (
                     <>
-                      <th className="w-16 px-1 text-left">IGST%</th>
+                      <th className="w-16 px-1">IGST%</th>
                       <th className="w-20 px-1">AMT</th>
                     </>
                   ) : (
                     <>
-                      <th className="w-16 px-1 text-left">CGST%</th>
+                      <th className="w-16 px-1">CGST%</th>
                       <th className="w-20 px-1">AMT</th>
-                      <th className="w-16 px-1 text-left">SGST%</th>
+                      <th className="w-16 px-1">SGST%</th>
                       <th className="w-20 px-1">AMT</th>
                     </>
                   )}
-                  <th className="w-16 px-1 text-left">CESS%</th>
+                  <th className="w-16 px-1">CESS%</th>
                   <th className="w-16 px-1">AMT</th>
                 </tr>
               </thead>

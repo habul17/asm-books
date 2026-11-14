@@ -102,7 +102,9 @@ const upTo99 = (n: number) => (n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]} $
 const upTo999 = (n: number) => {
   const h = Math.floor(n / 100);
   const r = n % 100;
-  return [h ? `${ONES[h]} Hundred` : "", r ? upTo99(r) : ""].filter(Boolean).join(" ");
+  if (!h) return upTo99(r);
+  // As on the shop's own bills: "Five Hundred And Sixty Eight".
+  return r ? `${ONES[h]} Hundred And ${upTo99(r)}` : `${ONES[h]} Hundred`;
 };
 
 function words(n: number): string {
@@ -121,7 +123,7 @@ function words(n: number): string {
 }
 
 /**
- * 123456 → "Rupees One Lakh Twenty Three Thousand Four Hundred Fifty Six Only".
+ * 123456 → "Rupees One Lakh Twenty Three Thousand Four Hundred And Fifty Six Only".
  * Rounds to whole rupees unless `paise` is set: 1500.5 → "Rupees One Thousand Five Hundred and Fifty Paise Only".
  */
 export function amountInWords(amount: number, { paise = false } = {}): string {

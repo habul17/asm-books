@@ -91,9 +91,12 @@ describe("taxSummary", () => {
 describe("amountInWords", () => {
   it("uses the Indian system", () => {
     expect(amountInWords(0)).toBe("Rupees Zero Only");
-    expect(amountInWords(123456)).toBe("Rupees One Lakh Twenty Three Thousand Four Hundred Fifty Six Only");
+    expect(amountInWords(123456)).toBe("Rupees One Lakh Twenty Three Thousand Four Hundred And Fifty Six Only");
     expect(amountInWords(10000000)).toBe("Rupees One Crore Only");
-    expect(amountInWords(219.6)).toBe("Rupees Two Hundred Twenty Only");
+    expect(amountInWords(9568)).toBe("Rupees Nine Thousand Five Hundred And Sixty Eight Only");
+    expect(amountInWords(1068)).toBe("Rupees One Thousand Sixty Eight Only");
+    expect(amountInWords(500)).toBe("Rupees Five Hundred Only");
+    expect(amountInWords(219.6)).toBe("Rupees Two Hundred And Twenty Only");
   });
 
   it("can include paise", () => {
