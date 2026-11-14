@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { GroupRow, NewGroupForm } from "@/components/customers/settings-forms";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { getCustomerOptions } from "@/server/customers";
 
 export const metadata: Metadata = { title: "Customer groups" };
@@ -36,11 +37,13 @@ export default function CustomerGroupsPage() {
       </Link>
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Customer groups</CardTitle>
-          <CardDescription>
-            Group customers such as Garages, Retail or Dealers. A group&apos;s price list is used for every customer
-            in it, unless the customer has their own.
-          </CardDescription>
+          <CardTitle className="text-lg">
+            Customer groups{" "}
+            <InfoTip label="About customer groups">
+              Group customers, such as Garages, Retail or Dealers. A group&apos;s price list is used for every customer in
+              it, unless the customer has their own.
+            </InfoTip>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <Suspense fallback={<Skeleton className="h-40" />}>

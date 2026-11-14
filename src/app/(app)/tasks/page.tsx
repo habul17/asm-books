@@ -6,6 +6,7 @@ import { cn } from "cn";
 import { AddTaskForm } from "@/components/tasks/task-form";
 import { TaskTick } from "@/components/tasks/task-tick";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatDate } from "@/lib/format";
 import { groupTasks, TASK_WHEN_LABELS } from "@/lib/tasks/tasks";
 import { listTasks, taskPeople, type TaskItem } from "@/server/tasks";
@@ -77,16 +78,18 @@ async function Lists() {
 export default function TasksPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <h1 className="text-xl font-semibold">Tasks</h1>
+      <h1 className="text-xl font-semibold">
+        Tasks{" "}
+        <InfoTip label="About tasks">
+          Everyone sees every task. A task with a date shows on the bell on that day, for the person it is for.
+        </InfoTip>
+      </h1>
       <Suspense fallback={<Skeleton className="h-44 rounded-xl" />}>
         <Add />
       </Suspense>
       <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
         <Lists />
       </Suspense>
-      <p className="text-xs text-muted-foreground">
-        Everyone who signs in sees every task. A task with a date shows on the bell on that day, for the person it is for.
-      </p>
     </div>
   );
 }

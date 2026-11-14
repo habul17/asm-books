@@ -64,10 +64,6 @@ async function Body() {
           ))}
         </ul>
       </section>
-      <p className="text-xs text-muted-foreground">
-        Age is counted from the bill date. Payments are counted against the oldest bills first, so what is left unpaid
-        is the newest bills. An opening balance is aged from the day the customer was added.
-      </p>
     </>
   );
 }
@@ -75,7 +71,10 @@ async function Body() {
 export default function ArAgingPage() {
   return (
     <ReportPage>
-      <ReportHeader title="AR Aging Summary">What customers owe you, by how old the unpaid bills are.</ReportHeader>
+      <ReportHeader title="AR Aging Summary">
+        What customers owe you, by how old the unpaid bills are. Age counts from the bill date. Payments clear the oldest
+        bills first.
+      </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body />
       </Suspense>

@@ -9,6 +9,7 @@ import { ListToolbar } from "@/components/forms/list-toolbar";
 import { OwnerGate } from "@/components/layout/owner-gate";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { MoneyEntryStatusFilter } from "@/server/money-entries";
 import { getBusiness } from "@/server/settings";
@@ -73,7 +74,14 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Banking</h1>
+        <h1 className="text-xl font-semibold">
+          Banking{" "}
+          <InfoTip label="About banking">
+            Sales, payments, bills and expenses are counted on their own. Enter here only other money: your own money,
+            loans, GST paid, equipment, other income, and cash put in or taken out of the bank.{" "}
+            <Link href="/reports/cash-flow">See the Cash Flow Statement</Link>.
+          </InfoTip>
+        </h1>
         <Link href="/banking/new" className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> New entry
         </Link>
@@ -82,14 +90,6 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
         <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
           <Balances />
         </Suspense>
-        <p className="text-sm text-muted-foreground">
-          Sales, payments, bills and expenses are counted on their own. Enter here only the money that is none of those:
-          your own money, loans, GST paid, equipment, other income, and cash put in or taken from the bank.{" "}
-          <Link href="/reports/cash-flow" className="underline">
-            See the Cash Flow Statement
-          </Link>
-          .
-        </p>
         <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
           <ListToolbar
             path="/banking"
@@ -102,15 +102,18 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
           <List searchParams={searchParams} />
         </Suspense>
         <section id="opening" className="flex scroll-mt-20 flex-col gap-2 pt-2">
-          <h2 className="px-1 text-sm font-semibold text-muted-foreground">Opening balances</h2>
+          <h2 className="px-1 text-sm font-semibold text-muted-foreground">
+            Opening balances{" "}
+            <InfoTip label="About opening balances">
+              The cash and bank money you had on the day you started the app. Banking and the reports count from here.
+              Set them once.
+            </InfoTip>
+          </h2>
           <div className="rounded-2xl border bg-card p-4 sm:p-6">
             <Suspense fallback={<Skeleton className="h-24" />}>
               <Opening />
             </Suspense>
           </div>
-          <p className="px-1 text-xs text-muted-foreground">
-            Banking and the reports count from these two figures. Set them once, when you start using the app.
-          </p>
         </section>
       </OwnerGate>
     </div>

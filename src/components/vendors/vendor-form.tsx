@@ -10,6 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTip } from "@/components/ui/info-tip";
 import { checkGstin, GST_STATE_OPTIONS } from "@/lib/gst";
 import { VENDOR_NAME_MAX } from "@/lib/vendors/validation";
 import type { VendorDetail } from "@/server/vendors";
@@ -50,7 +51,7 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
           <Input id="v-pin" name="pincode" inputMode="numeric" defaultValue={v?.pincode ?? ""} maxLength={7} />
         </Field>
         <div className="flex flex-col gap-1.5">
-          <Field label="GSTIN" htmlFor="v-gstin">
+          <Field label="GSTIN" htmlFor="v-gstin" hint="The 15-letter tax number on their bills. Leave it empty if they have none.">
             <Input
               id="v-gstin"
               name="gstin"
@@ -62,12 +63,13 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
               className="font-mono uppercase"
             />
           </Field>
-          <GstinHint value={gstin} emptyText="Leave empty if the vendor has no GSTIN." />
+          <GstinHint value={gstin} />
         </div>
         <Field
           label="State"
           htmlFor="v-state"
-          hint={gstinState?.ok ? "Taken from the GSTIN" : "Decides CGST + SGST or IGST on their bills."}
+          hint="Their state decides the tax on their bills: same state = CGST + SGST, other state = IGST."
+          note={gstinState?.ok ? "Taken from the GSTIN" : undefined}
         >
           <NativeSelect
             id="v-state"
@@ -110,7 +112,7 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
             </NativeSelect>
           </div>
         </Field>
-        <Field label="Payment terms (days)" htmlFor="v-terms" hint="Sets the due date on their bills.">
+        <Field label="Payment terms (days)" htmlFor="v-terms" hint="How many days you get to pay them. Sets the due date on their bills.">
           <Input
             id="v-terms"
             name="paymentTermsDays"
@@ -132,10 +134,8 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="active" defaultChecked={v.active} className="mt-0.5 size-4 accent-primary" />
           <span>
-            Active vendor
-            <span className="block text-muted-foreground">
-              Inactive vendors are hidden from search but their history is kept.
-            </span>
+            Active vendor{" "}
+            <InfoTip label="About Active vendor">Untick to hide this vendor from search. Their history is kept.</InfoTip>
           </span>
         </label>
       )}

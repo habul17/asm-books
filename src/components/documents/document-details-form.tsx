@@ -35,7 +35,7 @@ export function DocumentDetailsForm({
           <Input id="d-date" name="docDate" type="date" defaultValue={doc.docDate ?? ""} />
         </Field>
       </div>
-      <Field label="Notes (optional)" htmlFor="d-notes" hint="Words here are found by the search.">
+      <Field label="Notes (optional)" htmlFor="d-notes" hint="Words you type here can be found with the search.">
         <Textarea id="d-notes" name="notes" rows={2} maxLength={1000} defaultValue={doc.notes ?? ""} />
       </Field>
       {canHide && (

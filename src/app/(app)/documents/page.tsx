@@ -6,6 +6,7 @@ import { DocumentList, DocumentListSkeleton } from "@/components/documents/docum
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { ListToolbar } from "@/components/forms/list-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { DOCUMENT_FOLDERS, formatBytes, isDocumentFolder } from "@/lib/documents/documents";
 import { viewerIsOwner } from "@/server/auth";
 import { documentStorage } from "@/server/documents";
@@ -27,9 +28,11 @@ async function Upload() {
   return (
     <section className="flex flex-col gap-2 rounded-xl border border-dashed p-4">
       <DocumentUpload options canHide={canHide} />
-      <p className="text-xs text-muted-foreground">
-        Photos (JPG, PNG) and PDF files, up to 4 MB each. Big photos are made smaller for you. Using{" "}
-        {formatBytes(storage.used)} of {formatBytes(storage.limit)}.
+      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        Using {formatBytes(storage.used)} of {formatBytes(storage.limit)}
+        <InfoTip label="About uploads">
+          Photos (JPG, PNG) and PDF files, up to 4 MB each. Big photos are made smaller for you.
+        </InfoTip>
       </p>
     </section>
   );

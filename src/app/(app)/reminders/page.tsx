@@ -7,6 +7,7 @@ import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 import { LatePayerList, LowStockRows } from "@/components/reminders/reminder-lists";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getReminders } from "@/server/reminders";
 import { lowStock } from "@/server/reports";
@@ -77,7 +78,13 @@ async function Body() {
       {late && (
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">
-            <h2 className="text-sm font-semibold text-muted-foreground">Customers who have not paid</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">
+              Customers who have not paid{" "}
+              <InfoTip label="About unpaid bills">
+                Bills unpaid for {plural(days, "day")} or more. Payments clear the oldest bills first. Change the days in{" "}
+                <a href="#reminder-settings">Reminder settings</a> at the bottom.
+              </InfoTip>
+            </h2>
             {late.length > 0 && (
               <span className="text-sm text-muted-foreground">
                 {plural(late.length, "customer")} · {formatMoney(lateAmount)}
@@ -91,20 +98,17 @@ async function Body() {
           ) : (
             <LatePayerList payers={late} days={days} businessName={businessName} />
           )}
-          <p className="px-1 text-xs text-muted-foreground">
-            Shows bills unpaid for {plural(days, "day")} or more. Payments are counted against the oldest bills first.
-            Change the days under{" "}
-            <a href="#reminder-settings" className="underline">
-              Reminder settings
-            </a>{" "}
-            at the bottom of this page.
-          </p>
         </section>
       )}
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-1">
-          <h2 className="text-sm font-semibold text-muted-foreground">Low stock</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Low stock{" "}
+            <InfoTip label="About low stock">
+              Parts that are out of stock or at their minimum. Set a part&rsquo;s minimum on its Items page.
+            </InfoTip>
+          </h2>
           {reminders.lowStock > 0 && (
             <Link href="/reports/low-stock" className="text-sm font-medium hover:underline">
               See all {reminders.lowStock}
@@ -118,10 +122,6 @@ async function Body() {
         ) : (
           <LowStockRows items={stock.items} />
         )}
-        <p className="px-1 text-xs text-muted-foreground">
-          Parts that are out of stock, or at their minimum. Set a part&rsquo;s minimum on its Items page. The owner can
-          set one level for all parts under Reminder settings at the bottom of this page.
-        </p>
       </section>
     </>
   );
@@ -144,8 +144,9 @@ export default function RemindersPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Reminders</h1>
-        <p className="text-sm text-muted-foreground">What needs your attention today.</p>
+        <h1 className="text-xl font-semibold">
+          Reminders <InfoTip label="About reminders">What needs your attention today.</InfoTip>
+        </h1>
       </div>
       <Suspense fallback={<BodySkeleton />}>
         <Body />

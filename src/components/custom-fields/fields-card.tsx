@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import type { CustomFieldEntity } from "@/lib/custom-fields";
 import { getCustomFields } from "@/server/custom-fields";
 
@@ -39,8 +40,9 @@ export function CustomFieldsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Custom fields</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle className="text-lg">
+          Custom fields <InfoTip label="About custom fields">{description}</InfoTip>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <Suspense fallback={<Skeleton className="h-40" />}>

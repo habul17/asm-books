@@ -64,18 +64,6 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
           { label: "Of which in the bank", value: cf.closingBank },
         ]}
       />
-      <p className="text-xs text-muted-foreground">
-        Shows money as entered in ASM Books. Enter the owner&apos;s own money, loans, equipment and GST paid to the
-        government in{" "}
-        <Link href="/banking" className="underline">
-          Banking
-        </Link>{" "}
-        so the balance matches what is really in hand and in the bank. The balance counts from the{" "}
-        <Link href="/banking#opening" className="underline">
-          opening balances
-        </Link>{" "}
-        at the bottom of Banking.
-      </p>
     </>
   );
 }
@@ -83,7 +71,11 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/cash-f
 export default function CashFlowPage({ searchParams }: PageProps<"/reports/cash-flow">) {
   return (
     <ReportPage>
-      <ReportHeader title="Cash Flow Statement">Money that came in and went out in a period.</ReportHeader>
+      <ReportHeader title="Cash Flow Statement">
+        Money that came in and went out in a period. It counts from the{" "}
+        <Link href="/banking#opening">opening balances</Link>. For it to match your real cash and bank, enter your own
+        money, loans, equipment and GST paid in <Link href="/banking">Banking</Link>.
+      </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body searchParams={searchParams} />
       </Suspense>

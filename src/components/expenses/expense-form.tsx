@@ -112,7 +112,7 @@ export function ExpenseForm({
         </Field>
       </div>
 
-      <Field label="GST in this amount" htmlFor="e-gst" hint="Choose the rate if the bill shows GST you can claim back.">
+      <Field label="GST in this amount" htmlFor="e-gst" hint="If the bill shows GST, pick its rate. You can claim this GST back.">
         <NativeSelect id="e-gst" name="gstRate" defaultValue={String(initial.gstRate)} className="w-full sm:w-1/2">
           <NativeSelectOption value="0">No GST</NativeSelectOption>
           {GST_RATES.filter((r) => r > 0).map((r) => (

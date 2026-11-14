@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import type { DocumentFolder } from "@/lib/documents/documents";
 import { searchDocuments } from "@/server/documents";
 
@@ -18,12 +19,13 @@ async function Attached({ link }: { link: Link }) {
 export function DocumentAttachments({ link, folder, hint }: { link: Link; folder: DocumentFolder; hint: string }) {
   return (
     <section aria-label="Attached files" className="flex flex-col gap-2 print:hidden">
-      <h2 className="font-medium">Attached files</h2>
+      <h2 className="font-medium">
+        Attached files <InfoTip label="About attached files">{hint}</InfoTip>
+      </h2>
       <Suspense fallback={<Skeleton className="h-14 rounded-xl" />}>
         <Attached link={link} />
       </Suspense>
       <DocumentUpload link={link} folder={folder} label="Attach a photo or PDF" />
-      <p className="text-xs text-muted-foreground">{hint}</p>
     </section>
   );
 }

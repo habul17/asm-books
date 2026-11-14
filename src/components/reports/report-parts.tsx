@@ -7,6 +7,7 @@ import { OwnerGate } from "@/components/layout/owner-gate";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatMoney } from "@/lib/format";
 import { PERIOD_PRESETS, type Period } from "@/lib/reports/period";
 
@@ -34,13 +35,14 @@ export function ReportHeader({ title, children }: { title: string; children?: Re
         >
           <ChevronLeftIcon />
         </Link>
-        <h1 className="mr-auto text-xl font-semibold">{title}</h1>
+        <h1 className="mr-auto text-xl font-semibold">
+          {title} {children && <InfoTip label={`About ${title}`}>{children}</InfoTip>}
+        </h1>
         {/* Reads the address bar, so it waits for the browser. */}
         <Suspense fallback={null}>
           <ReportTools />
         </Suspense>
       </div>
-      {children && <p className="pl-11 text-sm text-muted-foreground print:pl-0">{children}</p>}
     </div>
   );
 }

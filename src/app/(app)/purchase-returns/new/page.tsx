@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { PurchaseReturnForm } from "@/components/purchase-returns/purchase-return-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTip } from "@/components/ui/info-tip";
 import { getBillEditorOptions } from "@/server/bills";
 import { todayInIndia } from "@/server/invoice-writes";
 import { pickVendorById } from "@/server/vendors";
@@ -23,10 +24,12 @@ export default function NewPurchaseReturnPage({ searchParams }: PageProps<"/purc
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">New purchase return</h1>
-        <p className="text-sm text-muted-foreground">
-          For damaged or wrong parts going back to the vendor. You get a debit note to send with them.
-        </p>
+        <h1 className="text-xl font-semibold">
+          New purchase return{" "}
+          <InfoTip label="About purchase returns">
+            For damaged or wrong parts going back to the vendor. You get a debit note to send with them.
+          </InfoTip>
+        </h1>
       </div>
       <Suspense fallback={<Skeleton className="h-80" />}>
         <Form searchParams={searchParams} />

@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 
 import { scanBillAction } from "@/app/(app)/bills/actions";
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/ui/info-tip";
 import { isScanMimeType, SCAN_MAX_BYTES } from "@/lib/bills/scan";
 import { shrinkImage } from "@/lib/bills/shrink-image";
 import type { BillScanResult } from "@/server/bill-scan";
@@ -58,15 +59,15 @@ export function BillScanBox({ ready, onScan }: { ready: boolean; onScan: (scan: 
             ? "This can take up to a minute. Please wait."
             : ready
               ? "Take a photo or upload a PDF of the vendor\u2019s bill. The form below is filled in for you to check."
-              : "Bill scanning is not set up yet. Enter the bill by hand below."}
+              : "Bill scanning is not set up yet. Enter the bill by hand below."}{" "}
+          {ready && !reading && (
+            <InfoTip label="About bill scanning">
+              The photo is sent to Google&apos;s AI service to be read. It is not kept in this app. Scanning replaces
+              anything already typed below.
+            </InfoTip>
+          )}
         </p>
       </div>
-      {ready && !reading && (
-        <p className="text-xs text-muted-foreground">
-          The photo is sent to Google&apos;s AI service to be read. It is not kept in this app. Scanning replaces
-          anything already typed below.
-        </p>
-      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

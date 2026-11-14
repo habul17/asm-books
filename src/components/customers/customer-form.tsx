@@ -59,7 +59,7 @@ export function CustomerForm({
           <Input id="c-pin" name="pincode" inputMode="numeric" defaultValue={c?.pincode ?? ""} maxLength={7} />
         </Field>
         <div className="flex flex-col gap-1.5">
-          <Field label="GSTIN" htmlFor="c-gstin">
+          <Field label="GSTIN" htmlFor="c-gstin" hint="The 15-letter tax number of the customer. Leave it empty if they have none.">
             <Input
               id="c-gstin"
               name="gstin"
@@ -71,9 +71,10 @@ export function CustomerForm({
               className="font-mono uppercase"
             />
           </Field>
-          <GstinHint value={gstin} emptyText="Leave empty if the customer has no GSTIN." />
+          <GstinHint value={gstin} />
         </div>
-        <Field label="State" htmlFor="c-state" hint={gstinState?.ok ? "Taken from the GSTIN" : undefined}>
+        <Field label="State" htmlFor="c-state" hint="Their state decides the tax on a bill: same state = CGST + SGST, other state = IGST."
+          note={gstinState?.ok ? "Taken from the GSTIN" : undefined}>
           <NativeSelect
             id="c-state"
             name="stateCode"
@@ -104,7 +105,7 @@ export function CustomerForm({
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Price list" htmlFor="c-list" hint="Leave as group's list unless this customer gets special prices.">
+        <Field label="Price list" htmlFor="c-list" hint="Leave it on the group's list, unless this customer gets special prices.">
           <NativeSelect id="c-list" name="priceListId" defaultValue={c?.priceListId ?? ""} className="w-full">
             <NativeSelectOption value="">Use the group&apos;s price list</NativeSelectOption>
             {options.priceLists.map((l) => (
@@ -145,7 +146,7 @@ export function CustomerForm({
             placeholder="No limit"
           />
         </Field>
-        <Field label="Payment terms (days)" htmlFor="c-terms" hint="0 = pay on the spot">
+        <Field label="Payment terms (days)" htmlFor="c-terms" hint="How many days they get to pay. 0 means they pay on the spot.">
           <Input
             id="c-terms"
             name="paymentTermsDays"

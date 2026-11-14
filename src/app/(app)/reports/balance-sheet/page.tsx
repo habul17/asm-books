@@ -141,15 +141,6 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
           )}
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        Built from what is entered in ASM Books. Enter the owner&apos;s own money, loans, equipment and GST paid to the
-        government in{" "}
-        <Link href="/banking" className="underline">
-          Banking
-        </Link>
-        ; until they are entered, cash, bank and GST to pay can differ from the real figures. Equipment is shown at what
-        was paid, with no wear taken off. Ask your accountant before using this for tax or a loan.
-      </p>
     </>
   );
 }
@@ -157,7 +148,11 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/balanc
 export default function BalanceSheetPage({ searchParams }: PageProps<"/reports/balance-sheet">) {
   return (
     <ReportPage>
-      <ReportHeader title="Balance Sheet">What the business has and what it owes on a date.</ReportHeader>
+      <ReportHeader title="Balance Sheet">
+        What the business has and what it owes on a date. Enter your own money, loans, equipment and GST paid in{" "}
+        <Link href="/banking">Banking</Link>, or the figures can be off. Ask your accountant before using it for tax or a
+        loan.
+      </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body searchParams={searchParams} />
       </Suspense>

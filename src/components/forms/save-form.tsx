@@ -1,9 +1,10 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Label } from "@/components/ui/label";
 
 export interface FormState {
@@ -76,25 +77,34 @@ export function useSelectOnMount(enabled: boolean) {
   return ref;
 }
 
-/** A label above an input. */
+/**
+ * A label above an input. `hint` is an explanation, tucked behind an (i) next
+ * to the label; `note` is live information (a preview, "Taken from the GSTIN")
+ * shown under the input.
+ */
 export function Field({
   label,
   htmlFor,
   hint,
+  note,
   children,
   className,
 }: {
   label: string;
   htmlFor: string;
-  hint?: string;
+  hint?: ReactNode;
+  note?: ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <div className="flex min-h-5 items-center gap-1">
+        <Label htmlFor={htmlFor}>{label}</Label>
+        {hint && <InfoTip label={`About ${label}`}>{hint}</InfoTip>}
+      </div>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
   );
 }

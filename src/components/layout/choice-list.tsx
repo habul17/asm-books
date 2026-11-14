@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckIcon, type LucideIcon } from "lucide-react";
+import { InfoTip } from "@/components/ui/info-tip";
 
 export interface Choice<T extends string> {
   value: T;
@@ -27,7 +28,9 @@ export function ChoiceList<T extends string>({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-sm font-semibold text-muted-foreground">{title}</h2>
+      <h2 className="px-1 text-sm font-semibold text-muted-foreground">
+        {title} {note && <InfoTip label={`About ${title}`}>{note}</InfoTip>}
+      </h2>
       <ul role="radiogroup" aria-label={title} className="divide-y overflow-hidden rounded-2xl border bg-card">
         {choices.map((c) => {
           const chosen = c.value === value;
@@ -48,7 +51,6 @@ export function ChoiceList<T extends string>({
           );
         })}
       </ul>
-      {note && <p className="px-1 text-sm text-muted-foreground">{note}</p>}
     </section>
   );
 }

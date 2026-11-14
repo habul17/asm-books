@@ -8,6 +8,7 @@ import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTip } from "@/components/ui/info-tip";
 import { checkGstin, GST_STATE_OPTIONS } from "@/lib/gst";
 import { GST_RATES, type BusinessSection, type BusinessSettings } from "@/lib/settings/business";
 
@@ -44,7 +45,7 @@ export function ShopForm({ b }: { b: BusinessSettings }) {
           <Input id="b-pin" name="pincode" inputMode="numeric" defaultValue={b.pincode} maxLength={7} />
         </Field>
         <div className="flex flex-col gap-1.5">
-          <Field label="GSTIN" htmlFor="b-gstin">
+          <Field label="GSTIN" htmlFor="b-gstin" hint="Your shop's 15-letter tax number. It is printed on every bill.">
             <Input
               id="b-gstin"
               name="gstin"
@@ -56,12 +57,13 @@ export function ShopForm({ b }: { b: BusinessSettings }) {
               className="font-mono uppercase"
             />
           </Field>
-          <GstinHint value={gstin} emptyText="Needed for tax invoices." />
+          <GstinHint value={gstin} />
         </div>
         <Field
           label="State"
           htmlFor="b-state"
-          hint={gstinState?.ok ? "Taken from the GSTIN" : "Decides CGST + SGST or IGST on invoices."}
+          hint="Your state decides the tax on a bill: same state = CGST + SGST, other state = IGST."
+          note={gstinState?.ok ? "Taken from the GSTIN" : undefined}
         >
           <NativeSelect
             id="b-state"
@@ -93,8 +95,7 @@ function Tick({ name, checked, title, note }: { name: string; checked: boolean; 
     <label className="flex items-start gap-3 text-sm">
       <input type="checkbox" name={name} defaultChecked={checked} className="mt-0.5 size-4 accent-primary" />
       <span>
-        <span className="font-medium">{title}</span>
-        <span className="block text-muted-foreground">{note}</span>
+        <span className="font-medium">{title}</span> <InfoTip label={`About ${title}`}>{note}</InfoTip>
       </span>
     </label>
   );
@@ -113,7 +114,7 @@ export function BillsForm({
         <Field label="Invoice title" htmlFor="b-title" hint="Printed at the top of every invoice.">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>
-        <Field label="Default GST %" htmlFor="b-gst" hint="For parts without their own GST rate.">
+        <Field label="Default GST %" htmlFor="b-gst" hint="Used for parts that have no GST rate of their own.">
           <NativeSelect id="b-gst" name="defaultGstRate" defaultValue={String(b.defaultGstRate)} className="w-full">
             {GST_RATES.map((r) => (
               <NativeSelectOption key={r} value={r}>
@@ -125,7 +126,7 @@ export function BillsForm({
         <Field
           label="Default price list"
           htmlFor="b-list"
-          hint="Prices for customers who have no price list of their own."
+          hint="The prices used for customers who have no price list of their own."
           className="sm:col-span-2"
         >
           <NativeSelect id="b-list" name="defaultPriceListId" defaultValue={b.defaultPriceListId ?? ""} className="w-full">
@@ -161,7 +162,7 @@ export function BillsForm({
           name="allowShortStock"
           checked={b.allowShortStock}
           title="Allow selling more than the stock in hand"
-          note="When off, an invoice is stopped if a part does not have enough stock. Turn on for a while if your stock is not entered yet."
+          note="When off, a bill is stopped if a part is out of stock. Turn it on for a while if your stock is not entered yet."
         />
       </div>
     </SectionForm>
@@ -189,7 +190,7 @@ export function NumbersForm({ b, year }: { b: BusinessSettings; year: string }) 
         {NUMBER_FIELDS.map((f) => {
           const value = String(b[f.key]);
           return (
-            <Field key={f.key} label={f.label} htmlFor={`n-${f.key}`} hint={`${value}/${year}/0001`}>
+            <Field key={f.key} label={f.label} htmlFor={`n-${f.key}`} note={`${value}/${year}/0001`}>
               <Input
                 id={`n-${f.key}`}
                 name={f.key}

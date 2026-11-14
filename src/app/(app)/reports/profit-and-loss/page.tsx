@@ -77,9 +77,6 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/profit
           )}
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        GST is left out: it is collected for the government, not your income. Opening stock is not counted as profit.
-      </p>
     </>
   );
 }
@@ -87,7 +84,9 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/profit
 export default function ProfitAndLossPage({ searchParams }: PageProps<"/reports/profit-and-loss">) {
   return (
     <ReportPage>
-      <ReportHeader title="Profit and Loss">What you earned after the cost of parts and your expenses.</ReportHeader>
+      <ReportHeader title="Profit and Loss">
+        What you earned after the cost of parts and your expenses. GST is left out, because it belongs to the government.
+      </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body searchParams={searchParams} />
       </Suspense>

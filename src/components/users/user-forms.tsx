@@ -6,6 +6,7 @@ import { addUser, changeMyPassword, saveUser, setUserPassword } from "@/app/(app
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InfoTip } from "@/components/ui/info-tip";
 import { PASSWORD_MIN } from "@/lib/auth/password";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/auth/user-validation";
 
@@ -22,8 +23,8 @@ function RoleChoice({ value, disabled }: { value?: Role; disabled?: boolean }) {
         <label key={r} className="flex items-start gap-2 text-sm">
           <input type="radio" name="role" value={r} defaultChecked={(value ?? "staff") === r} className="mt-0.5" />
           <span>
-            <span className="font-medium">{ROLE_LABELS[r]}</span>
-            <span className="block text-muted-foreground">{ROLE_HINTS[r]}</span>
+            <span className="font-medium">{ROLE_LABELS[r]}</span>{" "}
+            <InfoTip label={`About ${ROLE_LABELS[r]}`}>{ROLE_HINTS[r]}</InfoTip>
           </span>
         </label>
       ))}
@@ -68,7 +69,7 @@ export function NewUserForm() {
       </div>
       <RoleChoice />
       <NewPasswordFields prefix="u" />
-      <p className="text-sm text-muted-foreground">Tell them the password in person. They can change it later from My account.</p>
+      <p className="text-sm text-muted-foreground">Tell them the password in person. Only the owner can change it later.</p>
       <SaveRow state={state} pending={pending} dirty={dirty} label="Add user">
         <Link href="/users" className={buttonVariants({ variant: "ghost" })}>
           Cancel
@@ -96,12 +97,14 @@ export function EditUserForm({ user }: { user: { id: number; name: string; role:
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" name="active" defaultChecked={user.active} disabled={user.isMe} className="mt-0.5" />
         <span>
-          <span className="font-medium">Can sign in</span>
-          <span className="block text-muted-foreground">
-            {user.isMe
-              ? "You cannot switch yourself off or change your own role."
-              : "Untick to switch this person off. They are signed out at once; their past work stays."}
-          </span>
+          <span className="font-medium">Can sign in</span>{" "}
+          {user.isMe ? (
+            <span className="block text-muted-foreground">You cannot switch yourself off or change your own role.</span>
+          ) : (
+            <InfoTip label="About Can sign in">
+              Untick to switch this person off. They are signed out at once. Their past work stays.
+            </InfoTip>
+          )}
         </span>
       </label>
       <SaveRow state={state} pending={pending} dirty={dirty} label="Save changes" />

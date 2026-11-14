@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
+import { InfoTip } from "@/components/ui/info-tip";
 import type { ScanFlag } from "@/lib/bills/scan";
 import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
@@ -229,7 +230,12 @@ export function BillEditor({
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-muted-foreground">
-          Items · {taxType === "inter" ? "IGST (other state)" : "CGST + SGST (same state)"}
+          Items · {taxType === "inter" ? "IGST (other state)" : "CGST + SGST (same state)"}{" "}
+          <InfoTip label="About the rate">
+            {isOrder
+              ? "The rate starts at the part's last purchase price. Change it if the vendor quoted another rate."
+              : "The rate starts at the part's last purchase price. Change it to match the bill."}
+          </InfoTip>
         </h2>
         {lines.length > 0 && (
           <ul className="flex flex-col divide-y rounded-xl border">
@@ -333,11 +339,6 @@ export function BillEditor({
           </ul>
         )}
         <ItemPicker search={findBillItems} onPick={addItem} inputRef={pickerRef} />
-        <p className="text-xs text-muted-foreground">
-          {isOrder
-            ? "The rate starts at the part's last purchase price; change it if the vendor quoted another rate."
-            : "The rate starts at the part's last purchase price; change it to match the bill."}
-        </p>
       </section>
 
       {!isOrder && (
@@ -350,11 +351,11 @@ export function BillEditor({
           className="mt-0.5 size-4 accent-primary"
         />
         <span>
-          <span className="font-medium">Update purchase prices</span>
-          <span className="block text-muted-foreground">
+          <span className="font-medium">Update purchase prices</span>{" "}
+          <InfoTip label="About Update purchase prices">
             These rates (after discount, before GST) become the parts&apos; purchase prices, so your price lists follow
             them.
-          </span>
+          </InfoTip>
         </span>
       </label>
 
@@ -366,10 +367,8 @@ export function BillEditor({
           className="mt-0.5 size-4 accent-primary"
         />
         <span>
-          <span className="font-medium">Round total to whole rupees</span>
-          <span className="block text-muted-foreground">
-            Untick when the supplier&apos;s bill keeps the paise, like ₹1,234.56.
-          </span>
+          <span className="font-medium">Round total to whole rupees</span>{" "}
+          <InfoTip label="About Round total">Untick when the supplier&apos;s bill keeps the paise, like ₹1,234.56.</InfoTip>
         </span>
       </label>
         </>

@@ -46,8 +46,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/expens
       )}
       {items.length > 0 && gst > 0 && (
         <p className="text-xs text-muted-foreground">
-          Amounts are before GST. GST you can claim back on these expenses: {formatMoney(gst)} (shown in the GST
-          Summary).
+          GST you can claim back: {formatMoney(gst)}
         </p>
       )}
     </>
@@ -57,7 +56,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/expens
 export default function ExpensesByCategoryPage({ searchParams }: PageProps<"/reports/expenses-by-category">) {
   return (
     <ReportPage>
-      <ReportHeader title="Expenses by Category">Where your money went, biggest first.</ReportHeader>
+      <ReportHeader title="Expenses by Category">Where your money went, biggest first. Amounts are before GST.</ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body searchParams={searchParams} />
       </Suspense>

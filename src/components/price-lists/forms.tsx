@@ -7,6 +7,7 @@ import { Field, SaveRow, useSaveForm, useSelectOnMount } from "@/components/form
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTip } from "@/components/ui/info-tip";
 import { flattenFolders, type FolderNode } from "@/lib/price-lists/folders";
 import {
   ADJUST_MAX,
@@ -178,8 +179,7 @@ export function PriceListForm({
       <label className="flex items-start gap-2 text-sm sm:col-span-2">
         <input type="checkbox" name="enabled" defaultChecked={list.enabled} className="mt-0.5 size-4 accent-primary" />
         <span>
-          Switched on
-          <span className="block text-muted-foreground">Shown in the catalogue and on invoices</span>
+          Switched on <InfoTip label="About Switched on">When on, this list shows in the catalogue and on invoices.</InfoTip>
         </span>
       </label>
       <Field label="Notes" htmlFor="list-notes" className="sm:col-span-2">

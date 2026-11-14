@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { PURCHASE_RETURN_REASONS } from "@/lib/purchase-returns/validation";
@@ -164,7 +165,10 @@ export function PurchaseReturnForm({
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-muted-foreground">
-          Items · {taxType === "inter" ? "IGST (other state)" : "CGST + SGST (same state)"}
+          Items · {taxType === "inter" ? "IGST (other state)" : "CGST + SGST (same state)"}{" "}
+          <InfoTip label="About the rate">
+            The rate starts at the part&apos;s last purchase price. Change it to match what the vendor will credit.
+          </InfoTip>
         </h2>
         {lines.length > 0 && (
           <ul className="flex flex-col divide-y rounded-xl border">
@@ -237,9 +241,6 @@ export function PurchaseReturnForm({
           </ul>
         )}
         <ItemPicker<ReturnItem> search={findBillItems} onPick={addItem} inputRef={pickerRef} />
-        <p className="text-xs text-muted-foreground">
-          The rate starts at the part&apos;s last purchase price; change it to match what the vendor will credit.
-        </p>
       </section>
 
       <Field label="Notes (optional)" htmlFor="pr-notes">

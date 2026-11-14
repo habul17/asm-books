@@ -81,7 +81,7 @@ export function TransportForm({
           <Field label="Distance (km)" htmlFor="tr-km">
             <Input id="tr-km" name="distanceKm" inputMode="numeric" defaultValue={t.distanceKm ?? ""} maxLength={4} />
           </Field>
-          <Field label="E-way bill number" htmlFor="tr-ewb" hint="12 digits">
+          <Field label="E-way bill number" htmlFor="tr-ewb" hint="The 12-digit number from the e-way bill website.">
             <Input id="tr-ewb" name="ewayBillNo" inputMode="numeric" defaultValue={t.ewayBillNo ?? ""} maxLength={14} />
           </Field>
           <Field label="E-way bill date" htmlFor="tr-ewb-date">
