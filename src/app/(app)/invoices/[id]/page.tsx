@@ -35,7 +35,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
           {!final && <Badge variant="destructive">cancelled</Badge>}
         </h1>
         <PrintButton />
-        {final && (
+        {final && inv.canChange && (
           <Link href={`/invoices/${inv.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <PencilIcon /> Edit
           </Link>

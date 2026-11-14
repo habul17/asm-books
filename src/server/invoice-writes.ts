@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { parseExtra, type ExtraValues } from "@/lib/custom-fields";
 import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/invoices/math";
+import { canChangeInvoice, STAFF_EDIT_LIMIT } from "@/lib/invoices/edit-window";
 import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
 import { loadCustomFields } from "@/server/custom-fields";
@@ -316,6 +317,7 @@ async function lockInvoice(tx: Tx, id: number) {
       customerId: invoices.customerId,
       priceListId: invoices.priceListId,
       extra: invoices.extra,
+      createdAt: invoices.createdAt,
     })
     .from(invoices)
     .where(eq(invoices.id, id))
@@ -340,9 +342,15 @@ async function lockInvoice(tx: Tx, id: number) {
   return { ...inv, lines };
 }
 
-export async function updateInvoice(id: number, input: InvoiceInput, userId: number): Promise<void> {
+export async function updateInvoice(
+  id: number,
+  input: InvoiceInput,
+  userId: number,
+  { isOwner }: { isOwner: boolean },
+): Promise<void> {
   await withTransaction(async (tx) => {
     const existing = await lockInvoice(tx, id);
+    if (!canChangeInvoice(isOwner, existing.createdAt)) throw new InvoiceInputError(STAFF_EDIT_LIMIT);
     const { allowShortStock, header, lines } = await prepare(tx, input, existing);
     // Only the change in quantity moves stock.
     const before = qtyByProduct(existing.lines);

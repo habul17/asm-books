@@ -34,7 +34,7 @@ export async function saveInvoice(id: number | null, input: unknown): Promise<Ac
   try {
     if (id == null) savedId = await createInvoice(parsed.value, user.id);
     else {
-      await updateInvoice(id, parsed.value, user.id);
+      await updateInvoice(id, parsed.value, user.id, { isOwner: isOwner(user) });
       savedId = id;
     }
   } catch (err) {

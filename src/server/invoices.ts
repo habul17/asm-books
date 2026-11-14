@@ -24,6 +24,7 @@ import { loadBusiness } from "@/server/settings";
 import { loadCustomFields } from "./custom-fields";
 import { customerBalance } from "./customers";
 import { productSearch, purchasePriceAt } from "./product-search";
+import { canChangeInvoice } from "@/lib/invoices/edit-window";
 
 export const INVOICE_LIMIT = 100;
 const PICK_LIMIT = 15;
@@ -127,6 +128,8 @@ export async function getInvoice(id: number) {
     // Costs stay on the server; only the profit total is shared, and only with the owner.
     lines: lines.map(({ line, stockQty }) => ({ ...line, stockQty })),
     profit: isOwner && allCosted ? Math.round((head.invoice.taxableTotal - cost) * 100) / 100 : null,
+    /** Staff may change an invoice only on the day it was made. */
+    canChange: canChangeInvoice(isOwner, head.invoice.createdAt),
   };
 }
 

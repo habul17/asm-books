@@ -9,6 +9,7 @@ import { getActiveRecurring } from "@/server/recurring";
 import { getSalesDoc, type SalesDocDetail } from "@/server/sales-docs";
 
 import { InvoiceEditor, type EditorInitial } from "./invoice-editor";
+import { STAFF_EDIT_LIMIT } from "@/lib/invoices/edit-window";
 
 type DocLine = SalesDocDetail["lines"][number];
 
@@ -133,6 +134,11 @@ export async function NewInvoiceEditor({
 export async function EditInvoiceEditor({ id }: { id: number }) {
   const [options, inv] = await Promise.all([getEditorOptions(), getInvoice(id)]);
   if (!inv || inv.status === "cancelled") notFound();
+  if (!inv.canChange) {
+    return (
+      <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{STAFF_EDIT_LIMIT}</p>
+    );
+  }
   const customer = inv.customerId ? await pickCustomerById(inv.customerId) : null;
   const soldHere = new Map<number, number>();
   for (const l of inv.lines) if (l.productId != null) soldHere.set(l.productId, (soldHere.get(l.productId) ?? 0) + l.qty);
