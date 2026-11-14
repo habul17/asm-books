@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { FreshOnShow } from "@/components/forms/fresh-on-show";
 import { EditPaymentForm, PaymentFormSkeleton } from "@/components/payments/payment-loaders";
 
 export const metadata: Metadata = { title: "Edit payment" };
@@ -16,9 +17,11 @@ export default function EditPaymentPage({ params }: PageProps<"/payments/[id]/ed
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="text-xl font-semibold">Edit payment</h1>
-      <Suspense fallback={<PaymentFormSkeleton />}>
-        <Form params={params} />
-      </Suspense>
+      <FreshOnShow>
+        <Suspense fallback={<PaymentFormSkeleton />}>
+          <Form params={params} />
+        </Suspense>
+      </FreshOnShow>
     </div>
   );
 }

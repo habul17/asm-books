@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { FreshOnShow } from "@/components/forms/fresh-on-show";
 import { EditTaskForm } from "@/components/tasks/task-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isOwner, requireUser } from "@/server/auth";
@@ -38,9 +39,11 @@ export default function EditTaskPage({ params }: PageProps<"/tasks/[id]/edit">) 
         <ArrowLeftIcon className="size-4" /> Tasks
       </Link>
       <h1 className="text-xl font-semibold">Edit task</h1>
-      <Suspense fallback={<Skeleton className="h-72" />}>
-        <Form params={params} />
-      </Suspense>
+      <FreshOnShow>
+        <Suspense fallback={<Skeleton className="h-72" />}>
+          <Form params={params} />
+        </Suspense>
+      </FreshOnShow>
     </div>
   );
 }

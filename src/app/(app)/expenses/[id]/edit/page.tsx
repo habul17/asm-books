@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { FreshOnShow } from "@/components/forms/fresh-on-show";
 import { EditExpenseForm, ExpenseFormSkeleton } from "@/components/expenses/expense-loaders";
 
 export const metadata: Metadata = { title: "Edit expense" };
@@ -16,9 +17,11 @@ export default function EditExpensePage({ params }: PageProps<"/expenses/[id]/ed
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="text-xl font-semibold">Edit expense</h1>
-      <Suspense fallback={<ExpenseFormSkeleton />}>
-        <Form params={params} />
-      </Suspense>
+      <FreshOnShow>
+        <Suspense fallback={<ExpenseFormSkeleton />}>
+          <Form params={params} />
+        </Suspense>
+      </FreshOnShow>
     </div>
   );
 }

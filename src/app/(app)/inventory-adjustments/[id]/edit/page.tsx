@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { FreshOnShow } from "@/components/forms/fresh-on-show";
 import { AdjustmentForm } from "@/components/adjustments/adjustment-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAdjustment } from "@/server/adjustments";
@@ -45,9 +46,11 @@ export default function EditAdjustmentPage({ params }: PageProps<"/inventory-adj
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="text-xl font-semibold">Edit adjustment</h1>
-      <Suspense fallback={<Skeleton className="h-80" />}>
-        <Form params={params} />
-      </Suspense>
+      <FreshOnShow>
+        <Suspense fallback={<Skeleton className="h-80" />}>
+          <Form params={params} />
+        </Suspense>
+      </FreshOnShow>
     </div>
   );
 }

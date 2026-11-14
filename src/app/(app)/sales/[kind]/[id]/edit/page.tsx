@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { FreshOnShow } from "@/components/forms/fresh-on-show";
 import { EditorSkeleton, EditSalesDocEditor } from "@/components/invoices/editor-loaders";
 import { kindFromSlug, SALES_DOC_KIND } from "@/lib/sales-docs/kinds";
 
@@ -28,9 +29,11 @@ async function Editor({ params }: Props) {
 export default function EditSalesDocPage(props: Props) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-      <Suspense fallback={<EditorSkeleton />}>
-        <Editor {...props} />
-      </Suspense>
+      <FreshOnShow>
+        <Suspense fallback={<EditorSkeleton />}>
+          <Editor {...props} />
+        </Suspense>
+      </FreshOnShow>
     </div>
   );
 }
