@@ -3,9 +3,11 @@ import { formatQty } from "@/lib/format";
 import { GST_STATES } from "@/lib/gst";
 import { amountInWords, taxSummary } from "@/lib/invoices/math";
 import type { BusinessSettings } from "@/lib/settings/business";
+import { UPI_ID_PATTERN } from "@/lib/upi";
 import type { InvoiceDetail } from "@/server/invoices";
 
 import { PrintTitle } from "./print-title";
+import { UpiQr } from "./upi-qr";
 
 type Line = InvoiceDetail["lines"][number];
 
@@ -94,6 +96,7 @@ export function InvoiceDocument({
   details = [],
   extra = [],
   showBank = true,
+  payQr = false,
 }: {
   invoice: TaxDocumentData;
   business: BusinessSettings;
@@ -112,6 +115,8 @@ export function InvoiceDocument({
   extra?: ShownExtra[];
   /** False leaves out our bank details and sale terms, e.g. on a purchase order. */
   showBank?: boolean;
+  /** True prints a UPI "scan to pay" QR code for the total, when a UPI ID is saved. Only for bills the customer pays. */
+  payQr?: boolean;
 }) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
@@ -132,7 +137,9 @@ export function InvoiceDocument({
     b.bankName && `BANK NAME    : ${b.bankName}`,
     b.bankAccount && `A/C NO       : ${b.bankAccount}`,
     branchIfsc && `${b.bankBranch ? "BRANCH&IFSC " : "IFSC        "} : ${branchIfsc}`,
+    b.upiId && `UPI ID       : ${b.upiId}`,
   ].filter((l): l is string => showBank && Boolean(l));
+  const showQr = showBank && payQr && UPI_ID_PATTERN.test(b.upiId) && inv.status !== "cancelled" && inv.grandTotal > 0;
   const terms = showBank ? b.terms : "";
   // Column widths in percent; the description gives up room for the discount column.
   const widths = hasDiscount ? [5, 12, 16, 11, 11, 10, 6, 4.5, 9, 4.5, 11] : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
@@ -211,7 +218,11 @@ export function InvoiceDocument({
                   Code
                 </th>
                 <th className={headCell}>Qty</th>
-                <th className={headCell}>Rate</th>
+                <th className={headCell}>
+                  Rate
+                  <br />
+                  <span className="text-[10px]">(with Tax)</span>
+                </th>
                 {hasDiscount && (
                   <th className={headCell}>
                     Disc
@@ -248,7 +259,12 @@ export function InvoiceDocument({
                   <td className={right}>
                     {formatQty(l.qty)} {l.unit}
                   </td>
-                  <td className={right}>{amount(l.rate)}</td>
+                  <td className={right}>
+                    {amount(l.rate)}
+                    {l.qty > 0 && l.gstRate > 0 && (
+                      <span className="block text-[10px] font-normal">({amount(l.total / l.qty)})</span>
+                    )}
+                  </td>
                   {hasDiscount && <td className={right}>{l.discountPct || ""}</td>}
                   <td className={`${cell} text-center tabular-nums`}>{l.gstRate}</td>
                   <td className={right}>{amount(lineTax(l))}</td>
@@ -341,8 +357,9 @@ export function InvoiceDocument({
 
           <p className="border-t border-black px-1 py-0.5">{amountInWords(inv.grandTotal)}</p>
 
-          {(bankLines.length > 0 || terms || inv.notes) && (
-            <div className="border-t border-black px-1 py-1 font-normal">
+          {(bankLines.length > 0 || terms || inv.notes || showQr) && (
+            <div className="flex items-start justify-between gap-3 border-t border-black px-1 py-1 font-normal">
+              <div className="min-w-0">
               {bankLines.length > 0 && (
                 <>
                   <p>COMPANY&apos;S BANK DETAILS</p>
@@ -355,6 +372,8 @@ export function InvoiceDocument({
               )}
               {terms && <p className="whitespace-pre-line">{terms}</p>}
               {inv.notes && <p className="whitespace-pre-line">Note: {inv.notes}</p>}
+              </div>
+              {showQr && <UpiQr upiId={b.upiId} name={b.name} amount={inv.grandTotal} note={`Bill ${inv.number}`} />}
             </div>
           )}
 

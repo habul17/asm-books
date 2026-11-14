@@ -223,6 +223,22 @@ export function BankForm({ b }: { b: BusinessSettings }) {
         <Field label="IFSC" htmlFor="b-ifsc">
           <Input id="b-ifsc" name="bankIfsc" defaultValue={b.bankIfsc} maxLength={11} className="uppercase" />
         </Field>
+        <Field
+          label="UPI ID"
+          htmlFor="b-upi"
+          hint="Like shopname@okaxis. It prints on bills with a QR code, so customers can pay by scanning with GPay, PhonePe or Paytm. Check it carefully: money goes to this ID."
+        >
+          <Input
+            id="b-upi"
+            name="upiId"
+            defaultValue={b.upiId}
+            maxLength={100}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="shopname@okaxis"
+          />
+        </Field>
       </div>
     </SectionForm>
   );

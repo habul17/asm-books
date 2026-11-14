@@ -73,6 +73,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       <InvoiceDocument
         invoice={inv}
         business={business}
+        payQr
         extra={inv.shownExtra}
         paymentTerms={inv.paymentType === "cash" ? PAYMENT_MODE_LABELS[inv.cashMode ?? "cash"] : "Credit"}
         user={inv.createdByName}

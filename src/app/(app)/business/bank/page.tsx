@@ -6,7 +6,7 @@ import { BusinessPage } from "@/components/business/business-page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBusiness } from "@/server/settings";
 
-export const metadata: Metadata = { title: "Bank details" };
+export const metadata: Metadata = { title: "Bank and UPI" };
 
 async function Form() {
   return <BankForm b={await getBusiness()} />;
@@ -14,7 +14,7 @@ async function Form() {
 
 export default function BankPage() {
   return (
-    <BusinessPage title="Bank details" note="Printed at the bottom of bills, so customers know where to pay.">
+    <BusinessPage title="Bank and UPI" note="Printed at the bottom of bills, with a QR code customers can scan to pay.">
       <Suspense fallback={<Skeleton className="h-40" />}>
         <Form />
       </Suspense>

@@ -66,6 +66,8 @@ describe("parseBusiness", () => {
     expect(parseBusiness(form({ invoicePrefix: "IN/V" })).error).toMatch(/prefix/);
     expect(parseBusiness(form({ defaultGstRate: "7" })).error).toMatch(/Default GST/);
     expect(parseBusiness(form({ bankIfsc: "SBI123" })).error).toMatch(/IFSC/);
+    expect(parseBusiness(form({ upiId: "shop.name" })).error).toMatch(/UPI/);
+    expect(parseBusiness(form({ upiId: " shop.name@okaxis " })).value?.upiId).toBe("shop.name@okaxis");
     expect(parseBusiness(form({ stateCode: "99" })).error).toMatch(/state/);
     expect(parseBusiness(form({ gstin: "33ABCDE1234F1ZZ" })).error).toBeTruthy();
     expect(parseBusiness(form({ defaultPriceListId: "x" })).error).toMatch(/price list/);
@@ -119,7 +121,7 @@ describe("parseBusinessSection", () => {
 
   it("returns only the keys of its own part", () => {
     const r = parseBusinessSection("bank", fd({ bankIfsc: "sbin0001234", name: "Ignored", openingCash: "5" }));
-    expect(r.value).toEqual({ bankName: "", bankAccount: "", bankBranch: "", bankIfsc: "SBIN0001234" });
+    expect(r.value).toEqual({ bankName: "", bankAccount: "", bankBranch: "", bankIfsc: "SBIN0001234", upiId: "" });
   });
 
   it("does not need the business name outside the shop part", () => {
@@ -143,11 +145,10 @@ describe("parseBusinessSection", () => {
     });
   });
 
-  it("covers every setting exactly once, apart from the retired UPI ID", () => {
+  it("covers every setting exactly once", () => {
     const all = Object.values(BUSINESS_SECTIONS).flat();
     expect(new Set(all).size).toBe(all.length);
-    const editable = Object.keys(DEFAULT_BUSINESS).filter((k) => k !== "upiId");
-    expect([...all].sort()).toEqual(editable.sort());
+    expect([...all].sort()).toEqual(Object.keys(DEFAULT_BUSINESS).sort());
   });
 
   it("knows its part names", () => {

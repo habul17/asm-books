@@ -292,7 +292,7 @@ export const BUSINESS_SECTIONS = {
     "challanPrefix",
     "purchaseOrderPrefix",
   ],
-  bank: ["bankName", "bankAccount", "bankBranch", "bankIfsc"],
+  bank: ["bankName", "bankAccount", "bankBranch", "bankIfsc", "upiId"],
   reminders: ["paymentReminderDays", "defaultMinStock"],
   opening: ["openingCash", "openingBank"],
 } as const satisfies Record<string, readonly (keyof BusinessSettings)[]>;
