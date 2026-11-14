@@ -7,6 +7,7 @@ import { customers, payments } from "@/db/schema";
 import { financialYear, invoiceNumber } from "@/lib/invoices/math";
 import type { PaymentInput } from "@/lib/payments/validation";
 import { loadBusiness } from "@/server/settings";
+import { canChangeToday, staffEditLimit } from "@/lib/edit-window";
 
 /** A problem with what the user entered; the message is safe to show. */
 export class PaymentInputError extends Error {}
@@ -50,7 +51,7 @@ export async function createPayment(input: PaymentInput, userId: number): Promis
 
 async function lockPayment(tx: Tx, id: number) {
   const [row] = await tx
-    .select({ id: payments.id, fy: payments.fy, status: payments.status })
+    .select({ id: payments.id, fy: payments.fy, status: payments.status, createdAt: payments.createdAt })
     .from(payments)
     .where(eq(payments.id, id))
     .for("update");
@@ -59,9 +60,10 @@ async function lockPayment(tx: Tx, id: number) {
   return row;
 }
 
-export async function updatePayment(id: number, input: PaymentInput): Promise<void> {
+export async function updatePayment(id: number, input: PaymentInput, { isOwner }: { isOwner: boolean }): Promise<void> {
   await withTransaction(async (tx) => {
     const existing = await lockPayment(tx, id);
+    if (!canChangeToday(isOwner, existing.createdAt)) throw new PaymentInputError(staffEditLimit("payments"));
     if (financialYear(input.date) !== existing.fy) {
       throw new PaymentInputError(`This receipt belongs to the year ${existing.fy}. Keep the date inside that year.`);
     }

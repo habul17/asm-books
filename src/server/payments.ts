@@ -8,6 +8,7 @@ import { customers, payments, users } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
+import { canChangeToday } from "@/lib/edit-window";
 
 export const PAYMENT_LIMIT = 100;
 const MAX_WORDS = 8;
@@ -80,7 +81,7 @@ export type PaymentListItem = Awaited<ReturnType<typeof searchPayments>>["items"
 /** One payment with its customer's details and their balance now. */
 export async function getPayment(id: number) {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  const user = await requireUser();
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   const [row] = await getDb()
     .select({
@@ -101,12 +102,15 @@ export async function getPayment(id: number) {
       customerCity: customers.city,
       balanceNow: customerBalance,
       createdByName: users.name,
+      createdAt: payments.createdAt,
     })
     .from(payments)
     .innerJoin(customers, eq(customers.id, payments.customerId))
     .leftJoin(users, eq(users.id, payments.createdBy))
     .where(eq(payments.id, id));
-  return row ?? null;
+  if (!row) return null;
+  /** Staff may change a payment only on the day it was made. */
+  return { ...row, canChange: canChangeToday(user.role === "owner", row.createdAt) };
 }
 
 export type PaymentDetail = NonNullable<Awaited<ReturnType<typeof getPayment>>>;

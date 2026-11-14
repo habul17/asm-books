@@ -32,7 +32,7 @@ export async function savePayment(id: number | null, _prev: ActionState, formDat
   try {
     if (id == null) savedId = await createPayment(parsed.value, user.id);
     else {
-      await updatePayment(id, parsed.value);
+      await updatePayment(id, parsed.value, { isOwner: isOwner(user) });
       savedId = id;
     }
   } catch (err) {

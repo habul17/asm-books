@@ -8,6 +8,7 @@ import { todayInIndia } from "@/server/invoice-writes";
 import { getPayment } from "@/server/payments";
 
 import { PaymentForm } from "./payment-form";
+import { staffEditLimit } from "@/lib/edit-window";
 
 export async function NewPaymentForm({ customerId }: { customerId: number | null }) {
   await connection(); // Today's date must be read per request, not at build time.
@@ -24,6 +25,13 @@ export async function NewPaymentForm({ customerId }: { customerId: number | null
 export async function EditPaymentForm({ id }: { id: number }) {
   const payment = await getPayment(id);
   if (!payment || payment.status === "cancelled") notFound();
+  if (!payment.canChange) {
+    return (
+      <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+        {staffEditLimit("payments")}
+      </p>
+    );
+  }
   const customer = await pickCustomerById(payment.customerId);
   return (
     <PaymentForm

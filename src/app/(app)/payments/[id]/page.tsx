@@ -33,7 +33,7 @@ async function Payment({ params }: { params: PageProps<"/payments/[id]">["params
           {!final && <Badge variant="destructive">cancelled</Badge>}
         </h1>
         <PrintButton />
-        {final && (
+        {final && payment.canChange && (
           <Link href={`/payments/${payment.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <PencilIcon /> Edit
           </Link>

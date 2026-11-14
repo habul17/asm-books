@@ -9,7 +9,7 @@ import { getActiveRecurring } from "@/server/recurring";
 import { getSalesDoc, type SalesDocDetail } from "@/server/sales-docs";
 
 import { InvoiceEditor, type EditorInitial } from "./invoice-editor";
-import { STAFF_EDIT_LIMIT } from "@/lib/invoices/edit-window";
+import { staffEditLimit } from "@/lib/edit-window";
 
 type DocLine = SalesDocDetail["lines"][number];
 
@@ -136,7 +136,7 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
   if (!inv || inv.status === "cancelled") notFound();
   if (!inv.canChange) {
     return (
-      <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{STAFF_EDIT_LIMIT}</p>
+      <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{staffEditLimit("bills")}</p>
     );
   }
   const customer = inv.customerId ? await pickCustomerById(inv.customerId) : null;

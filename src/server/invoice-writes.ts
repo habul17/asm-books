@@ -15,7 +15,7 @@ import {
 } from "@/db/schema";
 import { parseExtra, type ExtraValues } from "@/lib/custom-fields";
 import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/invoices/math";
-import { canChangeInvoice, STAFF_EDIT_LIMIT } from "@/lib/invoices/edit-window";
+import { canChangeToday, staffEditLimit } from "@/lib/edit-window";
 import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
 import { loadCustomFields } from "@/server/custom-fields";
@@ -350,7 +350,7 @@ export async function updateInvoice(
 ): Promise<void> {
   await withTransaction(async (tx) => {
     const existing = await lockInvoice(tx, id);
-    if (!canChangeInvoice(isOwner, existing.createdAt)) throw new InvoiceInputError(STAFF_EDIT_LIMIT);
+    if (!canChangeToday(isOwner, existing.createdAt)) throw new InvoiceInputError(staffEditLimit("bills"));
     const { allowShortStock, header, lines } = await prepare(tx, input, existing);
     // Only the change in quantity moves stock.
     const before = qtyByProduct(existing.lines);
