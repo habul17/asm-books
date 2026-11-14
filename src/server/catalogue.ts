@@ -6,7 +6,7 @@ import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import {
   brands,
   categories,
@@ -35,14 +35,15 @@ export interface ProductSearchResult {
     categoryGroup: string | null;
     stockQty: number;
     purchasePrice: number | null;
+    active: boolean;
   }[];
 }
 
-/** Products matching the search box; see `productSearch` for the rules. */
+/** Products matching the search box; see `productSearch` for the rules. The owner also sees switched-off parts. */
 export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promise<ProductSearchResult> {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
-  const { where, rank } = productSearch(query);
+  const user = await requireUser();
+  const { where, rank } = productSearch(query, [], { includeOff: isOwner(user) });
   const db = getDb();
 
   const [countRows, items] = await db.batch([
@@ -60,6 +61,7 @@ export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promi
         categoryGroup: group.name,
         stockQty: products.stockQty,
         purchasePrice: purchasePriceAt(0),
+        active: products.active,
       })
       .from(products)
       .leftJoin(categories, eq(categories.id, products.categoryId))
@@ -80,7 +82,7 @@ export interface SellingPrice extends ComputedPrice {
 
 export async function getProduct(id: number) {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  const user = await requireUser();
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   const db = getDb();
 
@@ -97,6 +99,8 @@ export async function getProduct(id: number) {
         photo: products.photo,
         stockQty: products.stockQty,
         minStock: products.minStock,
+        active: products.active,
+        categoryId: products.categoryId,
         brand: brands.name,
         category: categories.name,
         categoryGroup: group.name,
@@ -160,6 +164,7 @@ export async function getProduct(id: number) {
 
   return {
     ...product,
+    canEdit: isOwner(user),
     purchasePrice,
     previousPurchasePrice,
     priceChange:
@@ -170,3 +175,31 @@ export async function getProduct(id: number) {
 }
 
 export type ProductDetail = NonNullable<Awaited<ReturnType<typeof getProduct>>>;
+
+/** Choices for the add/edit part form: brands, categories under their main group, and units in use. */
+export async function getProductFormOptions() {
+  await connection();
+  await requireUser();
+  const db = getDb();
+  const [brandRows, categoryRows, unitRows] = await db.batch([
+    db.select({ name: brands.name }).from(brands).orderBy(asc(brands.name)),
+    db
+      .select({ id: categories.id, name: categories.name, parentId: categories.parentId, sort: categories.sort })
+      .from(categories)
+      .orderBy(asc(categories.sort), asc(categories.name)),
+    db.selectDistinct({ unit: products.unit }).from(products).orderBy(asc(products.unit)),
+  ]);
+  const groups = categoryRows.filter((c) => c.parentId == null);
+  const categoryGroups = groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    children: categoryRows.filter((c) => c.parentId === g.id).map(({ id, name }) => ({ id, name })),
+  }));
+  return {
+    brands: brandRows.map((b) => b.name),
+    categoryGroups,
+    units: [...new Set(["Nos", ...unitRows.map((u) => u.unit)])],
+  };
+}
+
+export type ProductFormOptions = Awaited<ReturnType<typeof getProductFormOptions>>;

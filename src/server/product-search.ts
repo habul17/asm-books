@@ -26,12 +26,13 @@ export const purchasePriceAt = (offset: 0 | 1) =>
  * Group names are not searched: they are too broad and flood the results.
  * `rank` puts exact part-number matches first, then part numbers starting
  * with the query. The query must join `categories` on `products.category_id`.
+ * Switched-off parts are left out unless `includeOff` (the owner's Items list).
  */
-export function productSearch(query: string, extra: (SQL | undefined)[] = []) {
+export function productSearch(query: string, extra: (SQL | undefined)[] = [], { includeOff = false } = {}) {
   const q = query.trim().slice(0, 200);
   const words = q.split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
 
-  const conditions: (SQL | undefined)[] = [eq(products.active, true), ...extra];
+  const conditions: (SQL | undefined)[] = [includeOff ? undefined : eq(products.active, true), ...extra];
   for (const word of words) {
     const like = `%${escapeLike(word)}%`;
     conditions.push(or(ilike(products.partNo, like), ilike(products.description, like), ilike(categories.name, like)));

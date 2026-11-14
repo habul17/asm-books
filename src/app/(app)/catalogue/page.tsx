@@ -1,9 +1,12 @@
+import { PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { ProductDetailPanel, ProductDetailSkeleton } from "@/components/catalogue/product-detail";
 import { ProductResults, ProductResultsSkeleton } from "@/components/catalogue/product-results";
 import { SearchBox } from "@/components/catalogue/search-box";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Items" };
 
@@ -38,9 +41,16 @@ async function Detail({ searchParams }: { searchParams: Promise<Params> }) {
 export default function CataloguePage({ searchParams }: PageProps<"/catalogue">) {
   return (
     <div className="flex flex-col gap-4">
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
-        <SearchBox />
-      </Suspense>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+            <SearchBox />
+          </Suspense>
+        </div>
+        <Link href="/catalogue/new" className={buttonVariants({ className: "h-10 shrink-0" })}>
+          <PlusIcon /> Add part
+        </Link>
+      </div>
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <Suspense fallback={<ProductResultsSkeleton />}>
           <Results searchParams={searchParams} />

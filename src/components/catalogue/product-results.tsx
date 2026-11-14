@@ -45,10 +45,13 @@ export async function ProductResults({ query, selectedId }: { query: string; sel
                     selected && "bg-muted",
                   )}
                 >
-                  <span className="truncate font-mono font-semibold">{p.partNo}</span>
+                  <span className={cn("truncate font-mono font-semibold", !p.active && "text-muted-foreground line-through")}>
+                    {p.partNo}
+                  </span>
                   <span className="min-w-0">
                     <span className="block truncate">{p.description}</span>
                     <span className="block truncate text-xs text-muted-foreground">
+                      {!p.active && <span className="font-medium text-destructive">Switched off · </span>}
                       {[p.categoryGroup, p.category].filter(Boolean).join(" › ")}
                     </span>
                   </span>

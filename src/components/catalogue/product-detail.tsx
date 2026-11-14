@@ -1,7 +1,8 @@
-import { ArrowDownIcon, ArrowLeftIcon, ArrowUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowLeftIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -57,15 +58,28 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
         >
           <ArrowLeftIcon className="size-4" /> Back to results
         </Link>
-        <CardTitle className="text-lg">
-          <span className="font-mono">{p.partNo}</span> · {p.description}
-        </CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="text-lg">
+            <span className="font-mono">{p.partNo}</span> · {p.description}
+          </CardTitle>
+          {p.canEdit && (
+            <Link href={`/catalogue/${p.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}>
+              <PencilIcon /> Edit
+            </Link>
+          )}
+        </div>
+        {!p.active && (
+          <p className="w-fit rounded-md bg-destructive/10 px-2 py-1 text-sm text-destructive">
+            Switched off — hidden from bills and staff searches.
+          </p>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Fact label="Brand">{p.brand ?? "—"}</Fact>
           <Fact label="Category">{[p.categoryGroup, p.category].filter(Boolean).join(" › ") || "—"}</Fact>
           <Fact label="HSN code">{p.hsn ?? "—"}</Fact>
+          <Fact label="GST">{p.gstRate != null ? `${p.gstRate}%` : "Default"}</Fact>
           <Fact label="Stock">
             {formatQty(p.stockQty)} {p.unit}
           </Fact>
@@ -147,7 +161,7 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {[h.supplier, h.billRef].filter(Boolean).join(" · ") ||
-                        h.source?.replace(/^excel:/, "Imported from ") ||
+                        (h.source === "manual" ? "Typed in" : h.source?.replace(/^excel:/, "Imported from ")) ||
                         "—"}
                     </TableCell>
                   </TableRow>
