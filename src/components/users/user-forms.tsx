@@ -7,6 +7,7 @@ import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InfoTip } from "@/components/ui/info-tip";
+import { PasswordInput } from "@/components/ui/password-input";
 import { PASSWORD_MIN } from "@/lib/auth/password";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/auth/user-validation";
 
@@ -36,10 +37,10 @@ function NewPasswordFields({ prefix, label = "Password" }: { prefix: string; lab
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label={label} htmlFor={`${prefix}-pw`} hint={`At least ${PASSWORD_MIN} characters. A short sentence is easy to remember.`}>
-        <Input id={`${prefix}-pw`} name="password" type="password" required minLength={PASSWORD_MIN} maxLength={200} autoComplete="new-password" />
+        <PasswordInput id={`${prefix}-pw`} name="password" required minLength={PASSWORD_MIN} maxLength={200} autoComplete="new-password" />
       </Field>
       <Field label={`${label} again`} htmlFor={`${prefix}-pw2`}>
-        <Input id={`${prefix}-pw2`} name="confirm" type="password" required minLength={PASSWORD_MIN} maxLength={200} autoComplete="new-password" />
+        <PasswordInput id={`${prefix}-pw2`} name="confirm" required minLength={PASSWORD_MIN} maxLength={200} autoComplete="new-password" />
       </Field>
     </div>
   );
@@ -133,7 +134,7 @@ export function ChangePasswordForm() {
   return (
     <form ref={formRef} onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-4">
       <Field label="Current password" htmlFor="c-current">
-        <Input id="c-current" name="current" type="password" required maxLength={200} autoComplete="current-password" />
+        <PasswordInput id="c-current" name="current" required maxLength={200} autoComplete="current-password" />
       </Field>
       <NewPasswordFields prefix="c" label="New password" />
       <p className="text-sm text-muted-foreground">You stay signed in here; other phones and computers are signed out.</p>
