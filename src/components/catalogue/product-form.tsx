@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { saveProduct } from "@/app/(app)/catalogue/actions";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
@@ -8,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { DESCRIPTION_MAX, PART_NO_MAX } from "@/lib/catalogue/product-validation";
+import { CATEGORY_NAME_MAX, DESCRIPTION_MAX, NEW_CATEGORY, PART_NO_MAX } from "@/lib/catalogue/product-validation";
 import { GST_RATES } from "@/lib/settings/business";
 import type { ProductDetail, ProductFormOptions } from "@/server/catalogue";
 
@@ -25,6 +26,7 @@ export function ProductForm({
 }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveProduct.bind(null, product?.id ?? null));
   const p = product;
+  const [category, setCategory] = useState(String(p?.categoryId ?? ""));
 
   return (
     <form onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-6" noValidate>
@@ -55,8 +57,15 @@ export function ProductForm({
           <Input id="p-desc" name="description" defaultValue={p?.description} required maxLength={DESCRIPTION_MAX} />
         </Field>
         <Field label="Category" htmlFor="p-cat" className="sm:col-span-2" hint="Helps you find the part when you search.">
-          <NativeSelect id="p-cat" name="categoryId" className="w-full" defaultValue={p?.categoryId ?? ""}>
+          <NativeSelect
+            id="p-cat"
+            name="categoryId"
+            className="w-full"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
             <NativeSelectOption value="">—</NativeSelectOption>
+            <NativeSelectOption value={NEW_CATEGORY}>+ New category…</NativeSelectOption>
             {options.categoryGroups.map((g) =>
               g.children.length ? (
                 <optgroup key={g.id} label={g.name}>
@@ -74,6 +83,40 @@ export function ProductForm({
             )}
           </NativeSelect>
         </Field>
+        {category === NEW_CATEGORY && (
+          <>
+            <Field
+              label="Main group *"
+              htmlFor="p-newgroup"
+              hint="The big heading the new category sits under. Pick one from the list, or type a new one."
+            >
+              <Input
+                id="p-newgroup"
+                name="newGroup"
+                list="p-groups"
+                maxLength={CATEGORY_NAME_MAX}
+                autoComplete="off"
+                autoCapitalize="characters"
+                className="uppercase"
+              />
+              <datalist id="p-groups">
+                {options.categoryGroups.map((g) => (
+                  <option key={g.id} value={g.name} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="New category name *" htmlFor="p-newcat" hint="Like OIL SEALS. It is saved in capitals, like the rest of the list.">
+              <Input
+                id="p-newcat"
+                name="newCategory"
+                maxLength={CATEGORY_NAME_MAX}
+                autoComplete="off"
+                autoCapitalize="characters"
+                className="uppercase"
+              />
+            </Field>
+          </>
+        )}
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-3">

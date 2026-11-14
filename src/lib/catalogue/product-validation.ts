@@ -10,10 +10,23 @@ import { parseMinStock } from "./min-stock";
 export const PART_NO_MAX = 60;
 export const DESCRIPTION_MAX = 300;
 
-const optionalId = z.preprocess(
+/** The Category box value that means "make a new category". */
+export const NEW_CATEGORY = "new";
+export const CATEGORY_NAME_MAX = 80;
+
+const categoryChoice = z.preprocess(
   (v) => (v === "" || v == null ? null : v),
-  z.coerce.number({ error: "Choose a category from the list" }).int().positive().nullable(),
+  z.union([
+    z.literal(NEW_CATEGORY),
+    z.coerce.number({ error: "Choose a category from the list" }).int().positive(),
+  ]).nullable(),
 );
+
+const categoryName = (label: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ") : ""),
+    z.string().max(CATEGORY_NAME_MAX, `${label} can be at most ${CATEGORY_NAME_MAX} characters`),
+  );
 
 const productSchema = z.object({
   partNo: z
@@ -35,7 +48,9 @@ const productSchema = z.object({
         .max(DESCRIPTION_MAX, `Description can be at most ${DESCRIPTION_MAX} characters`),
     ),
   brand: optionalText(100, "Brand"),
-  categoryId: optionalId,
+  categoryId: categoryChoice,
+  newGroup: categoryName("Main group"),
+  newCategory: categoryName("Category name"),
   hsn: z.preprocess(
     (v) => (typeof v === "string" ? v.replace(/\s/g, "") || null : (v ?? null)),
     z
@@ -64,11 +79,21 @@ const productSchema = z.object({
 /** Checks the add/edit part form. */
 export function parseProduct(form: Record<string, unknown>) {
   // Boxes left out of the form count as empty.
-  const parsed = productSchema.safeParse({ listPrice: "", purchasePrice: "", minStock: "", ...form });
+  const parsed = productSchema.safeParse({ listPrice: "", purchasePrice: "", minStock: "", newGroup: "", newCategory: "", ...form });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form" } as const;
   const minStock = parseMinStock(parsed.data.minStock);
   if (minStock.error !== undefined) return { error: minStock.error } as const;
-  return { value: { ...parsed.data, minStock: minStock.value } } as const;
+  const { categoryId, newGroup, newCategory, ...data } = parsed.data;
+  let category: { id: number } | { group: string; name: string } | null = null;
+  if (categoryId === NEW_CATEGORY) {
+    if (!newGroup) return { error: "Choose or type the main group for the new category" } as const;
+    if (!newCategory) return { error: "Type the name of the new category" } as const;
+    // The shop's list is all in capitals, so new names match it.
+    category = { group: newGroup.toUpperCase(), name: newCategory.toUpperCase() };
+  } else if (categoryId != null) {
+    category = { id: categoryId };
+  }
+  return { value: { ...data, category, minStock: minStock.value } } as const;
 }
 
 export type ProductInput = NonNullable<ReturnType<typeof parseProduct>["value"]>;

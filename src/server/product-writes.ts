@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 
 import { getDb, withTransaction, type Tx } from "@/db";
 import { brands, categories, products, purchasePrices } from "@/db/schema";
@@ -35,6 +35,29 @@ async function brandIdFor(tx: Tx, name: string | null): Promise<number | null> {
   return added.id;
 }
 
+/**
+ * Finds a main group (parentId null) or a category under one by name, ignoring case,
+ * adding it when it is new. Only two levels exist, so a new category always sits under a main group.
+ */
+async function categoryIdFor(tx: Tx, name: string, parentId: number | null): Promise<number> {
+  const find = () =>
+    tx
+      .select({ id: categories.id })
+      .from(categories)
+      .where(
+        and(
+          sql`lower(${categories.name}) = lower(${name})`,
+          parentId == null ? isNull(categories.parentId) : eq(categories.parentId, parentId),
+        ),
+      )
+      .limit(1);
+  const [found] = await find();
+  if (found) return found.id;
+  await tx.insert(categories).values({ name, parentId }).onConflictDoNothing();
+  const [added] = await find();
+  return added.id;
+}
+
 /** Checks everything that needs the database, then returns the columns to save. */
 async function prepare(tx: Tx, input: ProductInput, id: number | null) {
   const [taken] = await tx
@@ -44,16 +67,21 @@ async function prepare(tx: Tx, input: ProductInput, id: number | null) {
     .limit(1);
   if (taken) throw new ProductInputError(`Part no ${input.partNo} is already in the list.`);
 
-  if (input.categoryId != null) {
-    const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, input.categoryId));
+  let categoryId: number | null = null;
+  if (input.category && "id" in input.category) {
+    const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, input.category.id));
     if (!cat) throw new ProductInputError("Choose a category from the list");
+    categoryId = cat.id;
+  } else if (input.category) {
+    const groupId = await categoryIdFor(tx, input.category.group, null);
+    categoryId = await categoryIdFor(tx, input.category.name, groupId);
   }
 
   return {
     partNo: input.partNo,
     description: input.description,
     brandId: await brandIdFor(tx, input.brand),
-    categoryId: input.categoryId,
+    categoryId,
     hsn: input.hsn,
     unit: input.unit,
     gstRate: input.gstRate,

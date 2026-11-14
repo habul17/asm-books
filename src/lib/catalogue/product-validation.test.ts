@@ -11,7 +11,7 @@ describe("parseProduct", () => {
       partNo: "52300",
       description: "Side mirror LH",
       brand: null,
-      categoryId: null,
+      category: null,
       hsn: null,
       unit: "Nos",
       gstRate: null,
@@ -47,5 +47,14 @@ describe("parseProduct", () => {
 
   it("treats an unticked box as switched off", () => {
     expect(parseProduct({ partNo: "A", description: "B" }).value?.active).toBe(false);
+  });
+
+  it("reads a chosen or a new category", () => {
+    expect(parseProduct({ ...base, categoryId: "12" }).value?.category).toEqual({ id: 12 });
+    expect(
+      parseProduct({ ...base, categoryId: "new", newGroup: " ENGINE ", newCategory: "Oil  seals" }).value?.category,
+    ).toEqual({ group: "ENGINE", name: "OIL SEALS" });
+    expect(parseProduct({ ...base, categoryId: "new", newCategory: "Oil seals" }).error).toMatch(/main group/);
+    expect(parseProduct({ ...base, categoryId: "new", newGroup: "ENGINE" }).error).toMatch(/name of the new/);
   });
 });
