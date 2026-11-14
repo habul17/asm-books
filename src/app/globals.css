@@ -139,15 +139,25 @@
 .invoice-document {
   font-family: "Courier New", Courier, "Liberation Mono", monospace;
 }
-/* Printing: A4 pages with a small margin; the app's own chrome is hidden with print:hidden. */
+/*
+ * Printing: A4 pages; the app's own chrome is hidden with print:hidden.
+ * The page margin is zero so the browser has no room for its own header and
+ * footer (page title, web address, date). The 10mm edge comes from the body's
+ * padding instead, repeated on every page.
+ */
 @media print {
   @page {
     size: A4;
-    margin: 10mm;
+    margin: 0;
   }
   html,
   body {
     background: white !important;
+  }
+  body {
+    padding: 10mm;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   /* Printed pages keep their normal size whatever text size is chosen on screen. */
   html {

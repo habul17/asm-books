@@ -5,6 +5,8 @@ import { amountInWords, taxSummary } from "@/lib/invoices/math";
 import type { BusinessSettings } from "@/lib/settings/business";
 import type { InvoiceDetail } from "@/server/invoices";
 
+import { PrintTitle } from "./print-title";
+
 type Line = InvoiceDetail["lines"][number];
 
 /** What a printed tax document needs; both invoices and credit notes have it. */
@@ -145,6 +147,7 @@ export function InvoiceDocument({
         </div>
       )}
 
+      <PrintTitle name={inv.number} />
       <p className="pr-4 text-right text-[11px] italic">(ORIGINAL)</p>
 
       <div className="flex flex-1 flex-col border border-black box-decoration-clone">

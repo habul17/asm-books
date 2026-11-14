@@ -19,7 +19,7 @@ async function SidebarForViewer() {
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="min-h-svh md:grid md:grid-cols-[15rem_minmax(0,1fr)] print:block">
+    <div className="min-h-svh md:grid md:grid-cols-[15rem_minmax(0,1fr)] print:block print:min-h-0">
       <aside className="sticky top-0 hidden h-svh flex-col gap-6 overflow-x-hidden overflow-y-auto border-r px-3 py-4 md:flex print:hidden">
         <div className="flex items-center justify-between gap-2 pr-1 pl-3">
           <Brand />
