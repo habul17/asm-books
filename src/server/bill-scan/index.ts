@@ -18,7 +18,7 @@ export { BillScanError, type BillFile, type ReadTask } from "./reader";
 /** The reader set up for this deployment, or null when scanning is not set up. */
 export function configuredReader(): BillReader | null {
   const key = process.env.GEMINI_API_KEY;
-  return key ? geminiReader(key, process.env.BILL_SCAN_MODEL || undefined) : null;
+  return key ? geminiReader(key, process.env.BILL_SCAN_MODEL || undefined, process.env.BILL_SCAN_FALLBACK_MODEL || undefined) : null;
 }
 
 export const billScanReady = () => configuredReader() != null;
@@ -37,6 +37,8 @@ const BILL_TASK: ReadTask = {
   ask: "Read this purchase bill and return its contents.",
   instructions: SCAN_INSTRUCTIONS,
   schema: SCANNED_BILL_JSON_SCHEMA,
+  // A long bill can take two minutes on the main model; the fallback still has time after that.
+  firstTryMs: 120_000,
 };
 
 /** The saved vendor a bill came from: matched on GSTIN first, then on the exact name. */

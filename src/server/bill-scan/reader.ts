@@ -19,6 +19,8 @@ export interface ReadTask {
   instructions: string;
   /** JSON Schema of the answer. */
   schema: object;
+  /** How long the main model gets before a faster fallback is asked. Long bills need longer. */
+  firstTryMs?: number;
 }
 
 /**

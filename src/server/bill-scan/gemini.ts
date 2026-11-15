@@ -5,6 +5,10 @@ import { FinishReason, GoogleGenAI, MediaResolution, ThinkingLevel } from "@goog
 import { BillScanError, type BillFile, type BillReader, type ReadTask } from "./reader";
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
+/** Asked when the main model is too slow or busy: newest models are sometimes overloaded for hours. */
+const DEFAULT_FALLBACK_MODEL = "gemini-3.6-flash";
+/** How long the main model gets before the fallback is asked, unless the task says otherwise. */
+const FIRST_TRY_MS = 60_000;
 
 /** HTTP status of a failed API call, when the error carries one. */
 function statusOf(err: unknown): number | null {
@@ -31,16 +35,17 @@ async function withRetry<T>(call: () => Promise<T>): Promise<T> {
   }
 }
 
+const timedOut = (err: unknown) => err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+
 /** Reads bills, receipts and slips with Google's Gemini API. */
-export function geminiReader(apiKey: string, model = DEFAULT_MODEL): BillReader {
+export function geminiReader(apiKey: string, model = DEFAULT_MODEL, fallback: string | null = DEFAULT_FALLBACK_MODEL): BillReader {
   const ai = new GoogleGenAI({ apiKey });
   return {
     async read(file: BillFile, task: ReadTask) {
       const noun = task.noun;
-      let response;
-      try {
-        response = await withRetry(() => ai.models.generateContent({
-          model,
+      const ask = (useModel: string, abortSignal?: AbortSignal) =>
+        withRetry(() => ai.models.generateContent({
+          model: useModel,
           contents: [
             {
               role: "user",
@@ -58,8 +63,20 @@ export function geminiReader(apiKey: string, model = DEFAULT_MODEL): BillReader 
             // Copying printed text needs little reasoning; more makes long documents slow.
             thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             mediaResolution: MediaResolution.MEDIA_RESOLUTION_HIGH,
+            abortSignal,
           },
         }));
+      let response;
+      try {
+        try {
+          response = await ask(model, fallback && fallback !== model ? AbortSignal.timeout(task.firstTryMs ?? FIRST_TRY_MS) : undefined);
+        } catch (err) {
+          const status = statusOf(err);
+          const slowOrBusy = timedOut(err) || status === 429 || (status != null && BUSY.has(status));
+          if (!fallback || fallback === model || !slowOrBusy) throw err;
+          console.warn(`[scan] ${model} was ${timedOut(err) ? "too slow" : "busy"}; asking ${fallback}`);
+          response = await ask(fallback);
+        }
       } catch (err) {
         const status = statusOf(err);
         if (status != null && BUSY.has(status)) {
