@@ -3,13 +3,13 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
-import { customers, products } from "@/db/schema";
-import { partKey } from "@/lib/bills/scan";
+import { customers } from "@/db/schema";
 import { ORDER_INSTRUCTIONS, ORDER_JSON_SCHEMA, orderLineLabel, orderQty, scannedOrderSchema } from "@/lib/invoices/order-scan";
 import { matchParty } from "@/lib/payments/scan";
 import { pickCustomerById, pickItems, priceItems, type PickedCustomer, type PickedItem } from "@/server/invoices";
 import { loadBusiness } from "@/server/settings";
 
+import { findPart, partKeys } from "./find-part";
 import { readDocument } from "./index";
 import { BillScanError, type BillFile } from "./reader";
 
@@ -34,30 +34,6 @@ export interface OrderScanResult {
   warnings: string[];
 }
 
-/** The one active part a written row means: same part number, else a search with exactly one fitting answer. */
-async function findPart(
-  line: { partNo: string | null; description: string | null },
-  byKey: Map<string, number[]>,
-  listId: number | null,
-): Promise<{ id: number; sure: boolean } | { choices: string[] } | null> {
-  const key = line.partNo ? partKey(line.partNo) : "";
-  const exact = key ? byKey.get(key) : undefined;
-  if (exact?.length === 1) return { id: exact[0], sure: true };
-  const query = (line.partNo ?? line.description ?? "").trim();
-  if (query.length < 3) return null;
-  const found = await pickItems(query, listId);
-  if (found.length === 1) return { id: found[0].id, sure: false };
-  // Several hits: keep the one part whose name has every word written, if there is just one.
-  const words = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
-  const full = found.filter((f) => {
-    const name = `${f.partNo} ${f.description}`.toLowerCase();
-    return words.every((w) => name.includes(w));
-  });
-  if (full.length === 1) return { id: full[0].id, sure: false };
-  const close = full.length ? full : found;
-  return close.length ? { choices: close.map((f) => f.partNo) } : null;
-}
-
 /**
  * Reads a customer's order and prepares rows for a new sales bill, priced with the
  * customer's price list (or `formListId` when no customer matches). When the bill already has
@@ -75,8 +51,8 @@ export async function scanOrder(
   if (!order.lines.length) warnings.push("No items were found on the order.");
 
   const db = getDb();
-  const [parts, people, business] = await Promise.all([
-    db.select({ id: products.id, partNo: products.partNo }).from(products).where(eq(products.active, true)),
+  const [byKey, people, business] = await Promise.all([
+    partKeys(),
     order.customerName || order.customerPhone
       ? db.select({ id: customers.id, name: customers.name, mobile: customers.mobile }).from(customers).where(eq(customers.active, true))
       : [],
@@ -96,16 +72,10 @@ export async function scanOrder(
   }
   const listId = customer ? (customer.priceListId ?? business.defaultPriceListId) : formListId;
 
-  const byKey = new Map<string, number[]>();
-  for (const p of parts) {
-    const k = partKey(p.partNo);
-    if (k) byKey.set(k, [...(byKey.get(k) ?? []), p.id]);
-  }
-
   const wanted: { id: number; qty: number }[] = [];
   for (const [i, line] of order.lines.entries()) {
     const label = orderLineLabel(line, i + 1);
-    const part = await findPart(line, byKey, listId);
+    const part = await findPart(line, byKey, (q) => pickItems(q, listId));
     if (!part) {
       warnings.push(`${label}: not found in your parts. Add it with the item search.`);
       continue;
