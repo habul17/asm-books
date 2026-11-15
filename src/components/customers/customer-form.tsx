@@ -3,28 +3,45 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { saveCustomer } from "@/app/(app)/customers/actions";
+import { saveCustomer, scanContactAction } from "@/app/(app)/customers/actions";
 import { GstinHint } from "@/components/forms/gstin-hint";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { CUSTOMER_NAME_MAX } from "@/lib/customers/validation";
+import type { ContactDraft } from "@/lib/contacts/scan";
 import { checkGstin, GST_STATE_OPTIONS } from "@/lib/gst";
 import type { CustomerDetail, CustomerOptions } from "@/server/customers";
 
-export function CustomerForm({
-  customer,
-  options,
-  cancelHref,
-}: {
-  customer: CustomerDetail | null;
-  options: CustomerOptions;
-  cancelHref: string;
-}) {
+type CustomerFormProps = { customer: CustomerDetail | null; options: CustomerOptions; cancelHref: string };
+
+/** A new customer can be filled from a photo; an existing one is edited as it is. */
+export function CustomerForm({ scanReady = false, ...props }: CustomerFormProps & { scanReady?: boolean }) {
+  const [scanned, setScanned] = useState<{ n: number; draft: ContactDraft } | null>(null);
+  if (props.customer != null) return <CustomerFields {...props} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <ScanBox
+        ready={scanReady}
+        noun="card"
+        help="Take a photo of their visiting card, GST certificate or letterhead. The form below is filled in for you to check."
+        action={scanContactAction}
+        onScan={(draft: ContactDraft) => setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, draft }))}
+      />
+      {scanned && <ScanWarnings warnings={scanned.draft.warnings} />}
+      {/* A new key starts the form again with the scanned values. */}
+      <CustomerFields key={scanned?.n ?? 0} {...props} prefill={scanned?.draft ?? null} />
+    </div>
+  );
+}
+
+function CustomerFields({ customer, options, cancelHref, prefill = null }: CustomerFormProps & { prefill?: ContactDraft | null }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveCustomer.bind(null, customer?.id ?? null));
-  const [gstin, setGstin] = useState(customer?.gstin ?? "");
+  const seed = customer ?? prefill;
+  const [gstin, setGstin] = useState(seed?.gstin ?? "");
   const gstinState = gstin.trim() ? checkGstin(gstin) : null;
   const activeFields = options.fields.filter((f) => f.active);
   const c = customer;
@@ -34,29 +51,29 @@ export function CustomerForm({
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Contact</legend>
         <Field label="Customer / shop name *" htmlFor="c-name" className="sm:col-span-2">
-          <Input id="c-name" name="name" defaultValue={c?.name} required maxLength={CUSTOMER_NAME_MAX} autoFocus={!c} />
+          <Input id="c-name" name="name" defaultValue={seed?.name ?? ""} required maxLength={CUSTOMER_NAME_MAX} autoFocus={!c} />
         </Field>
         <Field label="Contact person" htmlFor="c-contact">
-          <Input id="c-contact" name="contactPerson" defaultValue={c?.contactPerson ?? ""} maxLength={200} />
+          <Input id="c-contact" name="contactPerson" defaultValue={seed?.contactPerson ?? ""} maxLength={200} />
         </Field>
         <Field label="Mobile" htmlFor="c-mobile">
-          <Input id="c-mobile" name="mobile" type="tel" inputMode="tel" defaultValue={c?.mobile ?? ""} maxLength={40} />
+          <Input id="c-mobile" name="mobile" type="tel" inputMode="tel" defaultValue={seed?.mobile ?? ""} maxLength={40} />
         </Field>
         <Field label="Email" htmlFor="c-email" className="sm:col-span-2">
-          <Input id="c-email" name="email" type="email" defaultValue={c?.email ?? ""} maxLength={200} />
+          <Input id="c-email" name="email" type="email" defaultValue={seed?.email ?? ""} maxLength={200} />
         </Field>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Address and GST</legend>
         <Field label="Address" htmlFor="c-address" className="sm:col-span-2">
-          <Textarea id="c-address" name="address" rows={2} defaultValue={c?.address ?? ""} maxLength={1000} />
+          <Textarea id="c-address" name="address" rows={2} defaultValue={seed?.address ?? ""} maxLength={1000} />
         </Field>
         <Field label="City" htmlFor="c-city">
-          <Input id="c-city" name="city" defaultValue={c?.city ?? ""} maxLength={100} />
+          <Input id="c-city" name="city" defaultValue={seed?.city ?? ""} maxLength={100} />
         </Field>
         <Field label="PIN code" htmlFor="c-pin">
-          <Input id="c-pin" name="pincode" inputMode="numeric" defaultValue={c?.pincode ?? ""} maxLength={7} />
+          <Input id="c-pin" name="pincode" inputMode="numeric" defaultValue={seed?.pincode ?? ""} maxLength={7} />
         </Field>
         <div className="flex flex-col gap-1.5">
           <Field label="GSTIN" htmlFor="c-gstin" hint="The 15-letter tax number of the customer. Leave it empty if they have none.">
@@ -81,7 +98,7 @@ export function CustomerForm({
             className="w-full"
             {...(gstinState?.ok
               ? { value: gstinState.stateCode, disabled: true }
-              : { defaultValue: c?.stateCode ?? "" })}
+              : { defaultValue: seed?.stateCode ?? "" })}
           >
             <NativeSelectOption value="">—</NativeSelectOption>
             {GST_STATE_OPTIONS.map((s) => (
@@ -179,7 +196,7 @@ export function CustomerForm({
       )}
 
       <Field label="Notes" htmlFor="c-notes">
-        <Textarea id="c-notes" name="notes" rows={3} defaultValue={c?.notes ?? ""} maxLength={5000} />
+        <Textarea id="c-notes" name="notes" rows={3} defaultValue={seed?.notes ?? ""} maxLength={5000} />
       </Field>
 
       {c && (

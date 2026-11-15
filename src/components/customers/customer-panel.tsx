@@ -16,6 +16,7 @@ import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 
 import { Balance } from "./balance";
 import { CustomerForm } from "./customer-form";
+import { billScanReady } from "@/server/bill-scan";
 
 function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
@@ -58,7 +59,7 @@ export async function NewCustomerPanel({ backHref }: { backHref: string }) {
         <CardTitle className="text-lg">New customer</CardTitle>
       </CardHeader>
       <CardContent>
-        <CustomerForm customer={null} options={options} cancelHref={backHref} />
+        <CustomerForm customer={null} options={options} cancelHref={backHref} scanReady={billScanReady()} />
       </CardContent>
     </Card>
   );

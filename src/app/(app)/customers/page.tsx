@@ -17,6 +17,9 @@ import { getCustomerOptions } from "@/server/customers";
 
 export const metadata: Metadata = { title: "Customers" };
 
+// Reading a card photo for a new customer can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
+
 type Params = Awaited<PageProps<"/customers">["searchParams"]>;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";

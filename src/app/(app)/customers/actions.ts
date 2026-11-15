@@ -10,6 +10,9 @@ import { customerGroups, customers, customFields, priceLists } from "@/db/schema
 import { customersHref } from "@/lib/customers/href";
 import { groupSchema, parseCustomer } from "@/lib/customers/validation";
 import { requireUser } from "@/server/auth";
+import { scanContact } from "@/server/bill-scan/contact";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
+import type { ContactDraft } from "@/lib/contacts/scan";
 
 export interface ActionState {
   ok?: boolean;
@@ -161,4 +164,10 @@ export async function deleteGroup(id: number): Promise<ActionState> {
   }
   refresh();
   return { ok: true };
+}
+
+/** Reads a visiting card, GST certificate or letterhead and returns details to check. Nothing is saved. */
+export async function scanContactAction(formData: FormData): Promise<ScanAnswer<ContactDraft>> {
+  await requireUser();
+  return scanUpload(formData, "card", (file) => scanContact(file, "customer"));
 }

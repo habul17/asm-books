@@ -8,6 +8,9 @@ import { getDb } from "@/db";
 import { vendors } from "@/db/schema";
 import { parseVendor } from "@/lib/vendors/validation";
 import { requireUser } from "@/server/auth";
+import { scanContact } from "@/server/bill-scan/contact";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
+import type { ContactDraft } from "@/lib/contacts/scan";
 
 export interface ActionState {
   ok?: boolean;
@@ -42,4 +45,10 @@ export async function saveVendor(id: number | null, _prev: ActionState, formData
     return { error: "Could not save. Please try again." };
   }
   redirect(`/vendors/${savedId}`);
+}
+
+/** Reads a visiting card, GST certificate or letterhead and returns details to check. Nothing is saved. */
+export async function scanContactAction(formData: FormData): Promise<ScanAnswer<ContactDraft>> {
+  await requireUser();
+  return scanUpload(formData, "card", (file) => scanContact(file, "vendor"));
 }

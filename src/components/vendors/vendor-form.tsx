@@ -3,21 +3,46 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { saveVendor } from "@/app/(app)/vendors/actions";
+import { saveVendor, scanContactAction } from "@/app/(app)/vendors/actions";
 import { GstinHint } from "@/components/forms/gstin-hint";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoTip } from "@/components/ui/info-tip";
+import type { ContactDraft } from "@/lib/contacts/scan";
 import { checkGstin, GST_STATE_OPTIONS } from "@/lib/gst";
 import { VENDOR_NAME_MAX } from "@/lib/vendors/validation";
 import type { VendorDetail } from "@/server/vendors";
 
-export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null; cancelHref: string }) {
+type VendorFormProps = { vendor: VendorDetail | null; cancelHref: string };
+
+/** A new vendor can be filled from a photo; an existing one is edited as it is. */
+export function VendorForm({ scanReady = false, ...props }: VendorFormProps & { scanReady?: boolean }) {
+  const [scanned, setScanned] = useState<{ n: number; draft: ContactDraft } | null>(null);
+  if (props.vendor != null) return <VendorFields {...props} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <ScanBox
+        ready={scanReady}
+        noun="card"
+        help="Take a photo of their visiting card, GST certificate or the top of their bill. The form below is filled in for you to check."
+        action={scanContactAction}
+        onScan={(draft: ContactDraft) => setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, draft }))}
+      />
+      {scanned && <ScanWarnings warnings={scanned.draft.warnings} />}
+      {/* A new key starts the form again with the scanned values. */}
+      <VendorFields key={scanned?.n ?? 0} {...props} prefill={scanned?.draft ?? null} />
+    </div>
+  );
+}
+
+function VendorFields({ vendor, cancelHref, prefill = null }: VendorFormProps & { prefill?: ContactDraft | null }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveVendor.bind(null, vendor?.id ?? null));
-  const [gstin, setGstin] = useState(vendor?.gstin ?? "");
+  const seed = vendor ?? prefill;
+  const [gstin, setGstin] = useState(seed?.gstin ?? "");
   const gstinState = gstin.trim() ? checkGstin(gstin) : null;
   const v = vendor;
 
@@ -26,29 +51,29 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Contact</legend>
         <Field label="Vendor / company name *" htmlFor="v-name" className="sm:col-span-2">
-          <Input id="v-name" name="name" defaultValue={v?.name} required maxLength={VENDOR_NAME_MAX} autoFocus={!v} />
+          <Input id="v-name" name="name" defaultValue={seed?.name ?? ""} required maxLength={VENDOR_NAME_MAX} autoFocus={!v} />
         </Field>
         <Field label="Contact person" htmlFor="v-contact">
-          <Input id="v-contact" name="contactPerson" defaultValue={v?.contactPerson ?? ""} maxLength={200} />
+          <Input id="v-contact" name="contactPerson" defaultValue={seed?.contactPerson ?? ""} maxLength={200} />
         </Field>
         <Field label="Mobile" htmlFor="v-mobile">
-          <Input id="v-mobile" name="mobile" type="tel" inputMode="tel" defaultValue={v?.mobile ?? ""} maxLength={40} />
+          <Input id="v-mobile" name="mobile" type="tel" inputMode="tel" defaultValue={seed?.mobile ?? ""} maxLength={40} />
         </Field>
         <Field label="Email" htmlFor="v-email" className="sm:col-span-2">
-          <Input id="v-email" name="email" type="email" defaultValue={v?.email ?? ""} maxLength={200} />
+          <Input id="v-email" name="email" type="email" defaultValue={seed?.email ?? ""} maxLength={200} />
         </Field>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-medium text-muted-foreground">Address and GST</legend>
         <Field label="Address" htmlFor="v-address" className="sm:col-span-2">
-          <Textarea id="v-address" name="address" rows={2} defaultValue={v?.address ?? ""} maxLength={1000} />
+          <Textarea id="v-address" name="address" rows={2} defaultValue={seed?.address ?? ""} maxLength={1000} />
         </Field>
         <Field label="City" htmlFor="v-city">
-          <Input id="v-city" name="city" defaultValue={v?.city ?? ""} maxLength={100} />
+          <Input id="v-city" name="city" defaultValue={seed?.city ?? ""} maxLength={100} />
         </Field>
         <Field label="PIN code" htmlFor="v-pin">
-          <Input id="v-pin" name="pincode" inputMode="numeric" defaultValue={v?.pincode ?? ""} maxLength={7} />
+          <Input id="v-pin" name="pincode" inputMode="numeric" defaultValue={seed?.pincode ?? ""} maxLength={7} />
         </Field>
         <div className="flex flex-col gap-1.5">
           <Field label="GSTIN" htmlFor="v-gstin" hint="The 15-letter tax number on their bills. Leave it empty if they have none.">
@@ -77,7 +102,7 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
             className="w-full"
             {...(gstinState?.ok
               ? { value: gstinState.stateCode, disabled: true }
-              : { defaultValue: v?.stateCode ?? "" })}
+              : { defaultValue: seed?.stateCode ?? "" })}
           >
             <NativeSelectOption value="">—</NativeSelectOption>
             {GST_STATE_OPTIONS.map((s) => (
@@ -127,7 +152,7 @@ export function VendorForm({ vendor, cancelHref }: { vendor: VendorDetail | null
       </fieldset>
 
       <Field label="Notes" htmlFor="v-notes">
-        <Textarea id="v-notes" name="notes" rows={3} defaultValue={v?.notes ?? ""} maxLength={5000} />
+        <Textarea id="v-notes" name="notes" rows={3} defaultValue={seed?.notes ?? ""} maxLength={5000} />
       </Field>
 
       {v && (
