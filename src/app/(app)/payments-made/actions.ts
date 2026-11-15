@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { parseVendorPaymentInput } from "@/lib/payments/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanPaidSlip, type PaidSlipResult } from "@/server/bill-scan/payment-slip";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
   cancelVendorPayment,
   createVendorPayment,
@@ -60,4 +62,10 @@ export async function cancelVendorPaymentAction(id: number, _prev: ActionState, 
   }
   refresh();
   return { ok: true };
+}
+
+/** Reads a UPI screenshot, bank slip or cheque photo of money paid and returns values to check. Nothing is saved. */
+export async function scanSlipAction(formData: FormData): Promise<ScanAnswer<PaidSlipResult>> {
+  await requireUser();
+  return scanUpload(formData, "payment slip", scanPaidSlip);
 }

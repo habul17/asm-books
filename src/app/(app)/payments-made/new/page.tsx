@@ -5,6 +5,9 @@ import { NewVendorPaymentForm, VendorPaymentFormSkeleton } from "@/components/pa
 
 export const metadata: Metadata = { title: "Pay a vendor" };
 
+// Reading a payment slip can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
+
 async function Form({ searchParams }: { searchParams: PageProps<"/payments-made/new">["searchParams"] }) {
   const raw = (await searchParams).vendor;
   const n = Number(Array.isArray(raw) ? raw[0] : raw);

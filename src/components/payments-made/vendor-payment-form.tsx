@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { saveVendorPayment } from "@/app/(app)/payments-made/actions";
+import { saveVendorPayment, scanSlipAction } from "@/app/(app)/payments-made/actions";
 import { VendorBalance as Balance } from "@/components/vendors/vendor-balance";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMoney } from "@/lib/format";
+import type { PaidSlipResult } from "@/server/bill-scan/payment-slip";
 import { PAYMENT_MAX, PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/payments/validation";
 import type { PickedVendor } from "@/server/vendors";
 
@@ -26,16 +28,57 @@ export interface VendorPaymentFormValues {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function VendorPaymentForm({
-  id,
-  initial,
-  backHref,
-}: {
+type FormProps = {
   /** null for a new payment. */
   id: number | null;
   initial: VendorPaymentFormValues;
   backHref: string;
-}) {
+};
+
+/** Values for the form from a scanned slip, keeping what the slip does not say. */
+function fromSlip(base: VendorPaymentFormValues, r: PaidSlipResult): VendorPaymentFormValues {
+  return {
+    ...base,
+    // A vendor already chosen (opened from their page) is kept; a mismatch is warned about below.
+    vendor: base.vendor ?? r.vendor,
+    date: r.date ?? base.date,
+    amount: r.amount,
+    mode: r.mode ?? base.mode,
+    reference: r.reference ?? "",
+    notes: r.notes ?? "",
+  };
+}
+
+function slipWarnings(base: FormProps["initial"], r: Parameters<typeof fromSlip>[1]): string[] {
+  const chosen = base.vendor;
+  if (chosen && r.vendor && r.vendor.id !== chosen.id) {
+    return [`This slip looks like it is from ${r.vendor.name}, not ${chosen.name}. Check the vendor.`, ...r.warnings];
+  }
+  return r.warnings;
+}
+
+export function VendorPaymentForm({ scanReady = false, ...props }: FormProps & { scanReady?: boolean }) {
+  const [scanned, setScanned] = useState<{ n: number; values: VendorPaymentFormValues; warnings: string[] } | null>(null);
+  if (props.id != null) return <PaymentFields {...props} />;
+  return (
+    <div className="flex flex-col gap-5">
+      <ScanBox
+        ready={scanReady}
+        noun="payment slip"
+        help="Take a screenshot of the UPI or bank payment you made, or a photo of the cheque. The form below is filled in for you to check."
+        action={scanSlipAction}
+        onScan={(r: PaidSlipResult) =>
+          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, values: fromSlip(props.initial, r), warnings: slipWarnings(props.initial, r) }))
+        }
+      />
+      {scanned && <ScanWarnings warnings={scanned.warnings} />}
+      {/* A new key starts the form again with the scanned values. */}
+      <PaymentFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} />
+    </div>
+  );
+}
+
+function PaymentFields({ id, initial, backHref }: FormProps) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveVendorPayment.bind(null, id));
   const [vendor, setVendor] = useState(initial.vendor);
   const [amount, setAmount] = useState(initial.amount == null ? "" : String(initial.amount));

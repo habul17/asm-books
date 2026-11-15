@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { billScanReady } from "@/server/bill-scan";
 import { todayInIndia } from "@/server/invoice-writes";
 import { getVendorPayment } from "@/server/vendor-payments";
 import { pickVendorById } from "@/server/vendors";
@@ -15,6 +16,7 @@ export async function NewVendorPaymentForm({ vendorId }: { vendorId: number | nu
     <VendorPaymentForm
       id={null}
       initial={{ vendor, date: todayInIndia(), amount: null, mode: "bank", reference: "", notes: "" }}
+      scanReady={billScanReady()}
       backHref={vendor ? `/vendors/${vendor.id}` : "/payments-made"}
     />
   );

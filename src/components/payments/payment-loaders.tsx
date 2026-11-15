@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { billScanReady } from "@/server/bill-scan";
 import { customersHref } from "@/lib/customers/href";
 import { pickCustomerById } from "@/server/invoices";
 import { todayInIndia } from "@/server/invoice-writes";
@@ -17,6 +18,7 @@ export async function NewPaymentForm({ customerId }: { customerId: number | null
     <PaymentForm
       id={null}
       initial={{ customer, date: todayInIndia(), amount: null, mode: "cash", reference: "", notes: "" }}
+      scanReady={billScanReady()}
       backHref={customer ? customersHref({ id: customer.id }) : "/payments"}
     />
   );

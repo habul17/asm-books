@@ -5,6 +5,9 @@ import { NewPaymentForm, PaymentFormSkeleton } from "@/components/payments/payme
 
 export const metadata: Metadata = { title: "Receive payment" };
 
+// Reading a payment slip can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
+
 async function Form({ searchParams }: { searchParams: PageProps<"/payments/new">["searchParams"] }) {
   const raw = (await searchParams).customer;
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
