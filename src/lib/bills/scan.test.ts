@@ -110,7 +110,7 @@ describe("reviewScan", () => {
     const r = reviewScan(bill(), context);
     expect(r).toMatchObject({ billNo: "SB/1042", date: "2026-11-05", printedTotal: 1050, roundTotal: true, warnings: [] });
     expect(r.lines).toEqual([
-      { productId: 1, partNo: "BP-1234", description: "Brake pad front", unit: "Set", qty: "2", rate: "410", discountPct: "", gstRate: 28, flags: [] },
+      { productId: 1, partNo: "BP-1234", description: "Brake pad front", unit: "Set", qty: "2", rate: "410", discountPct: "", gstRate: 28, flags: [], printedPartNo: "BP-1234", hsn: "8708" },
     ]);
   });
 
@@ -118,6 +118,14 @@ describe("reviewScan", () => {
     const r = reviewScan(bill({ lines: [line({ partNo: "ZZ-999", description: "Wiper blade" })] }), context);
     expect(r.lines[0]).toMatchObject({ productId: null, partNo: null, description: "ZZ-999 Wiper blade", unit: "Nos" });
     expect(r.lines[0].flags.map((f) => f.kind)).toEqual(["part"]);
+    // Kept so the row can be added to the parts list as a new part.
+    expect(r.lines[0]).toMatchObject({ printedPartNo: "ZZ-999", hsn: "8708" });
+  });
+
+  it("keeps the supplier as printed, for adding a new vendor", () => {
+    const r = reviewScan(bill(), { ...context, vendorFound: false });
+    expect(r.supplier).toEqual({ name: bill().supplierName, gstin: bill().supplierGstin });
+    expect(r.warnings[0]).toMatch(/add them as a new vendor/);
   });
 
   it("flags a near match so a person confirms it", () => {

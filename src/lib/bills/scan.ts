@@ -209,6 +209,9 @@ export interface ScanReviewLine {
   discountPct: string;
   gstRate: number;
   flags: ScanFlag[];
+  /** What the bill printed, so a part that is not in the list yet can be added from it. */
+  printedPartNo: string | null;
+  hsn: string | null;
 }
 
 export interface ScanReview {
@@ -221,6 +224,8 @@ export interface ScanReview {
   roundTotal: boolean;
   /** Things about the whole bill to check before saving. */
   warnings: string[];
+  /** The supplier as printed, so a new one can be added as a vendor from the bill. */
+  supplier: { name: string | null; gstin: string | null };
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -249,7 +254,7 @@ function reviewLine(line: ScannedLine, index: PartIndex, defaultGstRate: number)
     flags.push({
       kind: "part",
       text: line.partNo
-        ? `Part no ${line.partNo} is not in your parts list. Pick the part, or add it in Catalogue first.`
+        ? `Part no ${line.partNo} is not in your parts list. Pick the part, or add it as a new part.`
         : "No part number could be read. Pick the part.",
     });
   } else if (match.how === "near") {
@@ -291,6 +296,8 @@ function reviewLine(line: ScannedLine, index: PartIndex, defaultGstRate: number)
     discountPct: discountPct ? String(discountPct) : "",
     gstRate: gst.rate,
     flags,
+    printedPartNo: line.partNo,
+    hsn: line.hsn?.replace(/\s/g, "") || null,
   };
 }
 
@@ -310,7 +317,7 @@ export function reviewScan(
     const who = [scan.supplierName, scan.supplierGstin && `GSTIN ${scan.supplierGstin}`].filter(Boolean).join(", ");
     warnings.push(
       who
-        ? `The supplier on the bill (${who}) is not in your vendors. Choose the vendor, or add them in Vendors first.`
+        ? `The supplier on the bill (${who}) is not in your vendors. Choose the vendor, or add them as a new vendor.`
         : "The supplier could not be read. Choose the vendor.",
     );
   }
@@ -345,5 +352,6 @@ export function reviewScan(
     printedTotal: scan.grandTotal,
     roundTotal: scan.grandTotal == null || Number.isInteger(round2(scan.grandTotal)),
     warnings,
+    supplier: { name: scan.supplierName, gstin: scan.supplierGstin },
   };
 }

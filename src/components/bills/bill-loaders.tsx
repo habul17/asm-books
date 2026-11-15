@@ -143,6 +143,8 @@ export async function EditBillForm({ id }: { id: number }) {
       }}
       sellerState={options.sellerState}
       cancelHref={`/bills/${bill.id}`}
+      // A round off over 50 paise means the supplier's printed total was used; keep it when the bill is changed.
+      printedTotal={Math.abs(bill.roundOff) > 0.5 ? bill.grandTotal : null}
     />
   );
 }

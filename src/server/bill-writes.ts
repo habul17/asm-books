@@ -86,7 +86,10 @@ async function prepare(tx: Tx, input: BillInput, existing: ExistingBill | null) 
   const lines = await buildPurchaseLines(tx, input.lines);
 
   const taxType = taxTypeFor(business.stateCode || null, vendor.stateCode || business.stateCode || null);
-  const { lines: calculated, totals } = calcInvoice(lines, taxType, { round: input.roundTotal });
+  const { lines: calculated, totals } = calcInvoice(lines, taxType, {
+    round: input.roundTotal,
+    printedTotal: input.printedTotal,
+  });
   const header = {
     vendorId: vendor.id,
     billNo: input.billNo,

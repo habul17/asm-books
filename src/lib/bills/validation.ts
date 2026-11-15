@@ -24,6 +24,8 @@ export const billInputSchema = z
     updatePrices: z.boolean(),
     /** False keeps the paise on the bill total, as on the supplier's bill. */
     roundTotal: z.boolean().default(true),
+    /** The total printed on the supplier's bill, used when it is only their rounding away. */
+    printedTotal: z.number().nonnegative().max(1e10).nullable().default(null),
     notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
     /** The purchase order this bill is for; saving the bill closes it. */
     fromOrderId: z.number().int().positive().nullable().default(null),

@@ -115,3 +115,27 @@ describe("calcInvoice without rounding", () => {
     expect(calcInvoice([line], "intra", { round: false }).totals).toMatchObject({ grandTotal: 118.6, roundOff: 0 });
   });
 });
+
+describe("calcInvoice with the supplier's printed total", () => {
+  // Rates printed by a supplier who rounds each row's total: 5 × 115.25 + 18% = 679.98, printed as 680.
+  const rows = [{ qty: 5, rate: 115.25, discountPct: 0, gstRate: 18 }];
+  it("uses the printed total when it is only their rounding away", () => {
+    const { totals } = calcInvoice(rows, "inter", { printedTotal: 680 });
+    expect(totals.grandTotal).toBe(680);
+    expect(totals.roundOff).toBeCloseTo(0.02, 2);
+  });
+  it("ignores a printed total that is too far off", () => {
+    expect(calcInvoice(rows, "inter", { printedTotal: 690 }).totals.grandTotal).toBe(680);
+    expect(calcInvoice(rows, "inter", { printedTotal: 677 }).totals.grandTotal).toBe(680);
+  });
+  it("allows more on many cheap pieces, whose rates were rounded", () => {
+    // 1,000 terminals printed at 1.57 (really 1.5678): ours 1852.60, theirs 1850.00.
+    const terminals = [{ qty: 1000, rate: 1.57, discountPct: 0, gstRate: 18 }];
+    expect(calcInvoice(terminals, "inter", { printedTotal: 1850 }).totals.grandTotal).toBe(1850);
+    // A misread row is still caught: 10% off is far more than rounding.
+    expect(calcInvoice(terminals, "inter", { printedTotal: 1660 }).totals.grandTotal).toBe(1853);
+  });
+  it("rounds as before without one", () => {
+    expect(calcInvoice(rows, "inter").totals.grandTotal).toBe(680);
+  });
+});

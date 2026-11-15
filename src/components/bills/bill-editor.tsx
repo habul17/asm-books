@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
+
+import { AddScannedPart, AddScannedVendor } from "./scan-adds";
 import { InfoTip } from "@/components/ui/info-tip";
 import type { ScanFlag } from "@/lib/bills/scan";
 import { formatMoney, formatQty } from "@/lib/format";
@@ -33,6 +35,9 @@ export interface BillLineDraft {
   gstRate: number;
   /** Things to check on a row that was filled in from a scanned bill. */
   flags?: ScanFlag[];
+  /** On a scanned row: the part no and HSN as printed, to add a part that is not in the list yet. */
+  printedPartNo?: string | null;
+  hsn?: string | null;
 }
 
 export interface BillDraft {
@@ -73,6 +78,7 @@ export function BillEditor({
   sellerState,
   cancelHref,
   printedTotal = null,
+  scannedSupplier = null,
   kind = "bill",
 }: {
   kind?: "bill" | "order";
@@ -81,6 +87,8 @@ export function BillEditor({
   cancelHref: string;
   /** For a scanned bill: the total printed on the paper bill, to compare with the total worked out here. */
   printedTotal?: number | null;
+  /** For a scanned bill whose supplier is not a saved vendor: the supplier as printed. */
+  scannedSupplier?: { name: string | null; gstin: string | null } | null;
 }) {
   const [vendor, setVendor] = useState(initial.vendor);
   const [billNo, setBillNo] = useState(initial.billNo);
@@ -104,7 +112,7 @@ export function BillEditor({
       gstRate: l.gstRate,
     })),
     taxType,
-    { round: roundTotal },
+    { round: roundTotal, printedTotal: isOrder ? null : printedTotal },
   );
 
   const chooseVendor = (v: PickedVendor | null) => {
@@ -135,7 +143,7 @@ export function BillEditor({
   };
 
   /** Sets the part of a scanned row that could not be matched; the scanned qty and rate stay. */
-  const choosePart = (key: string, item: PickedItem) =>
+  const choosePart = (key: string, item: Pick<PickedItem, "id" | "partNo" | "description" | "unit">) =>
     setLines((ls) =>
       ls.map((l) =>
         l.key === key
@@ -185,6 +193,7 @@ export function BillEditor({
             dueDate: dueDate || null,
             updatePrices,
             roundTotal,
+            printedTotal,
             fromOrderId: initial.fromOrderId,
             notes,
             lines: items,
@@ -204,6 +213,7 @@ export function BillEditor({
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">Vendor</span>
         <VendorPicker value={vendor} onChange={chooseVendor} />
+        {!vendor && scannedSupplier && <AddScannedVendor supplier={scannedSupplier} onAdded={chooseVendor} />}
       </div>
 
       <div className={isOrder ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-3"}>
@@ -270,7 +280,17 @@ export function BillEditor({
                       ))}
                     </ul>
                     {l.productId == null ? (
-                      <LinePartPicker onPick={(item) => choosePart(l.key, item)} />
+                      <>
+                        <LinePartPicker onPick={(item) => choosePart(l.key, item)} />
+                        <AddScannedPart
+                          printedPartNo={l.printedPartNo ?? null}
+                          description={l.description}
+                          hsn={l.hsn ?? null}
+                          unit={l.unit}
+                          gstRate={l.gstRate}
+                          onAdded={(part) => choosePart(l.key, part)}
+                        />
+                      </>
                     ) : (
                       <Button
                         type="button"
@@ -391,9 +411,9 @@ export function BillEditor({
           )}
           {totalGap != null && lines.length > 0 && (
             <span
-              className={`block text-xs font-medium ${Math.abs(totalGap) <= 1 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}
+              className={`block text-xs font-medium ${Math.abs(totalGap) < 0.01 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}
             >
-              {Math.abs(totalGap) <= 1
+              {Math.abs(totalGap) < 0.01
                 ? `Matches the total printed on the bill (${formatMoney(printedTotal)})`
                 : `The bill's printed total is ${formatMoney(printedTotal)}. This is ${formatMoney(Math.abs(totalGap))} ${totalGap > 0 ? "more" : "less"}. Check the rows.`}
             </span>

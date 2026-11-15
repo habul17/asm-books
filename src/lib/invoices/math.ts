@@ -60,14 +60,42 @@ export function calcLine({ qty, rate, discountPct, gstRate }: LineInput, type: T
 }
 
 /**
+ * How far a supplier's printed total can be from ours through their rounding alone:
+ * ₹1 for the total, plus half a paisa of rate on every piece, with GST. A bill
+ * with 1,000 terminals at "1.57" (really 1.5678) moves by about ₹3. A misread quantity or rate
+ * is almost always far more than this, so it still shows up.
+ */
+export function printedTotalSlack(lines: LineInput[]) {
+  const rateRounding = lines.reduce(
+    (s, l) => s + Math.abs(l.qty) * 0.005 * (1 - (l.discountPct ?? 0) / 100) * (1 + l.gstRate / 100),
+    0,
+  );
+  return 1 + rateRounding;
+}
+
+/** True when a supplier's printed total is only their rounding away from the worked-out total. */
+export const closeToPrinted = (exact: number, printed: number | null | undefined, slack: number): printed is number =>
+  printed != null && Number.isFinite(printed) && Math.abs(printed - exact) <= slack;
+
+/**
  * Works out every line and the invoice totals. The grand total is rounded to
  * whole rupees unless `round` is false (some supplier bills keep the paise).
+ * `printedTotal` is a supplier bill's own total: when it is within their rounding
+ * (a rupee or two, from rounding each row), it is used, so what we owe matches their bill.
  */
-export function calcInvoice<L extends LineInput>(lines: L[], type: TaxType, { round = true } = {}) {
+export function calcInvoice<L extends LineInput>(
+  lines: L[],
+  type: TaxType,
+  { round = true, printedTotal = null }: { round?: boolean; printedTotal?: number | null } = {},
+) {
   const out = lines.map((l) => ({ ...l, ...calcLine(l, type) }));
   const sum = (k: keyof LineAmounts) => round2(out.reduce((s, l) => s + l[k], 0));
   const exact = sum("total");
-  const grandTotal = round ? Math.round(exact) : exact;
+  const grandTotal = closeToPrinted(exact, printedTotal, printedTotalSlack(lines))
+    ? round2(printedTotal)
+    : round
+      ? Math.round(exact)
+      : exact;
   const totals: InvoiceTotals = {
     taxableTotal: sum("taxable"),
     cgstTotal: sum("cgst"),

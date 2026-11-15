@@ -15,6 +15,8 @@ interface Scanned {
   printedTotal: number | null;
   warnings: string[];
   flagged: number;
+  /** The supplier as printed, when they are not a saved vendor. */
+  supplier: { name: string | null; gstin: string | null } | null;
 }
 
 /** The new-bill page: enter a bill by hand, or scan one and check what was read. */
@@ -40,6 +42,7 @@ export function NewBillWorkspace({
         printedTotal: scan.printedTotal,
         warnings: scan.warnings,
         flagged: scan.lines.filter((l) => l.flags.length > 0).length,
+        supplier: scan.vendor ? null : scan.supplier,
         draft: {
           ...initial,
           vendor,
@@ -83,6 +86,7 @@ export function NewBillWorkspace({
         sellerState={sellerState}
         cancelHref={cancelHref}
         printedTotal={scanned?.printedTotal ?? null}
+        scannedSupplier={scanned?.supplier ?? null}
       />
     </div>
   );
