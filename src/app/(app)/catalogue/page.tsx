@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, ScanLineIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -47,6 +47,9 @@ export default function CataloguePage({ searchParams }: PageProps<"/catalogue">)
             <SearchBox />
           </Suspense>
         </div>
+        <Link href="/catalogue/rate-list" className={buttonVariants({ variant: "outline", className: "h-10 shrink-0" })}>
+          <ScanLineIcon /> <span className="hidden sm:inline">Read rate list</span>
+        </Link>
         <Link href="/catalogue/new" className={buttonVariants({ className: "h-10 shrink-0" })}>
           <PlusIcon /> Add part
         </Link>

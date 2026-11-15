@@ -7,7 +7,10 @@ import { z } from "zod";
 import { parseMinStock } from "@/lib/catalogue/min-stock";
 import { parseProduct } from "@/lib/catalogue/product-validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { createProduct, ProductInputError, setMinStock, updateProduct } from "@/server/product-writes";
+import { applyRateList, scanRateList } from "@/server/rate-list";
+import type { RateReview } from "@/lib/catalogue/rate-list";
 
 export interface ActionState {
   ok?: boolean;
@@ -65,4 +68,21 @@ export async function saveProduct(id: number | null, _prev: ActionState, formDat
     return { error: "Could not save. Please try again." };
   }
   redirect(`/catalogue?q=${encodeURIComponent(parsed.value.partNo)}&id=${savedId}`);
+}
+
+/** Reads a supplier's rate list and compares it with the parts list. Owner only. Nothing is saved. */
+export async function scanRateListAction(formData: FormData): Promise<ScanAnswer<RateReview>> {
+  return scanUpload(formData, "rate list", scanRateList);
+}
+
+/** Saves the rows of a rate list the owner approved. */
+export async function applyRateListAction(input: unknown) {
+  try {
+    const result = await applyRateList(input);
+    if (!("error" in result)) refresh();
+    return result;
+  } catch (err) {
+    console.error("[catalogue] rate list save failed:", err instanceof Error ? err.message : err);
+    return { error: "Could not save. Please try again." };
+  }
 }
