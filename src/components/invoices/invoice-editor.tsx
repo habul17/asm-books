@@ -19,6 +19,7 @@ import { amountInWords, calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/payments/validation";
 import { CHALLAN_REASONS, SALES_DOC_KIND, salesDocHref, salesDocsHref, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { GST_RATES } from "@/lib/settings/business";
+import { rateForQty, type PriceStep } from "@/lib/stock/fifo";
 import type { EditorOptions, PickedCustomer, PickedItem } from "@/server/invoices";
 
 import { CustomerPicker } from "./customer-picker";
@@ -38,6 +39,8 @@ export interface EditorLine {
   available: number | null;
   /** Set once the user types a rate, so changing the price list does not overwrite it. */
   rateEdited: boolean;
+  /** First in, first out: the selling price as the sale reaches newer purchase bills. */
+  steps?: PriceStep[];
 }
 
 export interface EditorInitial {
@@ -97,7 +100,28 @@ export function lineFromItem(item: PickedItem): EditorLine {
     gstRate: item.gstRate,
     available: item.stockQty,
     rateEdited: false,
+    steps: item.steps,
   };
+}
+
+/**
+ * First in, first out: one row per part, at the highest price among the purchase
+ * bills its pieces come from. A second row of the same part starts where the first
+ * ended. Rates typed by hand are kept.
+ */
+export function withFifoRates(lines: EditorLine[]): EditorLine[] {
+  const taken = new Map<number, number>();
+  return lines.map((l) => {
+    // Rows saved earlier have no steps: their pieces are already out of today's stock.
+    if (l.productId == null || !l.steps) return l;
+    const qty = num(l.qty) ?? 0;
+    const skip = taken.get(l.productId) ?? 0;
+    taken.set(l.productId, skip + Math.max(qty, 0));
+    if (l.rateEdited || qty <= 0) return l;
+    const price = rateForQty(l.steps, qty, skip);
+    const rate = price != null ? String(price) : "";
+    return rate === l.rate ? l : { ...l, rate };
+  });
 }
 
 /**
@@ -180,7 +204,7 @@ export function InvoiceEditor({
 
   const updateLine = (key: string, patch: Partial<EditorLine>) => {
     touch();
-    setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+    setLines((ls) => withFifoRates(ls.map((l) => (l.key === key ? { ...l, ...patch } : l))));
   };
 
   const addItem = (item: PickedItem) => {
@@ -189,9 +213,9 @@ export function InvoiceEditor({
       const same = ls.find((l) => l.productId === item.id);
       if (same) {
         const qty = (num(same.qty) ?? 0) + 1;
-        return ls.map((l) => (l.key === same.key ? { ...l, qty: formatQty(qty) } : l));
+        return withFifoRates(ls.map((l) => (l.key === same.key ? { ...l, qty: formatQty(qty) } : l)));
       }
-      return [...ls, lineFromItem(item)];
+      return withFifoRates([...ls, lineFromItem(item)]);
     });
   };
 
@@ -223,13 +247,15 @@ export function InvoiceEditor({
     if (!ids.length) return;
     setRepricing(true);
     try {
-      const prices = new Map((await repriceItems(ids, listId)).map((p) => [p.id, p.price]));
+      const items = new Map((await repriceItems(ids, listId)).map((p) => [p.id, p]));
       setLines((ls) =>
-        ls.map((l) => {
-          if (l.productId == null || l.rateEdited || !prices.has(l.productId)) return l;
-          const price = prices.get(l.productId);
-          return { ...l, rate: price != null ? String(price) : "" };
-        }),
+        withFifoRates(
+          ls.map((l) => {
+            const item = l.productId == null || l.rateEdited ? undefined : items.get(l.productId);
+            if (!item) return l;
+            return { ...l, rate: item.price != null ? String(item.price) : "", steps: item.steps };
+          }),
+        ),
       );
     } finally {
       setRepricing(false);
@@ -625,7 +651,7 @@ export function InvoiceEditor({
                         aria-label={`Remove item ${i + 1}`}
                         onClick={() => {
                           touch();
-                          setLines((ls) => ls.filter((x) => x.key !== l.key));
+                          setLines((ls) => withFifoRates(ls.filter((x) => x.key !== l.key)));
                         }}
                       >
                         <XIcon />

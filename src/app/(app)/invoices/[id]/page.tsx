@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
+import { InvoiceBatches } from "@/components/invoices/invoice-batches";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -83,6 +84,8 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
           ...transportRows(inv.transport),
         ]}
       />
+
+      {final && <InvoiceBatches inv={inv} />}
 
       {final && (
         <TransportForm

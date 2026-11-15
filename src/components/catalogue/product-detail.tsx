@@ -83,14 +83,57 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
           <Fact label="Stock">
             {formatQty(p.stockQty)} {p.unit}
           </Fact>
-          <Fact label="Purchase price">
+          <Fact label="Purchase price (sells next)">
             <strong className="tabular-nums" title={p.purchasePrice != null ? `₹${p.purchasePrice}` : undefined}>
               {formatMoney(p.purchasePrice)}
-            </strong>{" "}
+            </strong>
+          </Fact>
+          <Fact label="Newest purchase">
+            <span className="tabular-nums">{formatMoney(p.newestPurchasePrice)}</span>{" "}
             <PriceChange change={p.priceChange} />
           </Fact>
-          <Fact label="Previous purchase">{formatMoney(p.previousPurchasePrice)}</Fact>
         </dl>
+
+        {p.lots.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h3 className="font-medium">Stock by purchase bill</h3>
+            <p className="-mt-2 text-sm text-muted-foreground">
+              First in, first out: the top row sells first. A sale that runs into the next row is priced at the higher
+              row&apos;s price.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Bill</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Left</TableHead>
+                  <TableHead className="text-right">Bought at</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {p.lots.map((l, i) => (
+                  <TableRow key={`${l.billId ?? "older"}-${i}`}>
+                    <TableCell>
+                      {l.billId != null ? (
+                        <Link href={`/bills/${l.billId}`} className="font-mono underline-offset-4 hover:underline">
+                          {l.billNo}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">Older stock</span>
+                      )}
+                      {i === 0 && <Badge variant="secondary" className="ml-2">sells next</Badge>}
+                    </TableCell>
+                    <TableCell>{l.date ? formatDate(l.date) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatQty(l.left)} {p.unit}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatMoney(l.cost)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </section>
+        )}
 
         <MinStockForm productId={p.id} minStock={p.minStock} unit={p.unit} />
 

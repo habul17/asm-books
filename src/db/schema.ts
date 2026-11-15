@@ -797,6 +797,39 @@ export const billLines = pgTable(
 );
 
 /**
+ * First in, first out: which purchase bill the pieces on an invoice row came from,
+ * worked out when the invoice is saved. One invoice row can take from several bills.
+ * Rebuilt when the invoice is changed. Shown to the owner; never printed.
+ */
+export const invoiceLineBatches = pgTable(
+  "invoice_line_batches",
+  {
+    id: id(),
+    invoiceId: integer("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    /** The invoice row (its line_no); rows are rewritten when the invoice changes. */
+    lineNo: integer("line_no").notNull(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    /** Null: older stock from no bill, or pieces sold beyond the stock (`short`). */
+    billId: integer("bill_id").references(() => bills.id, { onDelete: "restrict" }),
+    billNo: text("bill_no"),
+    billDate: date("bill_date", { mode: "string" }),
+    qty: quantity("qty").notNull(),
+    /** Cost of one piece in that batch, before GST; null when not known. */
+    cost: cost("cost"),
+    short: boolean("short").notNull().default(false),
+  },
+  (t) => [
+    index("invoice_line_batches_invoice_idx").on(t.invoiceId, t.lineNo),
+    index("invoice_line_batches_bill_idx").on(t.billId),
+    check("invoice_line_batches_qty_check", sql`${t.qty} > 0`),
+  ],
+);
+
+/**
  * Goods sent back to a vendor (debit note). It lowers what we owe them and
  * takes the parts out of stock. Not edited: a wrong one is cancelled.
  */

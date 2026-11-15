@@ -19,6 +19,7 @@ import {
 import { folderPathResolver } from "@/lib/price-lists/folders";
 import { computePrice, type ComputedPrice } from "@/lib/pricing";
 
+import { loadStockLots } from "./fifo";
 import { productSearch, purchasePriceAt } from "./product-search";
 
 export const SEARCH_LIMIT = 50;
@@ -149,7 +150,11 @@ export async function getProduct(id: number) {
   const product = productRows[0];
   if (!product) return null;
 
-  const purchasePrice = history[0]?.price ?? null;
+  // First in, first out: selling prices follow the batch that sells next, not the newest bill.
+  const stock = (await loadStockLots(db, [id])).get(id);
+  const lots = stock?.lots ?? [];
+  const newestPurchasePrice = history[0]?.price ?? null;
+  const purchasePrice = lots[0]?.cost ?? stock?.shortCost ?? newestPurchasePrice;
   const previousPurchasePrice = history[1]?.price ?? null;
 
   const folderPath = folderPathResolver(folders);
@@ -167,8 +172,11 @@ export async function getProduct(id: number) {
     canEdit: isOwner(user),
     purchasePrice,
     previousPurchasePrice,
+    newestPurchasePrice,
     priceChange:
-      purchasePrice != null && previousPurchasePrice != null ? purchasePrice - previousPurchasePrice : null,
+      newestPurchasePrice != null && previousPurchasePrice != null ? newestPurchasePrice - previousPurchasePrice : null,
+    /** Stock on hand by purchase bill, oldest (sells next) first. */
+    lots,
     history,
     sellingPrices,
   };

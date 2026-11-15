@@ -20,6 +20,7 @@ import type { InvoiceInput } from "@/lib/invoices/validation";
 import { round2 } from "@/lib/pricing";
 import { loadCustomFields } from "@/server/custom-fields";
 import { recordRecurringInvoice } from "@/server/recurring-writes";
+import { allocateSale, loadStockLots, saveSaleBatches } from "@/server/fifo";
 import { loadBusiness } from "@/server/settings";
 
 import { purchasePriceAt } from "./product-search";
@@ -283,11 +284,32 @@ async function closeInvoicedDoc(tx: Tx, docId: number, invoiceId: number) {
   }
 }
 
+/**
+ * First in, first out: works out which purchase bills each row's pieces come from,
+ * and sets each row's cost (for profit) to what those pieces really cost.
+ * Rows of parts with no bill and no known price keep the cost they had.
+ */
+async function withFifoCosts<L extends { lineNo: number; productId: number | null; qty: number; cost: number | null }>(
+  tx: Tx,
+  lines: L[],
+  addBack?: Map<number, number>,
+) {
+  const stock = await loadStockLots(
+    tx,
+    lines.flatMap((l) => (l.productId == null ? [] : [l.productId])),
+    { addBack, lock: true },
+  );
+  const batches = allocateSale(stock, lines);
+  const costOf = new Map(batches.map((b) => [b.lineNo, b.cost]));
+  return { lines: lines.map((l) => ({ ...l, cost: costOf.get(l.lineNo) ?? l.cost })), batches };
+}
+
 export async function createInvoice(input: InvoiceInput, userId: number): Promise<number> {
   return withTransaction(async (tx) => {
-    const { fy, prefix, allowShortStock, header, lines } = await prepare(tx, input, null);
-    const sold = new Map([...qtyByProduct(lines)].map(([p, q]) => [p, -q]));
+    const { fy, prefix, allowShortStock, header, lines: prepared } = await prepare(tx, input, null);
+    const sold = new Map([...qtyByProduct(prepared)].map(([p, q]) => [p, -q]));
     if (!allowShortStock) await assertStockAvailable(tx, sold);
+    const { lines, batches } = await withFifoCosts(tx, prepared);
     // One invoice number at a time, so two people saving together never get the same number.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
     const [{ next }] = await tx
@@ -300,6 +322,7 @@ export async function createInvoice(input: InvoiceInput, userId: number): Promis
       .values({ ...header, number, fy, seq: next, createdBy: userId })
       .returning({ id: invoices.id });
     await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
+    await saveSaleBatches(tx, id, lines, batches);
     await moveStock(tx, sold, { kind: "sale", invoiceId: id, date: header.date, note: number, userId });
     if (input.fromDocId != null) await closeInvoicedDoc(tx, input.fromDocId, id);
     if (input.repeatId != null) await recordRecurringInvoice(tx, input.repeatId, id);
@@ -351,16 +374,19 @@ export async function updateInvoice(
   await withTransaction(async (tx) => {
     const existing = await lockInvoice(tx, id);
     if (!canChangeToday(isOwner, existing.createdAt)) throw new InvoiceInputError(staffEditLimit("bills"));
-    const { allowShortStock, header, lines } = await prepare(tx, input, existing);
+    const { allowShortStock, header, lines: prepared } = await prepare(tx, input, existing);
     // Only the change in quantity moves stock.
     const before = qtyByProduct(existing.lines);
-    const after = qtyByProduct(lines);
+    const after = qtyByProduct(prepared);
     const diff = new Map<number, number>();
     for (const p of new Set([...before.keys(), ...after.keys()])) diff.set(p, (before.get(p) ?? 0) - (after.get(p) ?? 0));
     if (!allowShortStock) await assertStockAvailable(tx, diff);
+    // The pieces this invoice took go back first, then the rows take again, oldest first.
+    const { lines, batches } = await withFifoCosts(tx, prepared, before);
     await tx.update(invoices).set(header).where(eq(invoices.id, id));
     await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, id));
     await tx.insert(invoiceLines).values(lines.map((l) => ({ ...l, invoiceId: id })));
+    await saveSaleBatches(tx, id, lines, batches);
     await moveStock(tx, diff, { kind: "sale_edit", invoiceId: id, date: header.date, note: existing.number, userId });
   });
 }

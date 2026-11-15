@@ -8,6 +8,7 @@ import {
   categories,
   customerGroups,
   customers,
+  invoiceLineBatches,
   invoiceLines,
   invoices,
   priceListItems,
@@ -17,8 +18,10 @@ import {
 } from "@/db/schema";
 import { shownExtra } from "@/lib/custom-fields";
 import { computePrice } from "@/lib/pricing";
+import { priceSteps, rateForQty, type PriceStep } from "@/lib/stock/fifo";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
+import { loadStockLots, type StockLots } from "@/server/fifo";
 import { loadBusiness } from "@/server/settings";
 
 import { loadCustomFields } from "./custom-fields";
@@ -117,6 +120,22 @@ export async function getInvoice(id: number) {
   const hasExtra = Object.keys(head.invoice.extra).length > 0;
   const fields = hasExtra ? await loadCustomFields("invoice", db) : [];
   const isOwner = user.role === "owner";
+  // Which purchase bill each sold piece came from: owner only, like profit.
+  const batches = isOwner
+    ? await db
+        .select({
+          lineNo: invoiceLineBatches.lineNo,
+          billId: invoiceLineBatches.billId,
+          billNo: invoiceLineBatches.billNo,
+          billDate: invoiceLineBatches.billDate,
+          qty: invoiceLineBatches.qty,
+          cost: invoiceLineBatches.cost,
+          short: invoiceLineBatches.short,
+        })
+        .from(invoiceLineBatches)
+        .where(eq(invoiceLineBatches.invoiceId, id))
+        .orderBy(asc(invoiceLineBatches.lineNo), asc(invoiceLineBatches.id))
+    : null;
   const allCosted = lines.every((l) => l.cost != null);
   const cost = lines.reduce((s, l) => s + (l.cost ?? 0) * l.line.qty, 0);
   return {
@@ -128,6 +147,8 @@ export async function getInvoice(id: number) {
     // Costs stay on the server; only the profit total is shared, and only with the owner.
     lines: lines.map(({ line, stockQty }) => ({ ...line, stockQty })),
     profit: isOwner && allCosted ? Math.round((head.invoice.taxableTotal - cost) * 100) / 100 : null,
+    /** Owner only: the purchase bills each row's pieces came from (first in, first out). */
+    batches,
     /** Staff may change an invoice only on the day it was made. */
     canChange: canChangeToday(isOwner, head.invoice.createdAt),
   };
@@ -246,12 +267,19 @@ interface ItemRow {
   manualPrice: number | null;
 }
 
-/** Selling price from the list (or the product's list price without one). Purchase prices never leave the server. */
-function toPickedItem(p: ItemRow, list: Awaited<ReturnType<typeof loadList>>, defaultGstRate: number) {
-  const price = list
-    ? computePrice(list, { purchase: p.purchase, previous_purchase: p.previousPurchase, list: p.list }, p.manualPrice)
-        .price
-    : p.list;
+/**
+ * Selling price from the list (or the product's list price without one). Purchase prices never leave the server.
+ * First in, first out: `steps` give the price as a sale reaches newer purchase bills; `price` is for one piece.
+ */
+function toPickedItem(
+  p: ItemRow,
+  list: Awaited<ReturnType<typeof loadList>>,
+  defaultGstRate: number,
+  stock: StockLots | undefined,
+): PickedItem {
+  const priceFor = (purchase: number | null) =>
+    list ? computePrice(list, { purchase, previous_purchase: p.previousPurchase, list: p.list }, p.manualPrice).price : p.list;
+  const steps = stock ? priceSteps(stock.lots, stock.shortCost, priceFor) : [{ from: 0, price: priceFor(p.purchase) }];
   return {
     id: p.id,
     partNo: p.partNo,
@@ -259,11 +287,23 @@ function toPickedItem(p: ItemRow, list: Awaited<ReturnType<typeof loadList>>, de
     unit: p.unit,
     gstRate: p.gstRate ?? defaultGstRate,
     stockQty: p.stockQty,
-    price,
+    price: rateForQty(steps, 1),
+    steps,
   };
 }
 
-export type PickedItem = ReturnType<typeof toPickedItem>;
+export interface PickedItem {
+  id: number;
+  partNo: string;
+  description: string;
+  unit: string;
+  gstRate: number;
+  stockQty: number;
+  /** Selling price of one piece; null when it has none. */
+  price: number | null;
+  /** Selling price steps as a sale reaches newer purchase bills (first in, first out). Sales only. */
+  steps?: PriceStep[];
+}
 
 /** Products matching the search, priced for the chosen price list. */
 export async function pickItems(query: string, priceListId: number | null) {
@@ -278,7 +318,8 @@ export async function pickItems(query: string, priceListId: number | null) {
     .where(where)
     .orderBy(rank, asc(products.sort), asc(products.id))
     .limit(PICK_LIMIT);
-  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate));
+  const stock = await loadStockLots(db, rows.map((r) => r.id));
+  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id)));
 }
 
 /** Current prices of the given products in a price list, for re-pricing the lines of an invoice. */
@@ -292,5 +333,6 @@ export async function priceItems(productIds: number[], priceListId: number | nul
     .select(itemColumns(list?.id ?? 0))
     .from(products)
     .where(inArray(products.id, ids));
-  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate));
+  const stock = await loadStockLots(db, ids);
+  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id)));
 }

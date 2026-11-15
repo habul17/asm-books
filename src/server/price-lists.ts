@@ -10,6 +10,7 @@ import { requireUser } from "@/server/auth";
 import { categories, priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
 import { computePrice, round2, type PriceRule } from "@/lib/pricing";
 
+import { loadStockLots } from "./fifo";
 import { productSearch, purchasePriceAt } from "./product-search";
 
 export const PRICES_PAGE = 100;
@@ -110,7 +111,11 @@ export async function getListPrices(
       .limit(limit),
   ]);
 
-  const items = rows.map((p): ListPriceRow => {
+  // First in, first out: prices follow the purchase bill that sells next.
+  const stock = await loadStockLots(db, rows.map((r) => r.id));
+  const items = rows.map((row): ListPriceRow => {
+    const s = stock.get(row.id);
+    const p = { ...row, purchase: s?.lots[0]?.cost ?? s?.shortCost ?? row.purchase };
     const bases = { purchase: p.purchase, previous_purchase: p.previousPurchase, list: p.list };
     const rule = computePrice(list, bases);
     const price = p.manualPrice ?? rule.price;
