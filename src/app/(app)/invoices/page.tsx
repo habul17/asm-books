@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { InvoiceList, InvoiceListSkeleton } from "@/components/invoices/invoice-list";
 import { ListToolbar } from "@/components/forms/list-toolbar";
 import { buttonVariants } from "@/components/ui/button";
-import type { InvoiceStatusFilter } from "@/server/invoices";
+import { INVOICE_STATUS_FILTERS, type InvoiceStatusFilter } from "@/server/invoices";
 
 export const metadata: Metadata = { title: "Invoices" };
 
@@ -20,7 +20,7 @@ async function List({ searchParams }: { searchParams: Promise<Params> }) {
     <InvoiceList
       filters={{
         query: first(params.q).slice(0, 200),
-        status: (["final", "cancelled"].includes(status) ? status : "all") as InvoiceStatusFilter,
+        status: (INVOICE_STATUS_FILTERS as string[]).includes(status) ? (status as InvoiceStatusFilter) : "all",
         customerId: null,
       }}
     />
@@ -46,7 +46,13 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
           path="/invoices"
           label="Search invoices"
           placeholder="Search invoice no, customer or mobile…"
-          statusLabels={{ all: "All invoices", final: "Active only", cancelled: "Cancelled only" }}
+          statusLabels={{
+            all: "All invoices",
+            due: "Money to come",
+            overdue: "Overdue",
+            final: "Active only",
+            cancelled: "Cancelled only",
+          }}
         />
       </Suspense>
       <Suspense fallback={<InvoiceListSkeleton />}>

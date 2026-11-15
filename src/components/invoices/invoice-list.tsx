@@ -6,14 +6,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { searchInvoices, type InvoiceFilters } from "@/server/invoices";
 
+import { PayBadge } from "./pay-badge";
+
 /** `pickForReturn` makes each row open the return form for that invoice. */
 export async function InvoiceList({ filters, pickForReturn }: { filters: InvoiceFilters; pickForReturn?: boolean }) {
-  const { count, total, items } = await searchInvoices(filters);
+  const { count, total, due, items } = await searchInvoices(filters);
   return (
     <section aria-label="Invoices" className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {count === items.length ? `${count} invoice${count === 1 ? "" : "s"}` : `Showing ${items.length} of ${count}`}
         {count > 0 && <> · total {formatMoney(total)}</>}
+        {due != null && count > 0 && <> · still to come {formatMoney(due)}</>}
       </p>
       {items.length === 0 ? (
         <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -42,8 +45,10 @@ export async function InvoiceList({ filters, pickForReturn }: { filters: Invoice
                 <span className="flex justify-end gap-1">
                   {inv.status === "cancelled" ? (
                     <Badge variant="destructive">cancelled</Badge>
+                  ) : inv.pay ? (
+                    <PayBadge pay={inv.pay} withDue={inv.pay.status !== "unpaid"} />
                   ) : (
-                    <Badge variant={inv.paymentType === "cash" ? "secondary" : "outline"}>{inv.paymentType}</Badge>
+                    <Badge variant="secondary">cash</Badge>
                   )}
                 </span>
               </Link>

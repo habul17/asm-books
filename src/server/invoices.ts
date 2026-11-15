@@ -22,6 +22,7 @@ import { priceSteps, rateForQty, type PriceStep } from "@/lib/stock/fifo";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { loadStockLots, type StockLots } from "@/server/fifo";
+import { invoicesWithPayStatus, loadPayStatus } from "@/server/pay-status";
 import { loadBusiness } from "@/server/settings";
 
 import { loadCustomFields } from "./custom-fields";
@@ -34,7 +35,9 @@ const PICK_LIMIT = 15;
 const MAX_WORDS = 8;
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
-export type InvoiceStatusFilter = "all" | "final" | "cancelled";
+/** "due": money still to come (unpaid, partly paid or overdue). */
+export type InvoiceStatusFilter = "all" | "final" | "cancelled" | "due" | "overdue";
+export const INVOICE_STATUS_FILTERS: InvoiceStatusFilter[] = ["all", "final", "cancelled", "due", "overdue"];
 
 export interface InvoiceFilters {
   query: string;
@@ -47,8 +50,14 @@ export async function searchInvoices(filters: InvoiceFilters, limit = INVOICE_LI
   await connection(); // Always read live data; never prerender at build time.
   await requireUser();
   const words = filters.query.trim().slice(0, 200).split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
+  const db = getDb();
+  const byPayment =
+    filters.status === "due" || filters.status === "overdue"
+      ? await invoicesWithPayStatus(db, filters.status === "due" ? ["unpaid", "part-paid", "overdue"] : ["overdue"])
+      : null;
   const conditions: (SQL | undefined)[] = [
-    filters.status === "all" ? undefined : eq(invoices.status, filters.status),
+    filters.status === "final" || filters.status === "cancelled" ? eq(invoices.status, filters.status) : undefined,
+    byPayment ? (byPayment.length ? inArray(invoices.id, byPayment) : sql`false`) : undefined,
     filters.customerId ? eq(invoices.customerId, filters.customerId) : undefined,
   ];
   for (const word of words) {
@@ -58,8 +67,7 @@ export async function searchInvoices(filters: InvoiceFilters, limit = INVOICE_LI
     );
   }
   const where = and(...conditions);
-  const db = getDb();
-  const [summary, items] = await db.batch([
+  const [summary, rows] = await db.batch([
     db
       .select({
         count: sql<number>`count(*)`.mapWith(Number),
@@ -85,7 +93,13 @@ export async function searchInvoices(filters: InvoiceFilters, limit = INVOICE_LI
       .orderBy(desc(invoices.date), desc(invoices.id))
       .limit(Math.min(Math.max(limit, 1), 500)),
   ]);
-  return { count: summary[0]?.count ?? 0, total: summary[0]?.total ?? 0, items };
+  const pay = await loadPayStatus(
+    db,
+    rows.flatMap((r) => (r.customerId != null ? [r.customerId] : [])),
+  );
+  const items = rows.map((r) => ({ ...r, pay: r.status === "final" ? (pay.get(r.id) ?? null) : null }));
+  const due = byPayment ? items.reduce((sum, i) => sum + (i.pay?.due ?? 0), 0) : null;
+  return { count: summary[0]?.count ?? 0, total: summary[0]?.total ?? 0, due, items };
 }
 
 export type InvoiceListItem = Awaited<ReturnType<typeof searchInvoices>>["items"][number];
@@ -151,6 +165,11 @@ export async function getInvoice(id: number) {
     batches,
     /** Staff may change an invoice only on the day it was made. */
     canChange: canChangeToday(isOwner, head.invoice.createdAt),
+    /** Paid, partly paid, unpaid or overdue; null for cash and cancelled invoices. */
+    pay:
+      head.invoice.status === "final" && head.invoice.paymentType === "credit" && head.invoice.customerId != null
+        ? ((await loadPayStatus(db, [head.invoice.customerId])).get(id) ?? null)
+        : null,
   };
 }
 

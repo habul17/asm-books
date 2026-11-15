@@ -9,6 +9,7 @@ import { shownExtra } from "@/lib/custom-fields";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
+import { PayBadge } from "@/components/invoices/pay-badge";
 import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { searchPayments } from "@/server/payments";
 import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
@@ -223,12 +224,14 @@ async function CustomerInvoices({ customerId }: { customerId: number }) {
                   <Badge variant="destructive" className="ml-2">
                     cancelled
                   </Badge>
+                ) : inv.pay ? (
+                  <span className="ml-2">
+                    <PayBadge pay={inv.pay} withDue={inv.pay.status !== "unpaid"} />
+                  </span>
                 ) : (
-                  inv.paymentType === "cash" && (
-                    <Badge variant="secondary" className="ml-2">
-                      cash
-                    </Badge>
-                  )
+                  <Badge variant="secondary" className="ml-2">
+                    cash
+                  </Badge>
                 )}
               </span>
               <span className={`tabular-nums ${inv.status === "cancelled" ? "line-through" : ""}`}>

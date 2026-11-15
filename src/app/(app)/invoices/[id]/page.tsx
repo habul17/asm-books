@@ -8,6 +8,7 @@ import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceBatches } from "@/components/invoices/invoice-batches";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
+import { PayBadge } from "@/components/invoices/pay-badge";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{inv.number}</span>
           {!final && <Badge variant="destructive">cancelled</Badge>}
+          {inv.pay && <PayBadge pay={inv.pay} />}
         </h1>
         <PrintButton />
         {final && inv.canChange && (
@@ -60,6 +62,13 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       </div>
 
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground print:hidden">
+        {inv.pay && (
+          <span>
+            Paid {formatMoney(inv.pay.paid)} · still to come{" "}
+            <span className="font-medium text-foreground">{formatMoney(inv.pay.due)}</span>
+            {inv.dueDate && inv.pay.status !== "paid" && <> · due {formatDate(inv.dueDate)}</>}
+          </span>
+        )}
         {inv.priceListName && <span>Price list: {inv.priceListName}</span>}
         {inv.createdByName && <span>Made by {inv.createdByName}</span>}
         {inv.profit != null && final && (
