@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { moneyPrefill } from "@/lib/payments/prefill";
 import { billScanReady } from "@/server/bill-scan";
 import { todayInIndia } from "@/server/invoice-writes";
 import { getVendorPayment } from "@/server/vendor-payments";
@@ -9,13 +10,15 @@ import { pickVendorById } from "@/server/vendors";
 
 import { VendorPaymentForm } from "./vendor-payment-form";
 
-export async function NewVendorPaymentForm({ vendorId }: { vendorId: number | null }) {
+export async function NewVendorPaymentForm({ vendorId, query = {} }: { vendorId: number | null; query?: Record<string, string | string[] | undefined> }) {
   await connection(); // Today's date must be read per request, not at build time.
   const vendor = vendorId ? await pickVendorById(vendorId) : null;
+  const today = todayInIndia();
+  const fill = moneyPrefill(query, today);
   return (
     <VendorPaymentForm
       id={null}
-      initial={{ vendor, date: todayInIndia(), amount: null, mode: "bank", reference: "", notes: "" }}
+      initial={{ vendor, date: fill.date ?? today, amount: fill.amount, mode: fill.mode ?? "bank", reference: fill.reference, notes: fill.notes }}
       scanReady={billScanReady()}
       backHref={vendor ? `/vendors/${vendor.id}` : "/payments-made"}
     />

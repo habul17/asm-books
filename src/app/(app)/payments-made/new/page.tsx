@@ -9,9 +9,10 @@ export const metadata: Metadata = { title: "Pay a vendor" };
 export const maxDuration = 300;
 
 async function Form({ searchParams }: { searchParams: PageProps<"/payments-made/new">["searchParams"] }) {
-  const raw = (await searchParams).vendor;
+  const query = await searchParams;
+  const raw = query.vendor;
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return <NewVendorPaymentForm vendorId={Number.isSafeInteger(n) && n > 0 ? n : null} />;
+  return <NewVendorPaymentForm vendorId={Number.isSafeInteger(n) && n > 0 ? n : null} query={query} />;
 }
 
 export default function NewVendorPaymentPage({ searchParams }: PageProps<"/payments-made/new">) {

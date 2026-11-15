@@ -9,9 +9,10 @@ export const metadata: Metadata = { title: "Receive payment" };
 export const maxDuration = 300;
 
 async function Form({ searchParams }: { searchParams: PageProps<"/payments/new">["searchParams"] }) {
-  const raw = (await searchParams).customer;
+  const query = await searchParams;
+  const raw = query.customer;
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return <NewPaymentForm customerId={Number.isSafeInteger(n) && n > 0 ? n : null} />;
+  return <NewPaymentForm customerId={Number.isSafeInteger(n) && n > 0 ? n : null} query={query} />;
 }
 
 export default function NewPaymentPage({ searchParams }: PageProps<"/payments/new">) {

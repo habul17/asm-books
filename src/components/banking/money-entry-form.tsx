@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { MONEY_KIND_INFO, MONEY_KINDS, type MoneyKind } from "@/lib/banking/entries";
+import type { MoneyPrefill } from "@/lib/payments/prefill";
 import { PAYMENT_MODE_LABELS, PAYMENT_MODES } from "@/lib/payments/validation";
 
 const GROUPS: { label: string; kinds: MoneyKind[] }[] = [
@@ -18,7 +19,7 @@ const GROUPS: { label: string; kinds: MoneyKind[] }[] = [
   { label: "Between cash and bank", kinds: MONEY_KINDS.filter((k) => MONEY_KIND_INFO[k].flow === "transfer") },
 ];
 
-export function MoneyEntryForm({ today, initialKind }: { today: string; initialKind: MoneyKind }) {
+export function MoneyEntryForm({ today, initialKind, fill }: { today: string; initialKind: MoneyKind; fill?: MoneyPrefill }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveMoneyEntry);
   const [kind, setKind] = useState<MoneyKind>(initialKind);
   const info = MONEY_KIND_INFO[kind];
@@ -54,18 +55,19 @@ export function MoneyEntryForm({ today, initialKind }: { today: string; initialK
             required
             autoComplete="off"
             placeholder="0.00"
+            defaultValue={fill?.amount ?? ""}
             className="h-10 text-lg font-medium tabular-nums"
           />
         </Field>
         <Field label="Date" htmlFor="m-date">
-          <Input id="m-date" name="date" type="date" required max={today} defaultValue={today} className="h-10" />
+          <Input id="m-date" name="date" type="date" required max={today} defaultValue={fill?.date ?? today} className="h-10" />
         </Field>
       </div>
 
       {info.flow !== "transfer" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={info.flow === "in" ? "Received by" : "Paid by"} htmlFor="m-mode" hint="Cash is the shop's cash; the others are the bank.">
-            <NativeSelect id="m-mode" name="mode" defaultValue="bank" className="w-full">
+            <NativeSelect id="m-mode" name="mode" defaultValue={fill?.mode ?? "bank"} className="w-full">
               {PAYMENT_MODES.map((m) => (
                 <NativeSelectOption key={m} value={m}>
                   {PAYMENT_MODE_LABELS[m]}
@@ -82,11 +84,11 @@ export function MoneyEntryForm({ today, initialKind }: { today: string; initialK
       )}
 
       <Field label="Reference (optional)" htmlFor="m-ref">
-        <Input id="m-ref" name="reference" maxLength={100} autoComplete="off" placeholder="Challan no, UTR, cheque no…" />
+        <Input id="m-ref" name="reference" defaultValue={fill?.reference} maxLength={100} autoComplete="off" placeholder="Challan no, UTR, cheque no…" />
       </Field>
 
       <Field label="Notes (optional)" htmlFor="m-notes">
-        <Textarea id="m-notes" name="notes" maxLength={1000} rows={2} />
+        <Textarea id="m-notes" name="notes" defaultValue={fill?.notes} maxLength={1000} rows={2} />
       </Field>
 
       <SaveRow state={state} pending={pending} dirty={dirty} label="Save entry">

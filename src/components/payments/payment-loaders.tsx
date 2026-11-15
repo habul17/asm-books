@@ -7,17 +7,20 @@ import { customersHref } from "@/lib/customers/href";
 import { pickCustomerById } from "@/server/invoices";
 import { todayInIndia } from "@/server/invoice-writes";
 import { getPayment } from "@/server/payments";
+import { moneyPrefill } from "@/lib/payments/prefill";
 
 import { PaymentForm } from "./payment-form";
 import { staffEditLimit } from "@/lib/edit-window";
 
-export async function NewPaymentForm({ customerId }: { customerId: number | null }) {
+export async function NewPaymentForm({ customerId, query = {} }: { customerId: number | null; query?: Record<string, string | string[] | undefined> }) {
   await connection(); // Today's date must be read per request, not at build time.
   const customer = customerId ? await pickCustomerById(customerId) : null;
+  const today = todayInIndia();
+  const fill = moneyPrefill(query, today);
   return (
     <PaymentForm
       id={null}
-      initial={{ customer, date: todayInIndia(), amount: null, mode: "cash", reference: "", notes: "" }}
+      initial={{ customer, date: fill.date ?? today, amount: fill.amount, mode: fill.mode ?? "cash", reference: fill.reference, notes: fill.notes }}
       scanReady={billScanReady()}
       backHref={customer ? customersHref({ id: customer.id }) : "/payments"}
     />

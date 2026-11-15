@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { moneyPrefill } from "@/lib/payments/prefill";
 import { billScanReady } from "@/server/bill-scan";
 import { expenseCategoryOptions as categoryOptions } from "@/server/bill-scan/receipt";
 import { getExpense } from "@/server/expenses";
@@ -10,22 +11,24 @@ import { vendorOptions } from "@/server/vendors";
 
 import { ExpenseForm } from "./expense-form";
 
-export async function NewExpenseForm() {
+export async function NewExpenseForm({ query }: { query: Promise<Record<string, string | string[] | undefined>> }) {
   await connection(); // Today's date must be read per request, not at build time.
+  const today = todayInIndia();
+  const fill = moneyPrefill(await query, today);
   const [categories, vendors] = await Promise.all([categoryOptions(), vendorOptions()]);
   return (
     <ExpenseForm
       id={null}
       initial={{
-        date: todayInIndia(),
-        category: "",
+        date: fill.date ?? today,
+        category: fill.category,
         paidTo: "",
         vendorId: null,
-        amount: null,
+        amount: fill.amount,
         gstRate: 0,
-        mode: "cash",
-        reference: "",
-        notes: "",
+        mode: fill.mode ?? "cash",
+        reference: fill.reference,
+        notes: fill.notes,
       }}
       categories={categories}
       vendors={vendors}
