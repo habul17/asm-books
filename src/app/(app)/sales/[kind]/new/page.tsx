@@ -7,6 +7,9 @@ import { kindFromSlug, SALES_DOC_KIND } from "@/lib/sales-docs/kinds";
 
 type Props = PageProps<"/sales/[kind]/new">;
 
+// Reading an order photo can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const kind = kindFromSlug((await params).kind);
   return { title: kind ? `New ${SALES_DOC_KIND[kind].noun}` : "Not found" };

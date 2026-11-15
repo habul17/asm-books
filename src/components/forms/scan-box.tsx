@@ -24,6 +24,7 @@ export function ScanBox<T>({
   waitHelp = "This usually takes under a minute, longer on busy days. Please keep this screen open.",
   action,
   onScan,
+  adds = false,
 }: {
   ready: boolean;
   noun: string;
@@ -31,10 +32,14 @@ export function ScanBox<T>({
   waitHelp?: string;
   action: (form: FormData) => Promise<Answer<T>>;
   onScan: (scan: T) => void;
+  /** The scan adds to what is typed instead of replacing it. */
+  adds?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [reading, startReading] = useTransition();
+
+  const article = /^[aeiou]/i.test(noun) ? "an" : "a";
 
   const read = (picked: File | undefined) => {
     if (!picked) return;
@@ -59,7 +64,7 @@ export function ScanBox<T>({
     <section className="flex flex-col gap-2 rounded-xl border border-dashed p-4">
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" disabled={!ready || reading} onClick={() => inputRef.current?.click()}>
-          <ScanLineIcon /> {reading ? `Reading the ${noun}…` : `Scan a ${noun}`}
+          <ScanLineIcon /> {reading ? `Reading the ${noun}…` : `Scan ${article} ${noun}`}
         </Button>
         <input
           ref={inputRef}
@@ -75,8 +80,8 @@ export function ScanBox<T>({
           {reading ? waitHelp : ready ? help : "Scanning is not set up yet. Fill in the form by hand below."}{" "}
           {ready && !reading && (
             <InfoTip label="About scanning">
-              The photo is sent to Google&apos;s AI service to be read. It is not kept in this app. Scanning replaces
-              anything already typed below.
+              The photo is sent to Google&apos;s AI service to be read. It is not kept in this app.{" "}
+              {adds ? "What is read is added to what is already below." : "Scanning replaces anything already typed below."}
             </InfoTip>
           )}
         </p>

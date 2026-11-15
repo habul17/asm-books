@@ -26,6 +26,7 @@ import { invoicesWithPayStatus, loadPayStatus } from "@/server/pay-status";
 import { loadBusiness } from "@/server/settings";
 
 import { loadCustomFields } from "./custom-fields";
+import { billScanReady } from "./bill-scan";
 import { customerBalance } from "./customers";
 import { productSearch, purchasePriceAt } from "./product-search";
 import { canChangeToday } from "@/lib/edit-window";
@@ -195,6 +196,8 @@ export async function getEditorOptions() {
     defaultGstRate: business.defaultGstRate,
     defaultPriceListId: business.defaultPriceListId,
     allowWalkIn: business.allowWalkIn,
+    /** Reading orders from photos is set up. */
+    scanReady: billScanReady(),
     priceLists: lists,
     /** Custom fields that are switched on, in the order they are shown. */
     fields: fields.filter((f) => f.active),

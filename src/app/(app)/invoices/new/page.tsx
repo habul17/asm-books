@@ -5,6 +5,9 @@ import { EditorSkeleton, NewInvoiceEditor } from "@/components/invoices/editor-l
 
 export const metadata: Metadata = { title: "New invoice" };
 
+// Reading an order photo can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
+
 async function Editor({ searchParams }: { searchParams: PageProps<"/invoices/new">["searchParams"] }) {
   const query = await searchParams;
   const positive = (raw: string | string[] | undefined) => {

@@ -4,8 +4,9 @@ import { PlusIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { repriceItems, saveInvoice } from "@/app/(app)/invoices/actions";
+import { repriceItems, saveInvoice, scanOrderAction } from "@/app/(app)/invoices/actions";
 import { saveSalesDoc } from "@/app/(app)/sales/actions";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/paym
 import { CHALLAN_REASONS, SALES_DOC_KIND, salesDocHref, salesDocsHref, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { GST_RATES } from "@/lib/settings/business";
 import { rateForQty, type PriceStep } from "@/lib/stock/fifo";
+import type { OrderScanResult } from "@/server/bill-scan/order";
 import type { EditorOptions, PickedCustomer, PickedItem } from "@/server/invoices";
 
 import { CustomerPicker } from "./customer-picker";
@@ -158,6 +160,7 @@ export function InvoiceEditor({
   const [dirty, setDirty] = useState(false);
   const [saving, startSaving] = useTransition();
   const [repricing, setRepricing] = useState(false);
+  const [scanWarnings, setScanWarnings] = useState<string[] | null>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
   const touch = () => setDirty(true);
@@ -273,6 +276,29 @@ export function InvoiceEditor({
     }
   };
 
+  /** Rows read from a customer's order are added to the bill; the same part adds to its row. */
+  const addScannedOrder = (scan: OrderScanResult) => {
+    touch();
+    setScanWarnings(scan.warnings);
+    if (scan.customer) {
+      setMode("customer");
+      setCustomer(scan.customer);
+      setSupply(null);
+      setPaymentType("credit");
+      setPriceListId(scan.priceListId);
+    }
+    setLines((ls) => {
+      let next = ls.filter((l) => l.productId != null || l.description.trim() !== "");
+      for (const row of scan.rows) {
+        const same = next.find((l) => l.productId === row.item.id);
+        next = same
+          ? next.map((l) => (l.key === same.key ? { ...l, qty: formatQty((num(l.qty) ?? 0) + row.qty) } : l))
+          : [...next, { ...lineFromItem(row.item), qty: formatQty(row.qty) }];
+      }
+      return withFifoRates(next);
+    });
+  };
+
   const save = () => {
     setError(null);
     if (!isWalkIn && !customer) {
@@ -333,6 +359,17 @@ export function InvoiceEditor({
 
   return (
     <div className="flex flex-col gap-4">
+      {initial.id == null && (
+        <ScanBox
+          ready={options.scanReady}
+          noun="order"
+          help={`Take a photo of the customer\u2019s order chit or WhatsApp list. The parts and quantities are added to this ${noun} for you to check.`}
+          action={scanOrderAction.bind(null, priceListId, isWalkIn ? null : (customer?.id ?? null))}
+          onScan={addScannedOrder}
+          adds
+        />
+      )}
+      {scanWarnings && <ScanWarnings warnings={scanWarnings} />}
       {!options.businessReady && (
         <p className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <TriangleAlertIcon className="size-4 shrink-0" />

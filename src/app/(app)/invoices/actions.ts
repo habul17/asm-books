@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { parseInvoiceInput } from "@/lib/invoices/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanOrder, type OrderScanResult } from "@/server/bill-scan/order";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { cancelInvoice, createInvoice, InvoiceInputError, updateInvoice } from "@/server/invoice-writes";
 import { pickCustomers, pickItems, priceItems } from "@/server/invoices";
 
@@ -75,4 +77,21 @@ export async function repriceItems(productIds: unknown, priceListId: unknown) {
   const list = listIdSchema.safeParse(priceListId);
   if (!ids.success || !list.success) return [];
   return priceItems(ids.data, list.data);
+}
+
+/**
+ * Reads a customer's order (chit, WhatsApp list) and returns bill rows to check.
+ * Nothing is saved.
+ */
+export async function scanOrderAction(
+  priceListId: unknown,
+  chosenCustomerId: unknown,
+  formData: FormData,
+): Promise<ScanAnswer<OrderScanResult>> {
+  await requireUser();
+  const list = listIdSchema.safeParse(priceListId);
+  const chosen = idSchema.safeParse(chosenCustomerId);
+  return scanUpload(formData, "order", (file) =>
+    scanOrder(file, { listId: list.success ? list.data : null, chosenCustomerId: chosen.success ? chosen.data : null }),
+  );
 }
