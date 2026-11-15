@@ -4,27 +4,43 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { bills, products, vendors } from "@/db/schema";
-import { reviewScan, scannedBillSchema, type ScanReview } from "@/lib/bills/scan";
+import { reviewScan, SCAN_INSTRUCTIONS, scannedBillSchema, SCANNED_BILL_JSON_SCHEMA, type ScanReview } from "@/lib/bills/scan";
 import { todayInIndia } from "@/server/invoice-writes";
 import { purchasePriceAt } from "@/server/product-search";
 import { loadBusiness } from "@/server/settings";
 import { pickVendorById, type PickedVendor } from "@/server/vendors";
 
 import { geminiReader } from "./gemini";
-import { BillScanError, type BillFile, type BillReader } from "./reader";
+import { BillScanError, type BillFile, type BillReader, type ReadTask } from "./reader";
 
-export { BillScanError, type BillFile } from "./reader";
+export { BillScanError, type BillFile, type ReadTask } from "./reader";
 
 /** The reader set up for this deployment, or null when scanning is not set up. */
-function configuredReader(): BillReader | null {
+export function configuredReader(): BillReader | null {
   const key = process.env.GEMINI_API_KEY;
   return key ? geminiReader(key, process.env.BILL_SCAN_MODEL || undefined) : null;
 }
 
 export const billScanReady = () => configuredReader() != null;
 
+/**
+ * Reads a document with the configured reader. The answer is untrusted: the caller
+ * checks it against its own schema.
+ */
+export async function readDocument(file: BillFile, task: ReadTask, reader: BillReader | null = configuredReader()) {
+  if (!reader) throw new BillScanError(`Scanning is not set up yet. Enter the ${task.noun} by hand.`);
+  return reader.read(file, task);
+}
+
+const BILL_TASK: ReadTask = {
+  noun: "bill",
+  ask: "Read this purchase bill and return its contents.",
+  instructions: SCAN_INSTRUCTIONS,
+  schema: SCANNED_BILL_JSON_SCHEMA,
+};
+
 /** The saved vendor a bill came from: matched on GSTIN first, then on the exact name. */
-async function findVendor(gstin: string | null, name: string | null): Promise<PickedVendor | null> {
+export async function findVendor(gstin: string | null, name: string | null): Promise<PickedVendor | null> {
   const db = getDb();
   const byGstin = gstin?.replace(/\s/g, "").toUpperCase();
   if (byGstin) {
@@ -57,7 +73,7 @@ export interface BillScanResult extends ScanReview {
  */
 export async function scanBill(file: BillFile, reader: BillReader | null = configuredReader()): Promise<BillScanResult> {
   if (!reader) throw new BillScanError("Bill scanning is not set up yet. Enter the bill by hand.");
-  const parsed = scannedBillSchema.safeParse(await reader.read(file));
+  const parsed = scannedBillSchema.safeParse(await reader.read(file, BILL_TASK));
   if (!parsed.success) throw new BillScanError("The bill could not be read. Try a clearer photo.");
   const scan = parsed.data;
 

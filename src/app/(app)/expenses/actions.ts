@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { parseExpenseInput } from "@/lib/expenses/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanReceipt, type ReceiptScanResult } from "@/server/bill-scan/receipt";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
   cancelExpense,
   createExpense,
@@ -60,4 +62,10 @@ export async function cancelExpenseAction(id: number, _prev: ActionState, formDa
   }
   refresh();
   return { ok: true };
+}
+
+/** Reads a photo or PDF of an expense receipt and returns values to check. Nothing is saved. */
+export async function scanReceiptAction(formData: FormData): Promise<ScanAnswer<ReceiptScanResult>> {
+  await requireUser();
+  return scanUpload(formData, "receipt", scanReceipt);
 }

@@ -8,12 +8,12 @@ import { eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { vendors } from "@/db/schema";
-import { isScanMimeType, SCAN_MAX_BYTES } from "@/lib/bills/scan";
 import { parseBillInput } from "@/lib/bills/validation";
 import { parseProduct } from "@/lib/catalogue/product-validation";
 import { parseVendor } from "@/lib/vendors/validation";
 import { isOwner, requireUser } from "@/server/auth";
-import { BillScanError, scanBill, type BillScanResult } from "@/server/bill-scan";
+import { scanBill, type BillScanResult } from "@/server/bill-scan";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { BillInputError, cancelBill, createBill, updateBill } from "@/server/bill-writes";
 import { pickBillItems } from "@/server/bills";
 import { createProduct, ProductInputError } from "@/server/product-writes";
@@ -72,20 +72,9 @@ export async function cancelBillAction(id: number, _prev: ActionState, formData:
  * Reads an uploaded photo or PDF of a vendor's bill and returns a draft to review.
  * Nothing is saved, and the file is not kept.
  */
-export async function scanBillAction(formData: FormData): Promise<{ scan: BillScanResult; error?: never } | { error: string; scan?: never }> {
+export async function scanBillAction(formData: FormData): Promise<ScanAnswer<BillScanResult>> {
   await requireUser();
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo or PDF of the bill." };
-  if (!isScanMimeType(file.type)) return { error: "Use a photo (JPG or PNG) or a PDF of the bill." };
-  if (file.size > SCAN_MAX_BYTES) return { error: "This file is too big. Use a file under 4 MB, or take a photo of the bill instead." };
-  try {
-    const data = Buffer.from(await file.arrayBuffer()).toString("base64");
-    return { scan: await scanBill({ data, mimeType: file.type }) };
-  } catch (err) {
-    if (err instanceof BillScanError) return { error: err.message };
-    console.error("[bills] scan failed:", err instanceof Error ? err.message : err);
-    return { error: "Could not read the bill. Please try again, or enter it by hand." };
-  }
+  return scanUpload(formData, "bill", (file) => scanBill(file));
 }
 
 // Adding what a scanned bill names but the app does not know yet, without leaving the bill.

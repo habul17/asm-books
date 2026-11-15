@@ -2,19 +2,13 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { EXPENSE_CATEGORIES } from "@/lib/expenses/validation";
-import { getExpense, usedExpenseCategories } from "@/server/expenses";
+import { billScanReady } from "@/server/bill-scan";
+import { expenseCategoryOptions as categoryOptions } from "@/server/bill-scan/receipt";
+import { getExpense } from "@/server/expenses";
 import { todayInIndia } from "@/server/invoice-writes";
 import { vendorOptions } from "@/server/vendors";
 
 import { ExpenseForm } from "./expense-form";
-
-/** Suggested categories first, then any others used before (without repeats). */
-async function categoryOptions() {
-  const used = await usedExpenseCategories();
-  const seen = new Set<string>(EXPENSE_CATEGORIES.map((c) => c.toLowerCase()));
-  return [...EXPENSE_CATEGORIES, ...used.filter((c) => !seen.has(c.toLowerCase()))];
-}
 
 export async function NewExpenseForm() {
   await connection(); // Today's date must be read per request, not at build time.
@@ -36,6 +30,7 @@ export async function NewExpenseForm() {
       categories={categories}
       vendors={vendors}
       backHref="/expenses"
+      scanReady={billScanReady()}
     />
   );
 }

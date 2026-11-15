@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { saveExpense } from "@/app/(app)/expenses/actions";
+import { saveExpense, scanReceiptAction } from "@/app/(app)/expenses/actions";
 import { Field, SaveRow, useSaveForm } from "@/components/forms/save-form";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { PAYMENT_MODE_LABELS, PAYMENT_MODES, type PaymentMode } from "@/lib/payments/validation";
 import { GST_RATES } from "@/lib/settings/business";
+import type { ReceiptScanResult } from "@/server/bill-scan/receipt";
 
 export interface ExpenseFormValues {
   date: string;
@@ -24,13 +26,7 @@ export interface ExpenseFormValues {
   notes: string;
 }
 
-export function ExpenseForm({
-  id,
-  initial,
-  categories,
-  vendors,
-  backHref,
-}: {
+type FormProps = {
   /** null for a new expense. */
   id: number | null;
   initial: ExpenseFormValues;
@@ -39,7 +35,46 @@ export function ExpenseForm({
   /** Saved suppliers to pick for "Paid to". */
   vendors: { id: number; name: string }[];
   backHref: string;
-}) {
+};
+
+/** Values for the form from a scanned receipt, keeping what the receipt does not say. */
+function fromReceipt(base: ExpenseFormValues, r: ReceiptScanResult): ExpenseFormValues {
+  return {
+    ...base,
+    date: r.date ?? base.date,
+    category: r.category ?? "",
+    vendorId: r.vendorId,
+    paidTo: r.vendorId == null ? (r.paidTo ?? "") : "",
+    amount: r.amount,
+    gstRate: r.gstRate,
+    mode: r.mode ?? base.mode,
+    reference: r.reference ?? "",
+    notes: r.notes ?? "",
+  };
+}
+
+export function ExpenseForm({ scanReady = false, ...props }: FormProps & { scanReady?: boolean }) {
+  const [scanned, setScanned] = useState<{ n: number; values: ExpenseFormValues; warnings: string[] } | null>(null);
+  if (props.id != null) return <ExpenseFields {...props} />;
+  return (
+    <div className="flex flex-col gap-5">
+      <ScanBox
+        ready={scanReady}
+        noun="receipt"
+        help="Take a photo of the receipt (fuel, EB, rent, courier…). The form below is filled in for you to check."
+        action={scanReceiptAction}
+        onScan={(r: ReceiptScanResult) =>
+          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, values: fromReceipt(props.initial, r), warnings: r.warnings }))
+        }
+      />
+      {scanned && <ScanWarnings warnings={scanned.warnings} />}
+      {/* A new key starts the form again with the scanned values. */}
+      <ExpenseFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} />
+    </div>
+  );
+}
+
+function ExpenseFields({ id, initial, categories, vendors, backHref }: FormProps) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveExpense.bind(null, id));
   const [vendorId, setVendorId] = useState(initial.vendorId == null ? "" : String(initial.vendorId));
 
