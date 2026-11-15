@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { cn } from "cn";
 
-import { findStockItems, saveAdjustment } from "@/app/(app)/inventory-adjustments/actions";
+import { findStockItems, saveAdjustment, scanCountAction } from "@/app/(app)/inventory-adjustments/actions";
 import { Field } from "@/components/forms/save-form";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { ItemPicker } from "@/components/invoices/item-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ADJUSTMENT_REASONS } from "@/lib/adjustments/validation";
 import { formatQty } from "@/lib/format";
 import type { StockItem } from "@/server/adjustments";
+import type { CountScanResult } from "@/server/bill-scan/stock-count";
 
 interface Line {
   key: string;
@@ -44,7 +46,7 @@ export interface AdjustmentFormInitial {
 }
 
 /** Correct stock by hand: type what the shelf holds, or how many to add or take out. */
-export function AdjustmentForm({ initial }: { initial: AdjustmentFormInitial }) {
+export function AdjustmentForm({ initial, scanReady = false }: { initial: AdjustmentFormInitial; scanReady?: boolean }) {
   const editing = initial.id != null;
   const [date, setDate] = useState(initial.date);
   const [reason, setReason] = useState<string>(initial.reason);
@@ -58,6 +60,7 @@ export function AdjustmentForm({ initial }: { initial: AdjustmentFormInitial }) 
     })),
   );
   const [error, setError] = useState<string | null>(null);
+  const [scanNotes, setScanNotes] = useState<string[] | null>(null);
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +73,26 @@ export function AdjustmentForm({ initial }: { initial: AdjustmentFormInitial }) 
     setError(null);
     if (lines.some((l) => l.item.id === item.id)) return setError(`${item.description} is already in the list.`);
     setLines((ls) => [...ls, { key: `a${++nextKey}`, item, counted: "", change: "" }]);
+  };
+
+  /** Counts read from a sheet: each part gets its counted figure; a part already listed is updated. */
+  const addCounts = (scan: CountScanResult) => {
+    setError(null);
+    setReason("Stock count correction");
+    setScanNotes([
+      ...(scan.matching ? [`${scan.matching} counted part${scan.matching === 1 ? "" : "s"} already match the app's stock and are not listed.`] : []),
+      ...scan.warnings,
+    ]);
+    setLines((ls) => {
+      let next = ls;
+      for (const { item, counted } of scan.rows) {
+        const row = { counted: show(counted), change: show(counted - item.stockQty) };
+        next = next.some((l) => l.item.id === item.id)
+          ? next.map((l) => (l.item.id === item.id ? { ...l, ...row } : l))
+          : [...next, { key: `s${++nextKey}`, item, ...row }];
+      }
+      return next;
+    });
   };
 
   const changes = lines.map((l) => num(l.change));
@@ -104,6 +127,17 @@ export function AdjustmentForm({ initial }: { initial: AdjustmentFormInitial }) 
         save();
       }}
     >
+      {!editing && (
+        <ScanBox
+          ready={scanReady}
+          noun="count sheet"
+          help="Take a photo of your stock count sheet. Parts whose count differs from the app are added below for you to check."
+          action={scanCountAction}
+          onScan={addCounts}
+          adds
+        />
+      )}
+      {scanNotes && <ScanWarnings warnings={scanNotes} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Reason" htmlFor="a-reason">
           <Input

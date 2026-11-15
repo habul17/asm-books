@@ -8,6 +8,8 @@ import { parseAdjustmentInput } from "@/lib/adjustments/validation";
 import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment } from "@/server/adjustment-writes";
 import { pickStockItems } from "@/server/adjustments";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanCount, type CountScanResult } from "@/server/bill-scan/stock-count";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 
 export interface ActionState {
   ok?: boolean;
@@ -61,4 +63,10 @@ export async function cancelAdjustmentAction(id: number, _prev: ActionState, for
 
 export async function findStockItems(query: unknown) {
   return pickStockItems(typeof query === "string" ? query : "");
+}
+
+/** Reads a stock count sheet and returns the parts whose count differs. Nothing is saved. */
+export async function scanCountAction(formData: FormData): Promise<ScanAnswer<CountScanResult>> {
+  await requireUser();
+  return scanUpload(formData, "count sheet", scanCount);
 }

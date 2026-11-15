@@ -6,9 +6,13 @@ import { AdjustmentForm } from "@/components/adjustments/adjustment-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ADJUSTMENT_REASONS } from "@/lib/adjustments/validation";
 import { requireUser } from "@/server/auth";
+import { billScanReady } from "@/server/bill-scan";
 import { todayInIndia } from "@/server/invoice-writes";
 
 export const metadata: Metadata = { title: "New adjustment" };
+
+// Reading a count sheet photo can take a few minutes when the reading service is busy.
+export const maxDuration = 300;
 
 async function Form() {
   await connection(); // Today's date must be read per request, not at build time.
@@ -16,6 +20,7 @@ async function Form() {
   return (
     <AdjustmentForm
       initial={{ id: null, date: todayInIndia(), reason: ADJUSTMENT_REASONS[0], notes: "", lines: [] }}
+      scanReady={billScanReady()}
     />
   );
 }
