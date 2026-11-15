@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CopyPlusIcon, PencilIcon, RepeatIcon, Undo2Icon } from "lucide-react";
+import { ArrowLeftIcon, CopyPlusIcon, HandCoinsIcon, PencilIcon, RepeatIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -37,6 +37,11 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
           {!final && <Badge variant="destructive">cancelled</Badge>}
           {inv.pay && <PayBadge pay={inv.pay} />}
         </h1>
+        {inv.pay && inv.pay.status !== "paid" && (
+          <Link href={`/payments/new?customer=${inv.customerId}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <HandCoinsIcon /> Receive payment
+          </Link>
+        )}
         <PrintButton />
         {final && inv.canChange && (
           <Link href={`/invoices/${inv.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>

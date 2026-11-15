@@ -373,7 +373,7 @@ export function InvoiceDocument({
               {terms && <p className="whitespace-pre-line">{terms}</p>}
               {inv.notes && <p className="whitespace-pre-line">Note: {inv.notes}</p>}
               </div>
-              {showQr && <UpiQr upiId={b.upiId} name={b.name} amount={inv.grandTotal} note={`Bill ${inv.number}`} />}
+              {showQr && <UpiQr upiId={b.upiId} name={b.name} note={`Bill ${inv.number}`} />}
             </div>
           )}
 
