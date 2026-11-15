@@ -6,7 +6,10 @@ import { z } from "zod";
 
 import { parseMoneyEntry } from "@/lib/banking/entries";
 import { isOwner, requireUser } from "@/server/auth";
+import { checkStatementLines, scanStatement, type LineCheck, type StatementRead } from "@/server/bank-statement";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { cancelMoneyEntry, createMoneyEntry, MoneyEntryError } from "@/server/money-entries";
+import { MAX_STATEMENT_LINES } from "@/lib/banking/statement";
 
 export interface ActionState {
   ok?: boolean;
@@ -52,4 +55,36 @@ export async function cancelMoneyEntryAction(id: number, _prev: ActionState, for
   }
   refresh();
   return { ok: true };
+}
+
+/** Reads a bank statement PDF or photo. Owner only. Nothing is saved. */
+export async function scanStatementAction(formData: FormData): Promise<ScanAnswer<StatementRead>> {
+  return scanUpload(formData, "bank statement", scanStatement);
+}
+
+const statementLines = z
+  .array(
+    z.object({
+      n: z.number().int().positive(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      narration: z.string().max(300),
+      reference: z.string().max(100).nullable(),
+      flow: z.enum(["in", "out"]),
+      amount: z.number().positive().max(1e10),
+    }),
+  )
+  .max(MAX_STATEMENT_LINES);
+
+/** Which statement lines are already in the app, with forms for the rest. Owner only. */
+export async function checkStatementAction(
+  lines: unknown,
+): Promise<{ checks: LineCheck[]; inApp: number; missingIn: number; missingOut: number } | { error: string }> {
+  const parsed = statementLines.safeParse(lines);
+  if (!parsed.success) return { error: "The statement could not be checked. Upload it again." };
+  try {
+    return await checkStatementLines(parsed.data);
+  } catch (err) {
+    console.error("[banking] statement check failed:", err instanceof Error ? err.message : err);
+    return { error: "Could not check the statement. Please try again." };
+  }
 }

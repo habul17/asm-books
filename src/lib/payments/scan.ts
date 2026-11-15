@@ -93,7 +93,7 @@ const simple = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
 
 /** The last 10 digits of an Indian mobile number found in a phone or UPI ID, if any. */
 export function mobileIn(s: string | null): string | null {
-  const m = s?.replace(/[\s-]/g, "").match(/(?:\+?91)?([6-9]\d{9})(?!\d)/);
+  const m = s?.replace(/[\s-]/g, "").match(/(?<!\d)(?:\+?91)?([6-9]\d{9})(?!\d)/);
   return m ? m[1] : null;
 }
 

@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, ScanLineIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -82,9 +82,14 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
             <Link href="/reports/cash-flow">See the Cash Flow Statement</Link>.
           </InfoTip>
         </h1>
-        <Link href="/banking/new" className={buttonVariants({ size: "sm" })}>
-          <PlusIcon /> New entry
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/banking/statement" className={buttonVariants({ size: "sm", variant: "outline" })}>
+            <ScanLineIcon /> Check bank statement
+          </Link>
+          <Link href="/banking/new" className={buttonVariants({ size: "sm" })}>
+            <PlusIcon /> New entry
+          </Link>
+        </div>
       </div>
       <OwnerGate what="see Banking" fallback={<Skeleton className="h-24 rounded-xl" />}>
         <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
