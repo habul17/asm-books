@@ -5,8 +5,8 @@ import { BillEditorSkeleton, NewBillForm } from "@/components/bills/bill-loaders
 
 export const metadata: Metadata = { title: "New bill" };
 
-/** Reading a scanned bill can take a while; give the request time to finish. */
-export const maxDuration = 60;
+/** Reading a scanned bill can take a few minutes for a long bill; 300 s is the most every Vercel plan allows. */
+export const maxDuration = 300;
 
 async function Form({ searchParams }: { searchParams: PageProps<"/bills/new">["searchParams"] }) {
   const query = await searchParams;

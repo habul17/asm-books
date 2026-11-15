@@ -56,7 +56,7 @@ export function BillScanBox({ ready, onScan }: { ready: boolean; onScan: (scan: 
         />
         <p className="min-w-0 flex-1 text-sm text-muted-foreground">
           {reading
-            ? "This can take up to a minute. Please wait."
+            ? "This can take 1 to 3 minutes for a long bill. Please keep this screen open."
             : ready
               ? "Take a photo or upload a PDF of the vendor\u2019s bill. The form below is filled in for you to check."
               : "Bill scanning is not set up yet. Enter the bill by hand below."}{" "}
