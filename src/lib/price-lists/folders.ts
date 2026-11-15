@@ -36,7 +36,7 @@ export function flattenFolders<T extends FolderNode>(folders: T[]): (T & { depth
   return out;
 }
 
-/** One-line summary of a price rule, e.g. "Purchase +20%, 5% disc., round ₹1". */
+/** One-line summary of a price rule, e.g. "Purchase +20%, 5% disc., round up ₹1". */
 export function describeRule(l: {
   base: string;
   adjustType: string;
@@ -48,6 +48,6 @@ export function describeRule(l: {
   const base = { purchase: "Purchase", previous_purchase: "Prev. purchase", list: "List price" }[l.base] ?? l.base;
   const parts = [`${base} ${l.adjustType === "markdown" ? "−" : "+"}${l.adjustPct}%`];
   if (l.discountPct) parts.push(`${l.discountPct}% disc.`);
-  if (l.roundTo) parts.push(`round ₹${l.roundTo}`);
+  if (l.roundTo) parts.push(`round up ₹${l.roundTo}`);
   return parts.join(", ");
 }

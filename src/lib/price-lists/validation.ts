@@ -14,10 +14,10 @@ export const MANUAL_PRICE_MAX = 1_000_000_000;
 /** Rounding choices offered in the form. */
 export const ROUNDING_OPTIONS = [
   { value: 0, label: "No rounding" },
-  { value: 0.5, label: "Nearest ₹0.50" },
-  { value: 1, label: "Nearest ₹1" },
-  { value: 5, label: "Nearest ₹5" },
-  { value: 10, label: "Nearest ₹10" },
+  { value: 0.5, label: "Round up to ₹0.50" },
+  { value: 1, label: "Round up to ₹1" },
+  { value: 5, label: "Round up to ₹5" },
+  { value: 10, label: "Round up to ₹10" },
 ] as const;
 
 const priceBases = Object.keys(PRICE_BASES) as [PriceBase, ...PriceBase[]];

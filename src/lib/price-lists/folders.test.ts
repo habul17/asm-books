@@ -33,7 +33,7 @@ describe("flattenFolders", () => {
 describe("describeRule", () => {
   it("summarises the rule in one line", () => {
     const rule = { base: "purchase", adjustType: "markup", adjustPct: 20, discountPct: 5, roundTo: 1 };
-    expect(describeRule(rule)).toBe("Purchase +20%, 5% disc., round ₹1");
+    expect(describeRule(rule)).toBe("Purchase +20%, 5% disc., round up ₹1");
     expect(describeRule({ ...rule, base: "manual" })).toBe("Manual prices only");
   });
 });

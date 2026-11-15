@@ -97,7 +97,7 @@ export function PriceListForm({
   // Keep a non-standard rounding value (e.g. set in the database) selectable.
   const rounding = ROUNDING_OPTIONS.some((o) => o.value === list.roundTo)
     ? ROUNDING_OPTIONS
-    : [...ROUNDING_OPTIONS, { value: list.roundTo, label: `Nearest ₹${list.roundTo}` }];
+    : [...ROUNDING_OPTIONS, { value: list.roundTo, label: `Round up to ₹${list.roundTo}` }];
 
   return (
     <form onSubmit={onSubmit} onChange={onChange} className="grid gap-4 sm:grid-cols-2">

@@ -46,6 +46,19 @@ describe("roundTo", () => {
   it("rounds to paise when step is 0", () => {
     expect(roundTo(10.005, 0)).toBe(10.01);
   });
+
+  it("always rounds up to the next step", () => {
+    expect(roundTo(99.6, 1)).toBe(100);
+    expect(roundTo(99.1, 1)).toBe(100);
+    expect(roundTo(101.01, 5)).toBe(105);
+    expect(roundTo(10.2, 0.5)).toBe(10.5);
+  });
+
+  it("keeps a price that is already on a step, despite float noise", () => {
+    expect(roundTo(100, 1)).toBe(100);
+    expect(roundTo(1.15 * 100, 5)).toBe(115);
+    expect(roundTo(0.1 + 0.2, 0.1)).toBe(0.3);
+  });
 });
 
 describe("withoutGst", () => {

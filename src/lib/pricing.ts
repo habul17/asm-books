@@ -16,7 +16,7 @@ export interface PriceRule {
   adjustType: AdjustType;
   adjustPct: number;
   discountPct: number;
-  /** Round to the nearest multiple of this amount; 0 = round to paise only. */
+  /** Round up to the next multiple of this amount; 0 = round to paise only. */
   roundTo: number;
 }
 
@@ -36,8 +36,15 @@ export interface ComputedPrice {
 
 export const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+/**
+ * Rounds a price up to the next multiple of `step` (₹99.10 → ₹100 for ₹1), so rounding
+ * never cuts the margin. A price already on a multiple stays. Step 0 rounds to paise.
+ */
 export function roundTo(n: number, step: number): number {
-  return step > 0 ? round2(Math.round(n / step) * step) : round2(n);
+  if (!(step > 0)) return round2(n);
+  // Drop float noise first, so 100.00000000001 is not pushed up to the next step.
+  const steps = Math.round((n / step) * 1e6) / 1e6;
+  return round2(Math.ceil(steps) * step);
 }
 
 /** base → ± adjust % → − discount % → rounding. A manual price always wins. */
