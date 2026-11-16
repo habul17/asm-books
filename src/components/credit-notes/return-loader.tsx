@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
+import { billScanReady } from "@/server/bill-scan";
 import { getReturnable } from "@/server/credit-notes";
 import { todayInIndia } from "@/server/invoice-writes";
 
@@ -27,7 +28,7 @@ export async function NewReturnForm({ invoiceId }: { invoiceId: number }) {
           This invoice is cancelled, so nothing on it can be returned.
         </p>
       ) : (
-        <ReturnForm invoice={invoice} today={todayInIndia()} />
+        <ReturnForm invoice={invoice} today={todayInIndia()} scanReady={billScanReady()} />
       )}
     </>
   );

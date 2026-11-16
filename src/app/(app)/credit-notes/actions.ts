@@ -6,6 +6,9 @@ import { z } from "zod";
 
 import { parseCreditNoteInput } from "@/lib/credit-notes/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanCreditNote, type CreditNoteScanResult } from "@/server/bill-scan/returned";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
+import { getReturnable } from "@/server/credit-notes";
 import { cancelCreditNote, createCreditNote, CreditNoteInputError, deleteCreditNote } from "@/server/credit-note-writes";
 
 export interface ActionState {
@@ -62,4 +65,16 @@ export async function deleteCreditNoteAction(id: number): Promise<ActionState & 
     return failure("delete", err);
   }
   return { href: "/credit-notes" };
+}
+
+/**
+ * Reads what the customer brought back (a slip, a chit or a voice note) and matches it to
+ * the rows of the invoice. Nothing is saved, and the file is not kept.
+ */
+export async function scanCreditNoteAction(invoiceId: number, formData: FormData): Promise<ScanAnswer<CreditNoteScanResult>> {
+  await requireUser();
+  const id = z.number().int().positive().safeParse(invoiceId);
+  const invoice = id.success ? await getReturnable(id.data) : null;
+  if (!invoice) return { error: "Invoice not found." };
+  return scanUpload(formData, "return slip", (file) => scanCreditNote(file, invoice));
 }

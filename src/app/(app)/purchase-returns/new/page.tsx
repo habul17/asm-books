@@ -17,7 +17,7 @@ async function Form({ searchParams }: { searchParams: PageProps<"/purchase-retur
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
   const vendorId = Number.isSafeInteger(n) && n > 0 ? n : null;
   const [options, vendor] = await Promise.all([getBillEditorOptions(), vendorId ? pickVendorById(vendorId) : null]);
-  return <PurchaseReturnForm today={todayInIndia()} vendor={vendor} sellerState={options.sellerState} />;
+  return <PurchaseReturnForm today={todayInIndia()} vendor={vendor} sellerState={options.sellerState} scanReady={options.scanReady} />;
 }
 
 export default function NewPurchaseReturnPage({ searchParams }: PageProps<"/purchase-returns/new">) {

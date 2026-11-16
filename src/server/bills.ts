@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
@@ -125,6 +125,27 @@ export async function pickBillItems(query: string) {
     .where(where)
     .orderBy(rank, asc(products.sort), asc(products.id))
     .limit(PICK_LIMIT);
+  return rows.map((r) => ({ ...r, gstRate: r.gstRate ?? business.defaultGstRate }));
+}
+
+/** These parts as `pickBillItems` returns them, for rows filled in by a scan. */
+export async function pickBillItemsById(ids: number[]) {
+  await requireUser();
+  if (!ids.length) return [];
+  const db = getDb();
+  const business = await loadBusiness(db);
+  const rows = await db
+    .select({
+      id: products.id,
+      partNo: products.partNo,
+      description: products.description,
+      unit: products.unit,
+      gstRate: products.gstRate,
+      stockQty: products.stockQty,
+      price: purchasePriceAt(0),
+    })
+    .from(products)
+    .where(inArray(products.id, ids));
   return rows.map((r) => ({ ...r, gstRate: r.gstRate ?? business.defaultGstRate }));
 }
 

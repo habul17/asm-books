@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 
 import { findBillItems } from "@/app/(app)/bills/actions";
-import { savePurchaseReturn } from "@/app/(app)/purchase-returns/actions";
+import { savePurchaseReturn, scanPurchaseReturnAction } from "@/app/(app)/purchase-returns/actions";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { Field } from "@/components/forms/save-form";
 import { ItemPicker } from "@/components/invoices/item-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { PURCHASE_RETURN_REASONS } from "@/lib/purchase-returns/validation";
 import { GST_RATES } from "@/lib/settings/business";
+import type { PurchaseReturnScanResult } from "@/server/bill-scan/returned";
 import type { PickedVendor } from "@/server/vendors";
 
 type ReturnItem = Awaited<ReturnType<typeof findBillItems>>[number];
@@ -41,15 +43,29 @@ const num = (s: string) => {
 
 let nextKey = 0;
 
+const lineOf = (item: ReturnItem): Line => ({
+  key: `r${++nextKey}`,
+  productId: item.id,
+  partNo: item.partNo,
+  description: item.description,
+  unit: item.unit,
+  stockQty: item.stockQty,
+  qty: "1",
+  rate: item.price != null ? String(Math.round(item.price * 10000) / 10000) : "",
+  gstRate: item.gstRate,
+});
+
 /** Send parts back to a vendor: stock goes out and what you owe them goes down. */
 export function PurchaseReturnForm({
   today,
   vendor: initialVendor,
   sellerState,
+  scanReady,
 }: {
   today: string;
   vendor: PickedVendor | null;
   sellerState: string | null;
+  scanReady: boolean;
 }) {
   const [vendor, setVendor] = useState(initialVendor);
   const [date, setDate] = useState(today);
@@ -58,6 +74,7 @@ export function PurchaseReturnForm({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [scanWarnings, setScanWarnings] = useState<string[] | null>(null);
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
 
@@ -72,23 +89,18 @@ export function PurchaseReturnForm({
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
+  /** Rows read from a slip replace the list; a vendor read from it is kept only when none is chosen. */
+  const applyScan = (scan: PurchaseReturnScanResult) => {
+    setError(null);
+    setScanWarnings(scan.warnings);
+    if (scan.vendor && !vendor) setVendor(scan.vendor);
+    setLines(scan.rows.map((item) => ({ ...lineOf(item), qty: String(item.qty) })));
+  };
+
   const addItem = (item: ReturnItem) => {
     setError(null);
     if (lines.some((l) => l.productId === item.id)) return setError(`${item.description} is already in the list.`);
-    setLines((ls) => [
-      ...ls,
-      {
-        key: `r${++nextKey}`,
-        productId: item.id,
-        partNo: item.partNo,
-        description: item.description,
-        unit: item.unit,
-        stockQty: item.stockQty,
-        qty: "1",
-        rate: item.price != null ? String(Math.round(item.price * 10000) / 10000) : "",
-        gstRate: item.gstRate,
-      },
-    ]);
+    setLines((ls) => [...ls, lineOf(item)]);
   };
 
   const save = () => {
@@ -126,6 +138,16 @@ export function PurchaseReturnForm({
         save();
       }}
     >
+      <ScanBox
+        ready={scanReady}
+        noun="return slip"
+        say="the supplier, and each part going back with how many"
+        help="Take a photo of the supplier’s credit note or your return slip, or speak. The parts below are filled in for you to check."
+        action={scanPurchaseReturnAction}
+        onScan={applyScan}
+      />
+      {scanWarnings && <ScanWarnings warnings={scanWarnings} />}
+
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">Send back to vendor</span>
         <VendorPicker value={vendor} onChange={setVendor} />

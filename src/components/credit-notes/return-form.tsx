@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { cn } from "cn";
 
-import { saveCreditNote } from "@/app/(app)/credit-notes/actions";
+import { saveCreditNote, scanCreditNoteAction } from "@/app/(app)/credit-notes/actions";
+import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { Field } from "@/components/forms/save-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RETURN_REASONS } from "@/lib/credit-notes/validation";
 import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice } from "@/lib/invoices/math";
+import type { CreditNoteScanResult } from "@/server/bill-scan/returned";
 import type { Returnable } from "@/server/credit-notes";
 
 const parseQty = (s: string) => {
@@ -20,7 +22,7 @@ const parseQty = (s: string) => {
 };
 
 /** Pick how many of each item came back; totals and tax follow the invoice. */
-export function ReturnForm({ invoice, today }: { invoice: Returnable; today: string }) {
+export function ReturnForm({ invoice, today, scanReady }: { invoice: Returnable; today: string; scanReady: boolean }) {
   const [qty, setQty] = useState<Record<number, string>>({});
   const [date, setDate] = useState(today);
   const [reason, setReason] = useState<string>(RETURN_REASONS[0]);
@@ -30,6 +32,7 @@ export function ReturnForm({ invoice, today }: { invoice: Returnable; today: str
   const [restock, setRestock] = useState(true);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [scanWarnings, setScanWarnings] = useState<string[] | null>(null);
   const [saving, startSaving] = useTransition();
 
   const chosen = invoice.lines
@@ -80,6 +83,20 @@ export function ReturnForm({ invoice, today }: { invoice: Returnable; today: str
         save();
       }}
     >
+      <ScanBox
+        ready={scanReady}
+        noun="return slip"
+        say="each part that came back and how many"
+        help="Take a photo of the customer’s return slip or chit, or speak. The quantities below are filled in for you to check."
+        action={scanCreditNoteAction.bind(null, invoice.id)}
+        onScan={(scan: CreditNoteScanResult) => {
+          setError(null);
+          setScanWarnings(scan.warnings);
+          setQty(Object.fromEntries(Object.entries(scan.qty).map(([id, n]) => [id, String(n)])));
+        }}
+      />
+      {scanWarnings && <ScanWarnings warnings={scanWarnings} />}
+
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-muted-foreground">How many came back?</h2>

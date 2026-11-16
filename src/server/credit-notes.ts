@@ -144,6 +144,7 @@ export async function getReturnable(invoiceId: number) {
     db
       .select({
         id: invoiceLines.id,
+        productId: invoiceLines.productId,
         partNo: invoiceLines.partNo,
         description: invoiceLines.description,
         unit: invoiceLines.unit,

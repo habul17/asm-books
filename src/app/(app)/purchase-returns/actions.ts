@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { parsePurchaseReturnInput } from "@/lib/purchase-returns/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanPurchaseReturn, type PurchaseReturnScanResult } from "@/server/bill-scan/returned";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
   cancelPurchaseReturn,
   createPurchaseReturn,
@@ -71,4 +73,13 @@ export async function deletePurchaseReturnAction(id: number): Promise<ActionStat
     return failure("delete", err);
   }
   return { href: "/purchase-returns" };
+}
+
+/**
+ * Reads the parts going back to a supplier (their credit note or a return slip) and returns
+ * rows to check. Nothing is saved, and the file is not kept.
+ */
+export async function scanPurchaseReturnAction(formData: FormData): Promise<ScanAnswer<PurchaseReturnScanResult>> {
+  await requireUser();
+  return scanUpload(formData, "return slip", (file) => scanPurchaseReturn(file));
 }
