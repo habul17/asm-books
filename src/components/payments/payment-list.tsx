@@ -8,12 +8,19 @@ import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 import { searchPayments, type PaymentFilters } from "@/server/payments";
 
 export async function PaymentList({ filters, limit }: { filters: PaymentFilters; limit?: number }) {
-  const { count, total, items } = await searchPayments(filters, limit);
+  const { count, total, profit, items } = await searchPayments(filters, limit, { withProfit: true });
   return (
     <section aria-label="Payments received" className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {count === items.length ? `${count} payment${count === 1 ? "" : "s"}` : `Showing ${items.length} of ${count}`}
         {count > 0 && <> · received {formatMoney(total)}</>}
+        {count > 0 && profit && (
+          <>
+            {" "}
+            · profit <span className="font-medium text-foreground">{formatMoney(profit.amount)}</span>
+            {profit.untraced > 0 && <> ({formatMoney(profit.untraced)} was for old dues or advance, not counted)</>}
+          </>
+        )}
       </p>
       {items.length === 0 ? (
         <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -37,6 +44,7 @@ export async function PaymentList({ filters, limit }: { filters: PaymentFilters;
                 <span className="truncate text-xs text-muted-foreground">
                   <span className="font-mono">{p.number}</span> · {formatDate(p.date)}
                   {p.reference && <> · {p.reference}</>}
+                  {p.profit != null && <> · profit {formatMoney(p.profit)}</>}
                 </span>
                 <span className="flex justify-end">
                   {p.status === "cancelled" ? (

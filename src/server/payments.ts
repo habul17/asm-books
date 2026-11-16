@@ -8,6 +8,7 @@ import { customers, payments, users } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
+import { loadPaymentProfits } from "./payment-profit";
 import { canChangeToday } from "@/lib/edit-window";
 
 export const PAYMENT_LIMIT = 100;
@@ -23,9 +24,9 @@ export interface PaymentFilters {
 }
 
 /** Every word must appear in the receipt number, reference, customer name or mobile. */
-export async function searchPayments(filters: PaymentFilters, limit = PAYMENT_LIMIT) {
+export async function searchPayments(filters: PaymentFilters, limit = PAYMENT_LIMIT, { withProfit = false } = {}) {
   await connection(); // Always read live data; never prerender at build time.
-  await requireUser();
+  const user = await requireUser();
   const words = filters.query.trim().slice(0, 200).split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
   const conditions: (SQL | undefined)[] = [
     filters.status === "all" ? undefined : eq(payments.status, filters.status),
@@ -73,7 +74,32 @@ export async function searchPayments(filters: PaymentFilters, limit = PAYMENT_LI
       .orderBy(desc(payments.date), desc(payments.id))
       .limit(Math.min(Math.max(limit, 1), 500)),
   ]);
-  return { count: summary[0]?.count ?? 0, total: summary[0]?.total ?? 0, items };
+  const base = { count: summary[0]?.count ?? 0, total: summary[0]?.total ?? 0 };
+  // Profit is owner only, like purchase costs.
+  if (!withProfit || user.role !== "owner") return { ...base, profit: null, items: items.map((p) => ({ ...p, profit: null })) };
+
+  const matching = await db
+    .select({ id: payments.id, customerId: payments.customerId })
+    .from(payments)
+    .innerJoin(customers, eq(customers.id, payments.customerId))
+    .where(and(where, eq(payments.status, "final")));
+  const profits = await loadPaymentProfits(
+    db,
+    matching.map((m) => m.customerId),
+  );
+  let sum = 0;
+  let untraced = 0;
+  for (const m of matching) {
+    sum += profits.get(m.id)?.profit ?? 0;
+    untraced += profits.get(m.id)?.untraced ?? 0;
+  }
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return {
+    ...base,
+    /** Profit from the bills this money settled; `untraced` is money for old dues, advances or bills without a cost. */
+    profit: { amount: round2(sum), untraced: round2(untraced) },
+    items: items.map((p) => ({ ...p, profit: p.status === "final" ? (profits.get(p.id)?.profit ?? null) : null })),
+  };
 }
 
 export type PaymentListItem = Awaited<ReturnType<typeof searchPayments>>["items"][number];
