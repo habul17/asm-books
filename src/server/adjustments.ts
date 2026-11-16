@@ -133,3 +133,22 @@ export async function pickStockItems(query: string) {
 }
 
 export type StockItem = Awaited<ReturnType<typeof pickStockItems>>[number];
+
+/** Every active part with the stock the app holds now, for a shelf-by-shelf stock check. */
+export async function stockList() {
+  await connection(); // Always read live data; never prerender at build time.
+  await requireUser();
+  return getDb()
+    .select({
+      id: products.id,
+      partNo: products.partNo,
+      description: products.description,
+      unit: products.unit,
+      stockQty: products.stockQty,
+    })
+    .from(products)
+    .where(eq(products.active, true))
+    .orderBy(asc(products.sort), asc(products.id));
+}
+
+export type StockListItem = Awaited<ReturnType<typeof stockList>>[number];

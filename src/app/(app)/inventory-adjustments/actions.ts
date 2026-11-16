@@ -4,7 +4,12 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { stockCheckLines, stockCheckSchema } from "@/lib/adjustments/stock-check";
 import { parseAdjustmentInput } from "@/lib/adjustments/validation";
+import { getDb } from "@/db";
+import { products } from "@/db/schema";
+import { inArray } from "drizzle-orm";
+import { todayInIndia } from "@/server/invoice-writes";
 import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment } from "@/server/adjustment-writes";
 import { pickStockItems } from "@/server/adjustments";
 import { isOwner, requireUser } from "@/server/auth";
@@ -69,4 +74,42 @@ export async function findStockItems(query: unknown) {
 export async function scanCountAction(formData: FormData): Promise<ScanAnswer<CountScanResult>> {
   await requireUser();
   return scanUpload(formData, "count sheet", scanCount);
+}
+
+/**
+ * Saves a stock check: for each part counted on the shelf, the difference from the
+ * stock the app holds now becomes a "Stock count correction". Counts are what is on
+ * the shelf, so a sale made while counting is already in them.
+ */
+export async function saveStockCheck(input: unknown): Promise<ActionState & { saved?: number[]; changed?: number }> {
+  const user = await requireUser();
+  const parsed = stockCheckSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the counts." };
+  const { counts } = parsed.data;
+  try {
+    const now = await getDb()
+      .select({ id: products.id, stockQty: products.stockQty })
+      .from(products)
+      .where(inArray(products.id, counts.map((c) => c.productId)));
+    const chunks = stockCheckLines(counts, new Map(now.map((p) => [p.id, p.stockQty])));
+    if (!chunks.length) return { ok: true, saved: [], changed: 0 };
+    const saved: number[] = [];
+    for (const [i, lines] of chunks.entries()) {
+      const part = chunks.length > 1 ? ` (part ${i + 1} of ${chunks.length})` : "";
+      saved.push(
+        await createAdjustment(
+          {
+            date: todayInIndia(),
+            reason: "Stock count correction",
+            notes: `Stock check: ${counts.length} part${counts.length === 1 ? "" : "s"} counted on the shelf${part}.`,
+            lines,
+          },
+          user.id,
+        ),
+      );
+    }
+    return { ok: true, saved, changed: chunks.flat().length };
+  } catch (err) {
+    return failure("stock check", err);
+  }
 }

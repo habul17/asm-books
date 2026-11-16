@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { ClipboardCheckIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -31,9 +31,14 @@ export default function AdjustmentsPage({ searchParams }: PageProps<"/inventory-
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Inventory adjustments</h1>
-        <Link href="/inventory-adjustments/new" className={buttonVariants({ size: "sm" })}>
-          <PlusIcon /> New adjustment
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/inventory-adjustments/stock-check" className={buttonVariants({ size: "sm", variant: "outline" })}>
+            <ClipboardCheckIcon /> Stock check
+          </Link>
+          <Link href="/inventory-adjustments/new" className={buttonVariants({ size: "sm" })}>
+            <PlusIcon /> New adjustment
+          </Link>
+        </div>
       </div>
       <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
         <ListToolbar
