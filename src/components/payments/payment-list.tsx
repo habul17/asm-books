@@ -42,7 +42,7 @@ export async function PaymentList({ filters, limit }: { filters: PaymentFilters;
                   {formatMoney(p.amount)}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  <span className="font-mono">{p.number}</span> · {formatDate(p.date)}
+                  <span className="font-mono">{p.number}</span> · paid {formatDate(p.date)}
                   {p.reference && <> · {p.reference}</>}
                   {p.profit != null && <> · profit {formatMoney(p.profit)}</>}
                 </span>
@@ -53,6 +53,17 @@ export async function PaymentList({ filters, limit }: { filters: PaymentFilters;
                     <Badge variant="secondary">{PAYMENT_MODE_LABELS[p.mode]}</Badge>
                   )}
                 </span>
+                {p.invoices.length > 0 && (
+                  <span className="col-span-2 text-xs text-muted-foreground">
+                    For{" "}
+                    {p.invoices.map((inv, i) => (
+                      <span key={inv.id} className="whitespace-nowrap">
+                        {i > 0 && ", "}
+                        <span className="font-mono">{inv.number}</span> of {formatDate(inv.date)}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </Link>
             </li>
           ))}

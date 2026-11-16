@@ -8,7 +8,7 @@ const pay = (paymentId: number | null, date: string, amount: number, order = pay
 describe("paymentProfits", () => {
   it("gives a full payment the bill's whole profit", () => {
     const out = paymentProfits([bill(1, "2026-11-01", 1180, 200)], [pay(7, "2026-11-05", 1180)], 0);
-    expect(out.get(7)).toEqual({ profit: 200, untraced: 0 });
+    expect(out.get(7)).toEqual({ profit: 200, untraced: 0, bills: [{ id: 1, amount: 1180 }] });
   });
 
   it("splits profit by the share of the bill paid", () => {
@@ -24,13 +24,20 @@ describe("paymentProfits", () => {
       0,
     );
     // 500 clears bill 1 (profit 50), 500 is half of bill 2 (profit 150).
-    expect(out.get(7)).toEqual({ profit: 200, untraced: 0 });
+    expect(out.get(7)).toEqual({
+      profit: 200,
+      untraced: 0,
+      bills: [
+        { id: 1, amount: 500 },
+        { id: 2, amount: 500 },
+      ],
+    });
   });
 
   it("counts old dues and advance money as untraced", () => {
     const out = paymentProfits([bill(1, "2026-11-01", 1000, 100)], [pay(7, "2026-11-02", 1500)], 300);
     // 300 old dues, 1000 clears the bill, 200 is advance.
-    expect(out.get(7)).toEqual({ profit: 100, untraced: 500 });
+    expect(out.get(7)).toEqual({ profit: 100, untraced: 500, bills: [{ id: 1, amount: 1000 }] });
   });
 
   it("lets an opening advance and a credited return settle bills before payments", () => {
@@ -46,6 +53,6 @@ describe("paymentProfits", () => {
 
   it("does not guess profit on a bill without a cost", () => {
     const out = paymentProfits([bill(1, "2026-11-01", 1000, null)], [pay(7, "2026-11-02", 1000)], 0);
-    expect(out.get(7)).toEqual({ profit: 0, untraced: 1000 });
+    expect(out.get(7)).toEqual({ profit: 0, untraced: 1000, bills: [{ id: 1, amount: 1000 }] });
   });
 });

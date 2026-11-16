@@ -8,11 +8,16 @@ import { paymentProfits, type PaymentProfit } from "@/lib/payments/profit";
 
 type Db = ReturnType<typeof getDb>;
 
+export interface PaymentSettled extends PaymentProfit {
+  /** The invoices this payment settled, oldest first. */
+  invoices: { id: number; number: string; date: string }[];
+}
+
 /**
- * Profit brought in by each final payment of these customers, worked out from the
- * credit bills the money settled (oldest first). Owner data: callers must check.
+ * For each final payment of these customers: the credit invoices the money settled
+ * (oldest first) and the profit that brought in. Profit is owner data: callers must check.
  */
-export async function loadPaymentProfits(db: Db, customerIds: number[]): Promise<Map<number, PaymentProfit>> {
+export async function loadPaymentProfits(db: Db, customerIds: number[]): Promise<Map<number, PaymentSettled>> {
   const ids = [...new Set(customerIds)];
   if (!ids.length) return new Map();
 
@@ -20,6 +25,7 @@ export async function loadPaymentProfits(db: Db, customerIds: number[]): Promise
     db
       .select({
         id: invoices.id,
+        number: invoices.number,
         customerId: invoices.customerId,
         date: invoices.date,
         total: invoices.grandTotal,
@@ -44,7 +50,8 @@ export async function loadPaymentProfits(db: Db, customerIds: number[]): Promise
     db.select({ id: customers.id, opening: customers.openingBalance }).from(customers).where(inArray(customers.id, ids)),
   ]);
 
-  const out = new Map<number, PaymentProfit>();
+  const byId = new Map(bills.map((b) => [b.id, b]));
+  const out = new Map<number, PaymentSettled>();
   for (const { id: customerId, opening: open } of opening) {
     const receipts = [
       ...paid.filter((p) => p.customerId === customerId).map((p) => ({ paymentId: p.id, date: p.date, order: p.id * 2, amount: p.amount })),
@@ -54,7 +61,10 @@ export async function loadPaymentProfits(db: Db, customerIds: number[]): Promise
         .map((c) => ({ paymentId: null, date: c.date, order: -1, amount: c.amount })),
     ];
     const mine = bills.filter((b) => b.customerId === customerId);
-    for (const [id, p] of paymentProfits(mine, receipts, open)) out.set(id, p);
+    for (const [id, p] of paymentProfits(mine, receipts, open)) {
+      const settled = p.bills.map((b) => byId.get(b.id)!).map((b) => ({ id: b.id, number: b.number, date: b.date }));
+      out.set(id, { ...p, invoices: settled });
+    }
   }
   return out;
 }

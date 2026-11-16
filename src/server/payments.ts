@@ -75,30 +75,34 @@ export async function searchPayments(filters: PaymentFilters, limit = PAYMENT_LI
       .limit(Math.min(Math.max(limit, 1), 500)),
   ]);
   const base = { count: summary[0]?.count ?? 0, total: summary[0]?.total ?? 0 };
-  // Profit is owner only, like purchase costs.
-  if (!withProfit || user.role !== "owner") return { ...base, profit: null, items: items.map((p) => ({ ...p, profit: null })) };
+  if (!withProfit) return { ...base, profit: null, items: items.map((p) => ({ ...p, profit: null, invoices: [] })) };
 
+  // Which invoices each payment settled (oldest first), for everyone; profit is owner only, like purchase costs.
+  const owner = user.role === "owner";
   const matching = await db
     .select({ id: payments.id, customerId: payments.customerId })
     .from(payments)
     .innerJoin(customers, eq(customers.id, payments.customerId))
     .where(and(where, eq(payments.status, "final")));
-  const profits = await loadPaymentProfits(
+  const settled = await loadPaymentProfits(
     db,
     matching.map((m) => m.customerId),
   );
   let sum = 0;
   let untraced = 0;
   for (const m of matching) {
-    sum += profits.get(m.id)?.profit ?? 0;
-    untraced += profits.get(m.id)?.untraced ?? 0;
+    sum += settled.get(m.id)?.profit ?? 0;
+    untraced += settled.get(m.id)?.untraced ?? 0;
   }
   const round2 = (n: number) => Math.round(n * 100) / 100;
   return {
     ...base,
     /** Profit from the bills this money settled; `untraced` is money for old dues, advances or bills without a cost. */
-    profit: { amount: round2(sum), untraced: round2(untraced) },
-    items: items.map((p) => ({ ...p, profit: p.status === "final" ? (profits.get(p.id)?.profit ?? null) : null })),
+    profit: owner ? { amount: round2(sum), untraced: round2(untraced) } : null,
+    items: items.map((p) => {
+      const s = p.status === "final" ? settled.get(p.id) : undefined;
+      return { ...p, profit: owner ? (s?.profit ?? null) : null, invoices: s?.invoices ?? [] };
+    }),
   };
 }
 

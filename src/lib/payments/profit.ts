@@ -23,6 +23,8 @@ export interface Receipt {
 export interface PaymentProfit {
   /** Profit from the bills this payment settled. */
   profit: number;
+  /** The bills this payment settled, oldest first, with how much went to each. */
+  bills: { id: number; amount: number }[];
   /** Part of the payment that settled old dues or bills without a known cost. */
   untraced: number;
 }
@@ -35,10 +37,10 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  */
 export function paymentProfits(bills: ProfitBill[], receipts: Receipt[], opening: number): Map<number, PaymentProfit> {
   // What the money settles, in order: old dues, then bills oldest first.
-  const sinks: { left: number; rate: number | null }[] = [];
-  if (opening > 0) sinks.push({ left: opening, rate: null });
+  const sinks: { id: number | null; left: number; rate: number | null }[] = [];
+  if (opening > 0) sinks.push({ id: null, left: opening, rate: null });
   for (const b of [...bills].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)) {
-    if (b.total > 0) sinks.push({ left: b.total, rate: b.profit == null ? null : b.profit / b.total });
+    if (b.total > 0) sinks.push({ id: b.id, left: b.total, rate: b.profit == null ? null : b.profit / b.total });
   }
 
   // An advance settles bills before any payment does.
@@ -52,18 +54,20 @@ export function paymentProfits(bills: ProfitBill[], receipts: Receipt[], opening
     let money = r.amount;
     let profit = 0;
     let untraced = 0;
+    const paid: { id: number; amount: number }[] = [];
     while (money > 0.005 && i < sinks.length) {
       const sink = sinks[i];
       const take = Math.min(money, sink.left);
       if (sink.rate == null) untraced += take;
       else profit += take * sink.rate;
+      if (sink.id != null) paid.push({ id: sink.id, amount: round2(take) });
       money -= take;
       sink.left -= take;
       if (sink.left <= 0.005) i++;
     }
     // Money beyond every bill is an advance: no profit yet.
     untraced += Math.max(money, 0);
-    if (r.paymentId != null) out.set(r.paymentId, { profit: round2(profit), untraced: round2(untraced) });
+    if (r.paymentId != null) out.set(r.paymentId, { profit: round2(profit), untraced: round2(untraced), bills: paid });
   }
   return out;
 }
