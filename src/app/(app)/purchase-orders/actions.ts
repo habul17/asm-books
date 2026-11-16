@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parsePurchaseOrderInput, PURCHASE_ORDER_STATUSES, type PurchaseOrderStatus } from "@/lib/purchase-orders/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { BillInputError } from "@/server/bill-writes";
-import { createPurchaseOrder, setPurchaseOrderStatus, updatePurchaseOrder } from "@/server/purchase-order-writes";
+import { createPurchaseOrder, deletePurchaseOrder, setPurchaseOrderStatus, updatePurchaseOrder } from "@/server/purchase-order-writes";
 
 export interface ActionState {
   ok?: boolean;
@@ -55,4 +55,17 @@ export async function setPurchaseOrderStatusAction(id: number, to: PurchaseOrder
   }
   refresh();
   return { ok: true };
+}
+
+/** Deletes a purchase order for good, then goes back to the list. Owner only. */
+export async function deletePurchaseOrderAction(id: number): Promise<ActionState> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Purchase order not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete a purchase order. Please ask the owner." };
+  try {
+    await deletePurchaseOrder(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  redirect("/purchase-orders");
 }

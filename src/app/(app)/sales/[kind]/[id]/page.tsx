@@ -7,6 +7,8 @@ import { Suspense } from "react";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { SalesDocStatusBadge } from "@/components/sales-docs/sales-doc-list";
+import { deleteSalesDocAction } from "@/app/(app)/sales/actions";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { SalesDocStatusButtons } from "@/components/sales-docs/sales-doc-status-buttons";
 import { TransportForm } from "@/components/transport/transport-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { kindFromSlug, NEXT_STEPS, SALES_DOC_KIND, salesDocHref, salesDocsHref } from "@/lib/sales-docs/kinds";
 import { needsEwayBill, transportRows } from "@/lib/transport";
+import { isOwner, requireUser } from "@/server/auth";
 import { getSalesDoc } from "@/server/sales-docs";
 import { getBusiness } from "@/server/settings";
 
@@ -29,7 +32,7 @@ async function Doc({ params }: { params: Props["params"] }) {
   const kind = kindFromSlug(slug);
   const id = Number(rawId);
   if (!kind || !Number.isSafeInteger(id) || id <= 0) notFound();
-  const [doc, business] = await Promise.all([getSalesDoc(kind, id), getBusiness()]);
+  const [doc, business, me] = await Promise.all([getSalesDoc(kind, id), getBusiness(), requireUser()]);
   if (!doc) notFound();
   const info = SALES_DOC_KIND[kind];
   const open = doc.status === "open";
@@ -127,6 +130,13 @@ async function Doc({ params }: { params: Props["params"] }) {
       )}
 
       <SalesDocStatusButtons kind={kind} id={doc.id} status={doc.status} invoiced={doc.invoiceId != null} />
+      {isOwner(me) && (
+        <DeleteButton
+          noun={info.noun}
+          action={deleteSalesDocAction.bind(null, kind, doc.id)}
+          note={doc.invoiceId != null ? "The invoice made from it stays." : undefined}
+        />
+      )}
     </>
   );
 }

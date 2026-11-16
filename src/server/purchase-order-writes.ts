@@ -111,3 +111,11 @@ export async function setPurchaseOrderStatus(id: number, to: PurchaseOrderStatus
     await tx.update(purchaseOrders).set({ status: to }).where(eq(purchaseOrders.id, id));
   });
 }
+
+/** Deletes a purchase order for good. Bills entered from it stay, without the link. */
+export async function deletePurchaseOrder(id: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    await lockOrder(tx, id);
+    await tx.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+  });
+}

@@ -193,3 +193,11 @@ export async function setInvoiceTransport(id: number, transport: Transport): Pro
     await tx.update(invoices).set({ transport }).where(eq(invoices.id, id));
   });
 }
+
+/** Deletes a quote, sales order or challan for good. Documents made from it keep their own copy. */
+export async function deleteSalesDoc(kind: SalesDocKind, id: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    await lockDoc(tx, kind, id);
+    await tx.delete(salesDocs).where(and(eq(salesDocs.id, id), eq(salesDocs.kind, kind)));
+  });
+}

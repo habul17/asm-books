@@ -7,10 +7,13 @@ import { Suspense } from "react";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { PurchaseOrderStatusBadge } from "@/components/purchase-orders/purchase-order-list";
+import { deletePurchaseOrderAction } from "@/app/(app)/purchase-orders/actions";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { PurchaseOrderStatusButtons } from "@/components/purchase-orders/purchase-order-status-buttons";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
+import { isOwner, requireUser } from "@/server/auth";
 import { getPurchaseOrder } from "@/server/purchase-orders";
 import { getBusiness } from "@/server/settings";
 
@@ -19,7 +22,7 @@ export const metadata: Metadata = { title: "Purchase order" };
 async function Order({ params }: { params: PageProps<"/purchase-orders/[id]">["params"] }) {
   const id = Number((await params).id);
   if (!Number.isSafeInteger(id) || id <= 0) notFound();
-  const [order, business] = await Promise.all([getPurchaseOrder(id), getBusiness()]);
+  const [order, business, me] = await Promise.all([getPurchaseOrder(id), getBusiness(), requireUser()]);
   if (!order) notFound();
   const open = order.status === "open";
 
@@ -79,6 +82,13 @@ async function Order({ params }: { params: PageProps<"/purchase-orders/[id]">["p
         status={order.status}
         billed={order.bills.some((b) => b.status === "final")}
       />
+      {isOwner(me) && (
+        <DeleteButton
+          noun="purchase order"
+          action={deletePurchaseOrderAction.bind(null, order.id)}
+          note={order.bills.length ? "Bills entered from it stay." : undefined}
+        />
+      )}
     </>
   );
 }

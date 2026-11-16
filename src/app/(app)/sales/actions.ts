@@ -4,13 +4,14 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { salesDocHref, SALES_DOC_KINDS, type SalesDocKind } from "@/lib/sales-docs/kinds";
+import { salesDocHref, salesDocsHref, SALES_DOC_KIND, SALES_DOC_KINDS, type SalesDocKind } from "@/lib/sales-docs/kinds";
 import { parseSalesDocInput } from "@/lib/sales-docs/validation";
 import { parseTransport } from "@/lib/transport";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { InvoiceInputError } from "@/server/invoice-writes";
 import {
   createSalesDoc,
+  deleteSalesDoc,
   setInvoiceTransport,
   setSalesDocStatus,
   setSalesDocTransport,
@@ -94,4 +95,17 @@ export async function saveTransport(
   }
   refresh();
   return { ok: true };
+}
+
+/** Deletes a quote, sales order or challan for good, then goes back to the list. Owner only. */
+export async function deleteSalesDocAction(kind: SalesDocKind, id: number): Promise<ActionState> {
+  const user = await requireUser();
+  if (!kindSchema.safeParse(kind).success || !idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: `Only the owner can delete a ${SALES_DOC_KIND[kind].noun}. Please ask the owner.` };
+  try {
+    await deleteSalesDoc(kind, id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  redirect(salesDocsHref(kind));
 }
