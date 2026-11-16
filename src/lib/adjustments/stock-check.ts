@@ -29,16 +29,31 @@ export type StockCount = z.infer<typeof stockCheckSchema>["counts"][number];
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
+export type StockCheckReason = "Opening stock" | "Stock count correction";
+
 /**
  * The change each count needs against the stock the app holds now, leaving out
- * parts that already match. Split into adjustments of at most the line limit.
+ * parts that already match. Stock found for a part that has never moved in the app
+ * is its opening stock; everything else is a correction. Each group is split into
+ * adjustments of at most the line limit.
  */
-export function stockCheckLines(counts: StockCount[], stockNow: Map<number, number>): { productId: number; qty: number }[][] {
+export function stockCheckLines(
+  counts: StockCount[],
+  stockNow: Map<number, number>,
+  neverMoved: Set<number> = new Set(),
+): { reason: StockCheckReason; lines: { productId: number; qty: number }[] }[] {
   const lines = counts
     .filter((c) => stockNow.has(c.productId))
     .map((c) => ({ productId: c.productId, qty: round3(c.counted - stockNow.get(c.productId)!) }))
     .filter((l) => l.qty !== 0);
-  const chunks: { productId: number; qty: number }[][] = [];
-  for (let i = 0; i < lines.length; i += MAX_ADJUSTMENT_LINES) chunks.push(lines.slice(i, i + MAX_ADJUSTMENT_LINES));
-  return chunks;
+  const opening = lines.filter((l) => l.qty > 0 && neverMoved.has(l.productId));
+  const corrections = lines.filter((l) => !opening.includes(l));
+  const out: { reason: StockCheckReason; lines: { productId: number; qty: number }[] }[] = [];
+  for (const [reason, group] of [
+    ["Opening stock", opening],
+    ["Stock count correction", corrections],
+  ] as const) {
+    for (let i = 0; i < group.length; i += MAX_ADJUSTMENT_LINES) out.push({ reason, lines: group.slice(i, i + MAX_ADJUSTMENT_LINES) });
+  }
+  return out;
 }

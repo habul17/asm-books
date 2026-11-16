@@ -103,7 +103,7 @@ export function StockCheck({ parts }: { parts: StockListItem[] }) {
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
         Compare each part with the shelf. Type the shelf count only where it is different, then save. Parts you leave empty are not
-        changed.
+        changed. Stock found for a part never bought or sold in the app is saved as opening stock.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

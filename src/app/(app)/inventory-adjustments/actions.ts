@@ -7,7 +7,7 @@ import { z } from "zod";
 import { stockCheckLines, stockCheckSchema } from "@/lib/adjustments/stock-check";
 import { parseAdjustmentInput } from "@/lib/adjustments/validation";
 import { getDb } from "@/db";
-import { products } from "@/db/schema";
+import { products, stockMovements } from "@/db/schema";
 import { inArray } from "drizzle-orm";
 import { todayInIndia } from "@/server/invoice-writes";
 import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment } from "@/server/adjustment-writes";
@@ -91,16 +91,26 @@ export async function saveStockCheck(input: unknown): Promise<ActionState & { sa
       .select({ id: products.id, stockQty: products.stockQty })
       .from(products)
       .where(inArray(products.id, counts.map((c) => c.productId)));
-    const chunks = stockCheckLines(counts, new Map(now.map((p) => [p.id, p.stockQty])));
+    const ids = counts.map((c) => c.productId);
+    const moved = await getDb()
+      .selectDistinct({ id: stockMovements.productId })
+      .from(stockMovements)
+      .where(inArray(stockMovements.productId, ids));
+    const movedIds = new Set(moved.map((m) => m.id));
+    const chunks = stockCheckLines(
+      counts,
+      new Map(now.map((p) => [p.id, p.stockQty])),
+      new Set(ids.filter((id) => !movedIds.has(id))),
+    );
     if (!chunks.length) return { ok: true, saved: [], changed: 0 };
     const saved: number[] = [];
-    for (const [i, lines] of chunks.entries()) {
+    for (const [i, { reason, lines }] of chunks.entries()) {
       const part = chunks.length > 1 ? ` (part ${i + 1} of ${chunks.length})` : "";
       saved.push(
         await createAdjustment(
           {
             date: todayInIndia(),
-            reason: "Stock count correction",
+            reason,
             notes: `Stock check: ${counts.length} part${counts.length === 1 ? "" : "s"} counted on the shelf${part}.`,
             lines,
           },
@@ -108,7 +118,7 @@ export async function saveStockCheck(input: unknown): Promise<ActionState & { sa
         ),
       );
     }
-    return { ok: true, saved, changed: chunks.flat().length };
+    return { ok: true, saved, changed: chunks.reduce((n, c) => n + c.lines.length, 0) };
   } catch (err) {
     return failure("stock check", err);
   }
