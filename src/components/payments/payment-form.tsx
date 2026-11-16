@@ -65,6 +65,7 @@ export function PaymentForm({ scanReady = false, ...props }: FormProps & { scanR
       <ScanBox
         ready={scanReady}
         noun="payment slip"
+        say="who paid, how much, and how (UPI, cash, cheque)"
         help="Take a screenshot of the UPI payment or a photo of the cheque or bank slip. The form below is filled in for you to check."
         action={scanSlipAction}
         onScan={(r: ReceivedSlipResult) =>

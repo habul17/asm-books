@@ -28,6 +28,7 @@ export function VendorForm({ scanReady = false, ...props }: VendorFormProps & { 
       <ScanBox
         ready={scanReady}
         noun="card"
+        say="the vendor's name, mobile number and town"
         help="Take a photo of their visiting card, GST certificate or the top of their bill. The form below is filled in for you to check."
         action={scanContactAction}
         onScan={(draft: ContactDraft) => setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, draft }))}

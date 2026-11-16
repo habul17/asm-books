@@ -363,6 +363,7 @@ export function InvoiceEditor({
         <ScanBox
           ready={options.scanReady}
           noun="order"
+          say="the customer, then each part and how many"
           help={`Take a photo of the customer\u2019s order chit or WhatsApp list. The parts and quantities are added to this ${noun} for you to check.`}
           action={scanOrderAction.bind(null, priceListId, isWalkIn ? null : (customer?.id ?? null))}
           onScan={addScannedOrder}

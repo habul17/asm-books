@@ -2,7 +2,18 @@ import "server-only";
 
 import { FinishReason, GoogleGenAI, MediaResolution, ThinkingLevel } from "@google/genai";
 
+import { isVoiceMimeType } from "@/lib/bills/scan";
+
 import { BillScanError, type BillFile, type BillReader, type ReadTask } from "./reader";
+
+/** Said before the task when the file is the user speaking, not a document. */
+const VOICE_NOTE = `The attached file is a voice recording of the shop owner or staff saying the details, not a printed document.
+- They may speak English, Tamil or a mix. Return names and descriptions in English letters.
+- Take every rule about "printed" or "as printed" to mean "as spoken".
+- Part numbers are often said digit by digit ("one three zero one" is 1301) or with letters ("fifteen oh three T" is 1503T).
+- A number said after a part number is the quantity or count, not part of the part number: "fifteen oh three T, twelve" is part 1503T with 12. Words like "pieces", "nos" or "set" mark a quantity.
+- Amounts may be said in words ("two thousand five hundred" is 2500).
+- Only return what was said. Never invent anything that was not said.`;
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 /** Asked when the main model is too slow or busy: newest models are sometimes overloaded for hours. */
@@ -50,7 +61,7 @@ export function geminiReader(apiKey: string, model = DEFAULT_MODEL, fallback: st
             {
               role: "user",
               parts: [
-                { text: task.ask },
+                { text: isVoiceMimeType(file.mimeType) ? `${VOICE_NOTE}\n\n${task.ask}` : task.ask },
                 // Photos and PDFs both go in as they are; PDFs keep their pages and printed text.
                 { inlineData: { data: file.data, mimeType: file.mimeType } },
               ],

@@ -13,7 +13,11 @@ import { isGstRate } from "@/lib/settings/business";
 import { MAX_BILL_LINES } from "./validation";
 
 /** Files a bill can be scanned from. */
-export const SCAN_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
+/** Voice recordings: what phone and desktop browsers record (Chrome: webm, Safari: mp4, Firefox: ogg). */
+export const VOICE_MIME_TYPES = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "audio/aac"] as const;
+export const isVoiceMimeType = (t: string) => (VOICE_MIME_TYPES as readonly string[]).includes(t);
+
+export const SCAN_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf", ...VOICE_MIME_TYPES] as const;
 export type ScanMimeType = (typeof SCAN_MIME_TYPES)[number];
 export const isScanMimeType = (t: string): t is ScanMimeType => (SCAN_MIME_TYPES as readonly string[]).includes(t);
 

@@ -61,6 +61,7 @@ export function ExpenseForm({ scanReady = false, ...props }: FormProps & { scanR
       <ScanBox
         ready={scanReady}
         noun="receipt"
+        say="what was paid for, how much, and to whom"
         help="Take a photo of the receipt (fuel, EB, rent, courier…). The form below is filled in for you to check."
         action={scanReceiptAction}
         onScan={(r: ReceiptScanResult) =>

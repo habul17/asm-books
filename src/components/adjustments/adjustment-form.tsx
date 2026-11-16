@@ -131,6 +131,7 @@ export function AdjustmentForm({ initial, scanReady = false }: { initial: Adjust
         <ScanBox
           ready={scanReady}
           noun="count sheet"
+          say="each part number and how many are on the shelf"
           help="Take a photo of your stock count sheet. Parts whose count differs from the app are added below for you to check."
           action={scanCountAction}
           onScan={addCounts}
