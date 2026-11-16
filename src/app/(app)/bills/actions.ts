@@ -14,7 +14,7 @@ import { parseVendor } from "@/lib/vendors/validation";
 import { isOwner, requireUser } from "@/server/auth";
 import { scanBill, type BillScanResult } from "@/server/bill-scan";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
-import { BillInputError, cancelBill, createBill, updateBill } from "@/server/bill-writes";
+import { BillInputError, cancelBill, createBill, updateBill, deleteBill } from "@/server/bill-writes";
 import { pickBillItems } from "@/server/bills";
 import { createProduct, ProductInputError } from "@/server/product-writes";
 import { pickVendorById, pickVendors, type PickedVendor } from "@/server/vendors";
@@ -155,4 +155,17 @@ export async function findVendors(query: unknown) {
 
 export async function findBillItems(query: unknown) {
   return pickBillItems(typeof query === "string" ? query : "");
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deleteBillAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deleteBill(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/bills" };
 }

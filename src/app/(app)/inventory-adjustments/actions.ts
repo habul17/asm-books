@@ -10,7 +10,7 @@ import { getDb } from "@/db";
 import { products, stockMovements } from "@/db/schema";
 import { inArray } from "drizzle-orm";
 import { todayInIndia } from "@/server/invoice-writes";
-import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment } from "@/server/adjustment-writes";
+import { AdjustmentInputError, cancelAdjustment, createAdjustment, updateAdjustment, deleteAdjustment } from "@/server/adjustment-writes";
 import { pickStockItems } from "@/server/adjustments";
 import { isOwner, requireUser } from "@/server/auth";
 import { scanCount, type CountScanResult } from "@/server/bill-scan/stock-count";
@@ -122,4 +122,17 @@ export async function saveStockCheck(input: unknown): Promise<ActionState & { sa
   } catch (err) {
     return failure("stock check", err);
   }
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deleteAdjustmentAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deleteAdjustment(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/inventory-adjustments" };
 }

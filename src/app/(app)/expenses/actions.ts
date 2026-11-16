@@ -13,6 +13,7 @@ import {
   createExpense,
   updateExpense,
   ExpenseInputError,
+  deleteExpense
 } from "@/server/expense-writes";
 
 export interface ActionState {
@@ -68,4 +69,17 @@ export async function cancelExpenseAction(id: number, _prev: ActionState, formDa
 export async function scanReceiptAction(formData: FormData): Promise<ScanAnswer<ReceiptScanResult>> {
   await requireUser();
   return scanUpload(formData, "receipt", scanReceipt);
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deleteExpenseAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deleteExpense(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/expenses" };
 }

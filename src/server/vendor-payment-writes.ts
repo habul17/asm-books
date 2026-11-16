@@ -85,3 +85,9 @@ export async function cancelVendorPayment(id: number, reason: string): Promise<v
       .where(eq(vendorPayments.id, id));
   });
 }
+
+/** Deletes it for good. Nothing else points at it; any kept receipt photo stays in Documents. */
+export async function deleteVendorPayment(id: number): Promise<void> {
+  const gone = await withTransaction((tx) => tx.delete(vendorPayments).where(eq(vendorPayments.id, id)).returning({ id: vendorPayments.id }));
+  if (!gone.length) throw new VendorPaymentInputError("Payment not found.");
+}

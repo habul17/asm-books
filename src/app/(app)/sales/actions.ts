@@ -98,7 +98,7 @@ export async function saveTransport(
 }
 
 /** Deletes a quote, sales order or challan for good, then goes back to the list. Owner only. */
-export async function deleteSalesDocAction(kind: SalesDocKind, id: number): Promise<ActionState> {
+export async function deleteSalesDocAction(kind: SalesDocKind, id: number): Promise<ActionState & { href?: string }> {
   const user = await requireUser();
   if (!kindSchema.safeParse(kind).success || !idSchema.safeParse(id).success) return { error: "Not found." };
   if (!isOwner(user)) return { error: `Only the owner can delete a ${SALES_DOC_KIND[kind].noun}. Please ask the owner.` };
@@ -107,5 +107,5 @@ export async function deleteSalesDocAction(kind: SalesDocKind, id: number): Prom
   } catch (err) {
     return failure("delete", err);
   }
-  redirect(salesDocsHref(kind));
+  return { href: salesDocsHref(kind) };
 }

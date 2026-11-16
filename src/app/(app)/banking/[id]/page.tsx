@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { deleteMoneyEntryAction } from "@/app/(app)/banking/actions";
 import { CancelMoneyEntryForm } from "@/components/banking/cancel-money-entry-form";
-import { OwnerGate } from "@/components/layout/owner-gate";
+import { DeleteButton } from "@/components/forms/delete-button";
+import { OwnerGate, OwnerOnlyBlock } from "@/components/layout/owner-gate";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,6 +58,9 @@ async function Entry({ params }: { params: PageProps<"/banking/[id]">["params"] 
         ))}
       </dl>
       {final && <CancelMoneyEntryForm id={entry.id} />}
+      <OwnerOnlyBlock>
+        <DeleteButton noun="entry" action={deleteMoneyEntryAction.bind(null, entry.id)} />
+      </OwnerOnlyBlock>
     </>
   );
 }

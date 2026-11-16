@@ -95,3 +95,9 @@ export async function cancelExpense(id: number, reason: string): Promise<void> {
       .where(eq(expenses.id, id));
   });
 }
+
+/** Deletes it for good. Nothing else points at it; any kept receipt photo stays in Documents. */
+export async function deleteExpense(id: number): Promise<void> {
+  const gone = await withTransaction((tx) => tx.delete(expenses).where(eq(expenses.id, id)).returning({ id: expenses.id }));
+  if (!gone.length) throw new ExpenseInputError("Expense not found.");
+}

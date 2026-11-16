@@ -8,7 +8,7 @@ import { parsePaymentInput } from "@/lib/payments/validation";
 import { isOwner, requireUser } from "@/server/auth";
 import { scanReceivedSlip, type ReceivedSlipResult } from "@/server/bill-scan/payment-slip";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
-import { cancelPayment, createPayment, PaymentInputError, updatePayment } from "@/server/payment-writes";
+import { cancelPayment, createPayment, PaymentInputError, updatePayment, deletePayment } from "@/server/payment-writes";
 
 export interface ActionState {
   ok?: boolean;
@@ -63,4 +63,17 @@ export async function cancelPaymentAction(id: number, _prev: ActionState, formDa
 export async function scanSlipAction(formData: FormData): Promise<ScanAnswer<ReceivedSlipResult>> {
   await requireUser();
   return scanUpload(formData, "payment slip", scanReceivedSlip);
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deletePaymentAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deletePayment(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/payments" };
 }

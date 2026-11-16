@@ -13,6 +13,7 @@ import {
   createVendorPayment,
   updateVendorPayment,
   VendorPaymentInputError,
+  deleteVendorPayment
 } from "@/server/vendor-payment-writes";
 
 export interface ActionState {
@@ -68,4 +69,17 @@ export async function cancelVendorPaymentAction(id: number, _prev: ActionState, 
 export async function scanSlipAction(formData: FormData): Promise<ScanAnswer<PaidSlipResult>> {
   await requireUser();
   return scanUpload(formData, "payment slip", scanPaidSlip);
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deleteVendorPaymentAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deleteVendorPayment(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/payments-made" };
 }

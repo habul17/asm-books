@@ -84,3 +84,9 @@ export async function cancelPayment(id: number, reason: string): Promise<void> {
       .where(eq(payments.id, id));
   });
 }
+
+/** Deletes it for good. Nothing else points at it; any kept receipt photo stays in Documents. */
+export async function deletePayment(id: number): Promise<void> {
+  const gone = await withTransaction((tx) => tx.delete(payments).where(eq(payments.id, id)).returning({ id: payments.id }));
+  if (!gone.length) throw new PaymentInputError("Payment not found.");
+}

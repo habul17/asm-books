@@ -4,7 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { deletePaymentAction } from "@/app/(app)/payments/actions";
 import { Balance } from "@/components/customers/balance";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { CancelPaymentForm } from "@/components/payments/cancel-payment-form";
 import { PaymentReceipt } from "@/components/payments/payment-receipt";
@@ -56,11 +58,12 @@ async function Payment({ params }: { params: PageProps<"/payments/[id]">["params
 
       <PaymentReceipt payment={payment} business={business} />
 
-      {final && (
-        <OwnerOnlyBlock>
-          <CancelPaymentForm id={payment.id} />
-        </OwnerOnlyBlock>
-      )}
+      <OwnerOnlyBlock>
+        <div className="flex flex-col gap-3">
+          {final && <CancelPaymentForm id={payment.id} />}
+          <DeleteButton noun="payment" action={deletePaymentAction.bind(null, payment.id)} note="The customer will owe this amount again." />
+        </div>
+      </OwnerOnlyBlock>
     </>
   );
 }

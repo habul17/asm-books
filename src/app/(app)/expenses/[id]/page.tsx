@@ -4,9 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { deleteExpenseAction } from "@/app/(app)/expenses/actions";
 import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { CancelExpenseForm } from "@/components/expenses/cancel-expense-form";
 import { ExpenseVoucher } from "@/components/expenses/expense-voucher";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -57,11 +59,12 @@ async function Expense({ params }: { params: PageProps<"/expenses/[id]">["params
         hint="Keep a photo or PDF of the receipt here."
       />
 
-      {final && (
-        <OwnerOnlyBlock>
-          <CancelExpenseForm id={expense.id} />
-        </OwnerOnlyBlock>
-      )}
+      <OwnerOnlyBlock>
+        <div className="flex flex-col gap-3">
+          {final && <CancelExpenseForm id={expense.id} />}
+          <DeleteButton noun="expense" action={deleteExpenseAction.bind(null, expense.id)} />
+        </div>
+      </OwnerOnlyBlock>
     </>
   );
 }

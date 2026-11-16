@@ -58,7 +58,7 @@ export async function setPurchaseOrderStatusAction(id: number, to: PurchaseOrder
 }
 
 /** Deletes a purchase order for good, then goes back to the list. Owner only. */
-export async function deletePurchaseOrderAction(id: number): Promise<ActionState> {
+export async function deletePurchaseOrderAction(id: number): Promise<ActionState & { href?: string }> {
   const user = await requireUser();
   if (!idSchema.safeParse(id).success) return { error: "Purchase order not found." };
   if (!isOwner(user)) return { error: "Only the owner can delete a purchase order. Please ask the owner." };
@@ -67,5 +67,5 @@ export async function deletePurchaseOrderAction(id: number): Promise<ActionState
   } catch (err) {
     return failure("delete", err);
   }
-  redirect("/purchase-orders");
+  return { href: "/purchase-orders" };
 }

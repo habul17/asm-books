@@ -1,15 +1,25 @@
 "use client";
 
 import { Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 
 /**
- * Deletes a record for good. Needs a second click; `action` deletes and moves on
- * (redirects), or returns an error to show.
+ * Deletes a record for good. Needs a second click; `action` deletes and returns the
+ * page to go to next, or an error to show.
  */
-export function DeleteButton({ noun, action, note }: { noun: string; action: () => Promise<{ error?: string } | void>; note?: string }) {
+export function DeleteButton({
+  noun,
+  action,
+  note,
+}: {
+  noun: string;
+  action: () => Promise<{ error?: string; href?: string }>;
+  note?: string;
+}) {
+  const router = useRouter();
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -17,11 +27,11 @@ export function DeleteButton({ noun, action, note }: { noun: string; action: () 
   const remove = () => {
     setError(null);
     startTransition(async () => {
-      const result = await action().catch(() => ({ error: "Could not delete. Check your internet and try again." }));
-      if (result?.error) {
+      const result: { error?: string; href?: string } = await action().catch(() => ({ error: "Could not delete. Check your internet and try again." }));
+      if (result.error) {
         setError(result.error);
         setArmed(false);
-      }
+      } else if (result.href) router.replace(result.href);
     });
   };
 

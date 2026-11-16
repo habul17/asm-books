@@ -8,7 +8,7 @@ import { parseMoneyEntry } from "@/lib/banking/entries";
 import { isOwner, requireUser } from "@/server/auth";
 import { checkStatementLines, scanStatement, type LineCheck, type StatementRead } from "@/server/bank-statement";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
-import { cancelMoneyEntry, createMoneyEntry, MoneyEntryError } from "@/server/money-entries";
+import { cancelMoneyEntry, createMoneyEntry, MoneyEntryError, deleteMoneyEntry } from "@/server/money-entries";
 import { MAX_STATEMENT_LINES } from "@/lib/banking/statement";
 
 export interface ActionState {
@@ -87,4 +87,17 @@ export async function checkStatementAction(
     console.error("[banking] statement check failed:", err instanceof Error ? err.message : err);
     return { error: "Could not check the statement. Please try again." };
   }
+}
+
+/** Deletes it for good, then goes back to the list. Owner only. */
+export async function deleteMoneyEntryAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  try {
+    await deleteMoneyEntry(id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/banking" };
 }

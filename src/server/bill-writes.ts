@@ -3,10 +3,11 @@ import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
-import { billLines, bills, products, purchaseOrders, purchasePrices, vendors } from "@/db/schema";
+import { billLines, bills, invoiceLineBatches, invoices, products, purchaseOrders, purchasePrices, vendors } from "@/db/schema";
 import type { BillInput } from "@/lib/bills/validation";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { loadBusiness } from "@/server/settings";
+import { undoStockOf } from "@/server/stock-undo";
 
 import { moveStock, qtyByProduct, todayInIndia } from "./invoice-writes";
 
@@ -203,5 +204,29 @@ export async function cancelBill(id: number, reason: string, userId: number): Pr
     await moveStock(tx, out, { kind: "purchase_cancel", billId: id, date: todayInIndia(), note: existing.billNo, userId });
     // The parts go back to the purchase price they had before this bill.
     await removePrices(tx, id);
+  });
+}
+
+/**
+ * Deletes a purchase bill for good: its stock comes off the shelf count and the
+ * purchase prices it set are removed. Not allowed once its pieces were sold,
+ * because those sales took their cost from this bill.
+ */
+export async function deleteBill(id: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    const [bill] = await tx.select({ id: bills.id }).from(bills).where(eq(bills.id, id)).for("update");
+    if (!bill) throw new BillInputError("Bill not found.");
+    const [sold] = await tx
+      .select({ number: invoices.number })
+      .from(invoiceLineBatches)
+      .innerJoin(invoices, eq(invoices.id, invoiceLineBatches.invoiceId))
+      .where(eq(invoiceLineBatches.billId, id))
+      .limit(1);
+    if (sold) {
+      throw new BillInputError(`Parts from this bill were sold on invoice ${sold.number}, so it cannot be deleted. Cancel it instead.`);
+    }
+    await undoStockOf(tx, "billId", id, (m) => new BillInputError(m));
+    await removePrices(tx, id);
+    await tx.delete(bills).where(eq(bills.id, id));
   });
 }

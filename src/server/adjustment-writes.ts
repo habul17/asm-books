@@ -7,6 +7,7 @@ import { products, stockAdjustmentLines, stockAdjustments } from "@/db/schema";
 import type { AdjustmentInput } from "@/lib/adjustments/validation";
 import { formatQty } from "@/lib/format";
 import { financialYear, invoiceNumber } from "@/lib/invoices/math";
+import { undoStockOf } from "@/server/stock-undo";
 import { loadBusiness } from "@/server/settings";
 
 import { moveStock, todayInIndia } from "./invoice-writes";
@@ -233,5 +234,15 @@ export async function updateAdjustment(id: number, input: AdjustmentInput, userI
       note: `${adj.number} · ${input.reason}`.slice(0, 200),
       userId,
     });
+  });
+}
+
+/** Deletes an adjustment for good and takes its stock change back off the shelf count. */
+export async function deleteAdjustment(id: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    const [adj] = await tx.select({ id: stockAdjustments.id }).from(stockAdjustments).where(eq(stockAdjustments.id, id)).for("update");
+    if (!adj) throw new AdjustmentInputError("Adjustment not found.");
+    await undoStockOf(tx, "adjustmentId", id, (m) => new AdjustmentInputError(`${m} Make a new adjustment instead.`));
+    await tx.delete(stockAdjustments).where(eq(stockAdjustments.id, id));
   });
 }

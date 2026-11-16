@@ -117,3 +117,9 @@ export async function cancelMoneyEntry(id: number, reason: string): Promise<void
     .returning({ id: moneyEntries.id });
   if (done.length === 0) throw new MoneyEntryError("Entry not found, or it is already cancelled.");
 }
+
+/** Deletes a bank or cash entry for good. */
+export async function deleteMoneyEntry(id: number): Promise<void> {
+  const gone = await getDb().delete(moneyEntries).where(eq(moneyEntries.id, id)).returning({ id: moneyEntries.id });
+  if (!gone.length) throw new MoneyEntryError("Entry not found.");
+}

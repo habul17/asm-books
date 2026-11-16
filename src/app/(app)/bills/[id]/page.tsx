@@ -4,8 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { deleteBillAction } from "@/app/(app)/bills/actions";
 import { CancelBillForm } from "@/components/bills/cancel-bill-form";
 import { DocumentAttachments } from "@/components/documents/document-attachments";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -134,11 +136,12 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
         hint="Keep a photo or PDF of the vendor's paper bill here."
       />
 
-      {final && (
-        <OwnerOnlyBlock>
-          <CancelBillForm id={b.id} />
-        </OwnerOnlyBlock>
-      )}
+      <OwnerOnlyBlock>
+        <div className="flex flex-col gap-3">
+          {final && <CancelBillForm id={b.id} />}
+          <DeleteButton noun="bill" action={deleteBillAction.bind(null, b.id)} note="Its stock comes off the shelf count." />
+        </div>
+      </OwnerOnlyBlock>
     </>
   );
 }

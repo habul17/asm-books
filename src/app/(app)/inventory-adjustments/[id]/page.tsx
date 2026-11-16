@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { cn } from "cn";
 
+import { deleteAdjustmentAction } from "@/app/(app)/inventory-adjustments/actions";
 import { CancelAdjustmentForm } from "@/components/adjustments/cancel-adjustment-form";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,11 +106,12 @@ async function Adjustment({ params }: { params: PageProps<"/inventory-adjustment
         )}
       </section>
 
-      {final && (
-        <OwnerOnlyBlock>
-          <CancelAdjustmentForm id={adj.id} />
-        </OwnerOnlyBlock>
-      )}
+      <OwnerOnlyBlock>
+        <div className="flex flex-col gap-3">
+          {final && <CancelAdjustmentForm id={adj.id} />}
+          <DeleteButton noun="adjustment" action={deleteAdjustmentAction.bind(null, adj.id)} note="Its stock change is undone." />
+        </div>
+      </OwnerOnlyBlock>
     </>
   );
 }
