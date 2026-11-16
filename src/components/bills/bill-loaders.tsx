@@ -77,7 +77,7 @@ export async function NewPurchaseOrderForm({ vendorId }: { vendorId: number | nu
   await connection(); // Today's date must be read per request, not at build time.
   const [options, vendor] = await Promise.all([getBillEditorOptions(), vendorId ? pickVendorById(vendorId) : null]);
   return (
-    <BillEditor
+    <NewBillWorkspace
       kind="order"
       initial={{
         id: null,
@@ -93,6 +93,7 @@ export async function NewPurchaseOrderForm({ vendorId }: { vendorId: number | nu
       }}
       sellerState={options.sellerState}
       cancelHref={vendor ? `/vendors/${vendor.id}` : "/purchase-orders"}
+      scanReady={options.scanReady}
     />
   );
 }
