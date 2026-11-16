@@ -169,6 +169,13 @@
       "when": 1794804239743,
       "tag": "0023_invoice_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794805805875,
+      "tag": "0024_returns_deleted_at",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, getTableColumns, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
@@ -29,6 +29,7 @@ export async function searchCreditNotes(filters: CreditNoteFilters, limit = CRED
   await requireUser();
   const words = filters.query.trim().slice(0, 200).split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
   const conditions: (SQL | undefined)[] = [
+    isNull(creditNotes.deletedAt),
     filters.status === "all" ? undefined : eq(creditNotes.status, filters.status),
     filters.customerId ? eq(creditNotes.customerId, filters.customerId) : undefined,
     filters.invoiceId ? eq(creditNotes.invoiceId, filters.invoiceId) : undefined,

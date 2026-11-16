@@ -4,8 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { deleteCreditNoteAction } from "@/app/(app)/credit-notes/actions";
 import { Balance } from "@/components/customers/balance";
 import { CancelCreditNoteForm } from "@/components/credit-notes/cancel-credit-note-form";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +32,7 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{note.number}</span>
-          {!final && <Badge variant="destructive">cancelled</Badge>}
+          {!final && <Badge variant="destructive">{note.deletedAt ? "deleted" : "cancelled"}</Badge>}
         </h1>
         <PrintButton />
       </div>
@@ -69,9 +71,16 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
         ]}
       />
 
-      {final && (
+      {note.deletedAt ? (
+        <p className="text-sm text-muted-foreground print:hidden">
+          This credit note was deleted. It is hidden from lists and reports; its number is kept as cancelled for GST.
+        </p>
+      ) : (
         <OwnerOnlyBlock>
-          <CancelCreditNoteForm id={note.id} />
+          <div className="flex flex-col gap-3">
+            {final && <CancelCreditNoteForm id={note.id} />}
+            <DeleteButton noun="credit note" action={deleteCreditNoteAction.bind(null, note.id)} note="Returned stock comes back off the shelf. Only the newest is removed completely; an older one keeps its number as cancelled for GST." />
+          </div>
         </OwnerOnlyBlock>
       )}
     </>

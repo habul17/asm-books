@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
 import { col } from "@/db/sql";
@@ -9,6 +9,7 @@ import type { CreditNoteInput } from "@/lib/credit-notes/validation";
 import { formatQty } from "@/lib/format";
 import { calcInvoice, financialYear, invoiceNumber } from "@/lib/invoices/math";
 import { loadBusiness } from "@/server/settings";
+import { undoStockOf } from "@/server/stock-undo";
 
 import { moveStock, qtyByProduct, todayInIndia } from "./invoice-writes";
 
@@ -162,5 +163,64 @@ export async function cancelCreditNote(id: number, reason: string, userId: numbe
         userId,
       });
     }
+  });
+}
+
+/**
+ * Deletes a credit note for the owner. The newest of its year is removed for good, so
+ * the next one takes its number; an older one is cancelled and hidden, its number
+ * kept on record as cancelled for GST. Restocked goods come back off the shelf.
+ */
+export async function deleteCreditNote(id: number, userId: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    const [cn] = await tx
+      .select({
+        id: creditNotes.id,
+        number: creditNotes.number,
+        fy: creditNotes.fy,
+        seq: creditNotes.seq,
+        status: creditNotes.status,
+        invoiceId: creditNotes.invoiceId,
+        restocked: creditNotes.restocked,
+      })
+      .from(creditNotes)
+      .where(and(eq(creditNotes.id, id), isNull(creditNotes.deletedAt)))
+      .for("update");
+    if (!cn) throw new CreditNoteInputError("Credit note not found.");
+    const fail = (m: string) => new CreditNoteInputError(`${m} Those pieces were sold again.`);
+    const [{ last }] = await tx
+      .select({ last: sql<number>`max(${creditNotes.seq})`.mapWith(Number) })
+      .from(creditNotes)
+      .where(eq(creditNotes.fy, cn.fy));
+    if (cn.seq === last) {
+      await undoStockOf(tx, "creditNoteId", id, fail);
+      await tx.delete(creditNotes).where(eq(creditNotes.id, id));
+      return;
+    }
+    if (cn.status === "final" && cn.restocked) {
+      const lines = await tx
+        .select({ productId: creditNoteLines.productId, qty: creditNoteLines.qty })
+        .from(creditNoteLines)
+        .where(eq(creditNoteLines.creditNoteId, id));
+      const back = new Map([...qtyByProduct(lines)].map(([p, q]) => [p, -q]));
+      await moveStock(tx, back, {
+        kind: "sale_return_cancel",
+        invoiceId: cn.invoiceId,
+        creditNoteId: id,
+        date: todayInIndia(),
+        note: cn.number,
+        userId,
+      });
+    }
+    const wasFinal = cn.status === "final";
+    await tx
+      .update(creditNotes)
+      .set({
+        status: "cancelled",
+        cancelledAt: wasFinal ? new Date() : undefined,
+        cancelReason: wasFinal ? "Deleted" : undefined,
+        deletedAt: new Date(),
+      })
+      .where(eq(creditNotes.id, id));
   });
 }

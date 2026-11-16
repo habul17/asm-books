@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { deletePurchaseReturnAction } from "@/app/(app)/purchase-returns/actions";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
@@ -29,7 +31,7 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{pr.number}</span>
-          {!final && <Badge variant="destructive">cancelled</Badge>}
+          {!final && <Badge variant="destructive">{pr.deletedAt ? "deleted" : "cancelled"}</Badge>}
         </h1>
         <PrintButton />
         <Link href="/purchase-returns/new" className={buttonVariants({ size: "sm" })}>
@@ -62,9 +64,16 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
         ]}
       />
 
-      {final && (
+      {pr.deletedAt ? (
+        <p className="text-sm text-muted-foreground print:hidden">
+          This purchase return was deleted. It is hidden from lists and reports; its number is kept as cancelled for GST.
+        </p>
+      ) : (
         <OwnerOnlyBlock>
-          <CancelPurchaseReturnForm id={pr.id} />
+          <div className="flex flex-col gap-3">
+            {final && <CancelPurchaseReturnForm id={pr.id} />}
+            <DeleteButton noun="purchase return" action={deletePurchaseReturnAction.bind(null, pr.id)} note="The returned pieces come back on the shelf. Only the newest is removed completely; an older one keeps its number as cancelled for GST." />
+          </div>
         </OwnerOnlyBlock>
       )}
     </>

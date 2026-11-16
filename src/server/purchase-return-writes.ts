@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
 import { products, purchaseReturnLines, purchaseReturns, vendors } from "@/db/schema";
@@ -8,6 +8,7 @@ import { formatQty } from "@/lib/format";
 import { calcInvoice, financialYear, invoiceNumber, taxTypeFor } from "@/lib/invoices/math";
 import type { PurchaseReturnInput } from "@/lib/purchase-returns/validation";
 import { loadBusiness } from "@/server/settings";
+import { undoStockOf } from "@/server/stock-undo";
 
 import { moveStock, qtyByProduct, todayInIndia } from "./invoice-writes";
 
@@ -133,5 +134,53 @@ export async function cancelPurchaseReturn(id: number, reason: string, userId: n
       note: pr.number,
       userId,
     });
+  });
+}
+
+/**
+ * Deletes a purchase return for the owner. The newest of its year is removed for
+ * good, so the next one takes its number; an older one is cancelled and hidden, its
+ * number kept on record as cancelled for GST. The returned pieces come back on the shelf.
+ */
+export async function deletePurchaseReturn(id: number, userId: number): Promise<void> {
+  await withTransaction(async (tx) => {
+    const [pr] = await tx
+      .select({ id: purchaseReturns.id, number: purchaseReturns.number, fy: purchaseReturns.fy, seq: purchaseReturns.seq, status: purchaseReturns.status })
+      .from(purchaseReturns)
+      .where(and(eq(purchaseReturns.id, id), isNull(purchaseReturns.deletedAt)))
+      .for("update");
+    if (!pr) throw new PurchaseReturnInputError("Purchase return not found.");
+    const [{ last }] = await tx
+      .select({ last: sql<number>`max(${purchaseReturns.seq})`.mapWith(Number) })
+      .from(purchaseReturns)
+      .where(eq(purchaseReturns.fy, pr.fy));
+    if (pr.seq === last) {
+      await undoStockOf(tx, "purchaseReturnId", id, (m) => new PurchaseReturnInputError(m));
+      await tx.delete(purchaseReturns).where(eq(purchaseReturns.id, id));
+      return;
+    }
+    if (pr.status === "final") {
+      const lines = await tx
+        .select({ productId: purchaseReturnLines.productId, qty: purchaseReturnLines.qty })
+        .from(purchaseReturnLines)
+        .where(eq(purchaseReturnLines.purchaseReturnId, id));
+      await moveStock(tx, qtyByProduct(lines), {
+        kind: "purchase_return_cancel",
+        purchaseReturnId: id,
+        date: todayInIndia(),
+        note: pr.number,
+        userId,
+      });
+    }
+    const wasFinal = pr.status === "final";
+    await tx
+      .update(purchaseReturns)
+      .set({
+        status: "cancelled",
+        cancelledAt: wasFinal ? new Date() : undefined,
+        cancelReason: wasFinal ? "Deleted" : undefined,
+        deletedAt: new Date(),
+      })
+      .where(eq(purchaseReturns.id, id));
   });
 }

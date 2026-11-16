@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { parseCreditNoteInput } from "@/lib/credit-notes/validation";
 import { isOwner, requireUser } from "@/server/auth";
-import { cancelCreditNote, createCreditNote, CreditNoteInputError } from "@/server/credit-note-writes";
+import { cancelCreditNote, createCreditNote, CreditNoteInputError, deleteCreditNote } from "@/server/credit-note-writes";
 
 export interface ActionState {
   ok?: boolean;
@@ -49,4 +49,17 @@ export async function cancelCreditNoteAction(id: number, _prev: ActionState, for
   }
   refresh();
   return { ok: true };
+}
+
+/** Deletes it (the newest for good, an older one kept as cancelled), then goes back to the list. Owner only. */
+export async function deleteCreditNoteAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  try {
+    await deleteCreditNote(id, user.id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/credit-notes" };
 }

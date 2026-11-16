@@ -566,6 +566,8 @@ export const creditNotes = pgTable(
     status: invoiceStatus("status").notNull().default("final"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
+    /** Deleted by the owner: hidden everywhere, but the number stays on record as cancelled for GST. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },
@@ -863,6 +865,8 @@ export const purchaseReturns = pgTable(
     status: invoiceStatus("status").notNull().default("final"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
+    /** Deleted by the owner: hidden everywhere, but the number stays on record as cancelled for GST. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },

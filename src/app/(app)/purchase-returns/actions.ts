@@ -9,6 +9,7 @@ import { isOwner, requireUser } from "@/server/auth";
 import {
   cancelPurchaseReturn,
   createPurchaseReturn,
+  deletePurchaseReturn,
   PurchaseReturnInputError,
 } from "@/server/purchase-return-writes";
 
@@ -57,4 +58,17 @@ export async function cancelPurchaseReturnAction(
   }
   refresh();
   return { ok: true };
+}
+
+/** Deletes it (the newest for good, an older one kept as cancelled), then goes back to the list. Owner only. */
+export async function deletePurchaseReturnAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  if (!idSchema.safeParse(id).success) return { error: "Not found." };
+  try {
+    await deletePurchaseReturn(id, user.id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/purchase-returns" };
 }

@@ -8,7 +8,7 @@ import { formatQty } from "@/lib/format";
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
-type MovementOwner = "billId" | "adjustmentId" | "invoiceId";
+type MovementOwner = "billId" | "adjustmentId" | "invoiceId" | "creditNoteId" | "purchaseReturnId";
 
 /**
  * Removes every stock movement a record made, as if it had never been saved, so the
