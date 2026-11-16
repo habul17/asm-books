@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { parsePaymentInput } from "@/lib/payments/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanReceivedSlip, type ReceivedSlipResult } from "@/server/bill-scan/payment-slip";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { cancelPayment, createPayment, PaymentInputError, updatePayment, deletePayment } from "@/server/payment-writes";
@@ -40,6 +41,8 @@ export async function savePayment(id: number | null, _prev: ActionState, formDat
   } catch (err) {
     return failure("save", err);
   }
+  // A scanned paper used to fill the form is attached to what was saved.
+  await claimScan(scanIdOf(formData), { paymentId: savedId }, user);
   redirect(`/payments/${savedId}`);
 }
 
@@ -61,8 +64,8 @@ export async function cancelPaymentAction(id: number, _prev: ActionState, formDa
 
 /** Reads a UPI screenshot, bank slip or cheque photo of money received and returns values to check. Nothing is saved. */
 export async function scanSlipAction(formData: FormData): Promise<ScanAnswer<ReceivedSlipResult>> {
-  await requireUser();
-  return scanUpload(formData, "payment slip", scanReceivedSlip);
+  const user = await requireUser();
+  return scanUpload(formData, "payment slip", scanReceivedSlip, { user, folder: "payments", title: "Payment received slip" });
 }
 
 /** Deletes it for good, then goes back to the list. Owner only. */

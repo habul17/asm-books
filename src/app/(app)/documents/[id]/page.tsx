@@ -59,6 +59,30 @@ async function Document({ params }: { params: PageProps<"/documents/[id]">["para
             </Link>
           </span>
         )}
+        {doc.paymentId != null && doc.paymentNumber && (
+          <span>
+            Payment{" "}
+            <Link href={`/payments/${doc.paymentId}`} className="font-mono font-medium text-foreground hover:underline">
+              {doc.paymentNumber}
+            </Link>
+          </span>
+        )}
+        {doc.vendorPaymentId != null && doc.vendorPaymentNumber && (
+          <span>
+            Payment made{" "}
+            <Link href={`/payments-made/${doc.vendorPaymentId}`} className="font-mono font-medium text-foreground hover:underline">
+              {doc.vendorPaymentNumber}
+            </Link>
+          </span>
+        )}
+        {doc.purchaseReturnId != null && doc.purchaseReturnNumber && (
+          <span>
+            Purchase return{" "}
+            <Link href={`/purchase-returns/${doc.purchaseReturnId}`} className="font-mono font-medium text-foreground hover:underline">
+              {doc.purchaseReturnNumber}
+            </Link>
+          </span>
+        )}
       </p>
 
       {isPdf ? (

@@ -3,13 +3,15 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 
 import { withTransaction } from "@/db";
-import { bills, documentFiles, documents, expenses } from "@/db/schema";
+import { bills, documentFiles, documents, expenses, payments, purchaseReturns, vendorPayments } from "@/db/schema";
 import {
   DOCUMENT_STORAGE_LIMIT,
   formatBytes,
   type DocumentDetails,
   type DocumentFolder,
+  linkParts,
   type DocumentLink,
+  type DocumentLinkKey,
   type DocumentMimeType,
 } from "@/lib/documents/documents";
 import { isOwner, type CurrentUser } from "@/server/auth";
@@ -29,6 +31,73 @@ export interface NewDocument {
   link: DocumentLink;
   mimeType: DocumentMimeType;
   bytes: Buffer;
+  /** A scan kept until the form it filled is saved (see `claimScan`). */
+  scanPending?: boolean;
+}
+
+type Tx = Parameters<Parameters<typeof withTransaction>[0]>[0];
+
+const LINKED_TABLES = {
+  billId: { table: bills, noun: "Bill" },
+  expenseId: { table: expenses, noun: "Expense" },
+  paymentId: { table: payments, noun: "Payment" },
+  vendorPaymentId: { table: vendorPayments, noun: "Payment" },
+  purchaseReturnId: { table: purchaseReturns, noun: "Purchase return" },
+} as const;
+
+/** The link as document columns, after checking the record exists. */
+async function checkedLink(tx: Tx, link: DocumentLink): Promise<Partial<Record<DocumentLinkKey, number>>> {
+  const parts = linkParts(link);
+  if (!parts) return {};
+  const [key, value] = parts;
+  const { table, noun } = LINKED_TABLES[key];
+  const [row] = await tx.select({ id: table.id }).from(table).where(eq(table.id, value));
+  if (!row) throw new DocumentInputError(`${noun} not found.`);
+  return { [key]: row.id };
+}
+
+/** Scans kept this long without a save are removed. */
+const PENDING_SCAN_HOURS = 24;
+
+/**
+ * Attaches a scan kept by `scanUpload` to the record its form just saved. Only the person
+ * who scanned it can claim it, and only once; anything else is ignored, because the record
+ * itself is already saved.
+ */
+export async function claimScan(documentId: number | null | undefined, link: NonNullable<DocumentLink>, user: CurrentUser) {
+  if (!documentId || !Number.isSafeInteger(documentId) || documentId <= 0) return;
+  try {
+    await withTransaction(async (tx) => {
+      const columns = await checkedLink(tx, link);
+      await tx
+        .update(documents)
+        .set({ ...columns, scanPending: false })
+        .where(and(eq(documents.id, documentId), eq(documents.scanPending, true), eq(documents.uploadedBy, user.id)));
+    });
+  } catch (err) {
+    console.error("[documents] keeping the scan failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+/** The kept scan a form sends back as `scanDocumentId` (a form field or an input property). */
+export function scanIdOf(source: unknown): number | null {
+  const raw =
+    source instanceof FormData
+      ? source.get("scanDocumentId")
+      : source && typeof source === "object"
+        ? (source as Record<string, unknown>).scanDocumentId
+        : null;
+  const n = Number(raw);
+  return raw != null && raw !== "" && Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** Removes scans that were never saved with a form. */
+export async function removeStaleScans() {
+  await withTransaction((tx) =>
+    tx
+      .delete(documents)
+      .where(and(eq(documents.scanPending, true), sql`${documents.createdAt} < now() - make_interval(hours => ${PENDING_SCAN_HOURS})`)),
+  );
 }
 
 /** Stores an uploaded file. The caller has already checked its type and size. */
@@ -45,18 +114,7 @@ export async function createDocument(input: NewDocument, user: CurrentUser): Pro
       );
     }
 
-    let billId: number | null = null;
-    let expenseId: number | null = null;
-    if (input.link && "billId" in input.link) {
-      const [bill] = await tx.select({ id: bills.id }).from(bills).where(eq(bills.id, input.link.billId));
-      if (!bill) throw new DocumentInputError("Bill not found.");
-      billId = bill.id;
-    } else if (input.link) {
-      const [expense] = await tx.select({ id: expenses.id }).from(expenses).where(eq(expenses.id, input.link.expenseId));
-      if (!expense) throw new DocumentInputError("Expense not found.");
-      expenseId = expense.id;
-    }
-
+    const link = await checkedLink(tx, input.link);
     const [{ id }] = await tx
       .insert(documents)
       .values({
@@ -66,8 +124,8 @@ export async function createDocument(input: NewDocument, user: CurrentUser): Pro
         size: input.bytes.length,
         // Only the owner can hide a document from staff.
         ownerOnly: input.ownerOnly && isOwner(user),
-        billId,
-        expenseId,
+        ...link,
+        scanPending: input.scanPending ?? false,
         uploadedBy: user.id,
       })
       .returning({ id: documents.id });

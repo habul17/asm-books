@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { parsePurchaseReturnInput } from "@/lib/purchase-returns/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanPurchaseReturn, type PurchaseReturnScanResult } from "@/server/bill-scan/returned";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
@@ -39,6 +40,8 @@ export async function savePurchaseReturn(input: unknown): Promise<ActionState> {
   } catch (err) {
     return failure("save", err);
   }
+  // A scanned paper used to fill the form is attached to what was saved.
+  await claimScan(scanIdOf(input), { purchaseReturnId: id }, user);
   redirect(`/purchase-returns/${id}`);
 }
 
@@ -80,6 +83,10 @@ export async function deletePurchaseReturnAction(id: number): Promise<ActionStat
  * rows to check. Nothing is saved, and the file is not kept.
  */
 export async function scanPurchaseReturnAction(formData: FormData): Promise<ScanAnswer<PurchaseReturnScanResult>> {
-  await requireUser();
-  return scanUpload(formData, "return slip", (file) => scanPurchaseReturn(file));
+  const user = await requireUser();
+  return scanUpload(formData, "return slip", (file) => scanPurchaseReturn(file), {
+    user,
+    folder: "returns",
+    title: "Return slip scan",
+  });
 }

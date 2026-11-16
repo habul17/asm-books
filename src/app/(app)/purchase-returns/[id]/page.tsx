@@ -12,6 +12,7 @@ import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 import { CancelPurchaseReturnForm } from "@/components/purchase-returns/cancel-purchase-return-form";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/format";
 import { getPurchaseReturn } from "@/server/purchase-returns";
@@ -63,6 +64,8 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
           { label: "Reason", value: pr.reason },
         ]}
       />
+
+      <DocumentAttachments link={{ purchaseReturnId: pr.id }} folder="returns" hint="Keep a photo of the return slip or the supplier's credit note here." />
 
       {pr.deletedAt ? (
         <p className="text-sm text-muted-foreground print:hidden">

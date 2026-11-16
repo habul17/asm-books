@@ -14,7 +14,7 @@ export function BillScanBox({
   kind = "bill",
 }: {
   ready: boolean;
-  onScan: (scan: BillScanResult) => void;
+  onScan: (scan: BillScanResult, keptId?: number) => void;
   kind?: "bill" | "order";
 }) {
   if (kind === "order")
@@ -31,6 +31,7 @@ export function BillScanBox({
     );
   return (
     <ScanBox
+      keep
       ready={ready}
       noun="bill"
       say="the supplier, bill number, and each part with how many and the rate"

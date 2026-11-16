@@ -4,7 +4,7 @@ import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { bills, documentFiles, documents, expenses, users } from "@/db/schema";
+import { bills, documentFiles, documents, expenses, payments, purchaseReturns, users, vendorPayments } from "@/db/schema";
 import { DOCUMENT_STORAGE_LIMIT, type DocumentFolder } from "@/lib/documents/documents";
 import { isOwner, requireUser, type CurrentUser } from "@/server/auth";
 
@@ -17,6 +17,9 @@ export interface DocumentFilters {
   folder: DocumentFolder | "all";
   billId?: number | null;
   expenseId?: number | null;
+  paymentId?: number | null;
+  vendorPaymentId?: number | null;
+  purchaseReturnId?: number | null;
 }
 
 /** Staff never see documents marked "owner only". */
@@ -36,6 +39,12 @@ const listColumns = {
   billNo: bills.billNo,
   expenseId: documents.expenseId,
   expenseNumber: expenses.number,
+  paymentId: documents.paymentId,
+  paymentNumber: payments.number,
+  vendorPaymentId: documents.vendorPaymentId,
+  vendorPaymentNumber: vendorPayments.number,
+  purchaseReturnId: documents.purchaseReturnId,
+  purchaseReturnNumber: purchaseReturns.number,
   uploadedByName: users.name,
   createdAt: documents.createdAt,
 };
@@ -50,6 +59,11 @@ export async function searchDocuments(filters: DocumentFilters, limit = DOCUMENT
     filters.folder === "all" ? undefined : eq(documents.folder, filters.folder),
     filters.billId ? eq(documents.billId, filters.billId) : undefined,
     filters.expenseId ? eq(documents.expenseId, filters.expenseId) : undefined,
+    filters.paymentId ? eq(documents.paymentId, filters.paymentId) : undefined,
+    filters.vendorPaymentId ? eq(documents.vendorPaymentId, filters.vendorPaymentId) : undefined,
+    filters.purchaseReturnId ? eq(documents.purchaseReturnId, filters.purchaseReturnId) : undefined,
+    // A scan whose form was never saved is not a document yet.
+    eq(documents.scanPending, false),
   ];
   for (const word of words) {
     const like = `%${escapeLike(word)}%`;
@@ -64,6 +78,9 @@ export async function searchDocuments(filters: DocumentFilters, limit = DOCUMENT
       .from(documents)
       .leftJoin(bills, eq(bills.id, documents.billId))
       .leftJoin(expenses, eq(expenses.id, documents.expenseId))
+      .leftJoin(payments, eq(payments.id, documents.paymentId))
+      .leftJoin(vendorPayments, eq(vendorPayments.id, documents.vendorPaymentId))
+      .leftJoin(purchaseReturns, eq(purchaseReturns.id, documents.purchaseReturnId))
       .leftJoin(users, eq(users.id, documents.uploadedBy))
       .where(where)
       .orderBy(desc(documents.createdAt), desc(documents.id))
@@ -84,6 +101,9 @@ export async function getDocument(id: number) {
     .from(documents)
     .leftJoin(bills, eq(bills.id, documents.billId))
     .leftJoin(expenses, eq(expenses.id, documents.expenseId))
+    .leftJoin(payments, eq(payments.id, documents.paymentId))
+    .leftJoin(vendorPayments, eq(vendorPayments.id, documents.vendorPaymentId))
+    .leftJoin(purchaseReturns, eq(purchaseReturns.id, documents.purchaseReturnId))
     .leftJoin(users, eq(users.id, documents.uploadedBy))
     .where(and(eq(documents.id, id), visibleTo(user)));
   return row ?? null;

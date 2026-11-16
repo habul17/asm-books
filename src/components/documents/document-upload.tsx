@@ -11,6 +11,7 @@ import {
   DOCUMENT_FOLDERS,
   DOCUMENT_MAX_BYTES,
   type DocumentFolder,
+  linkParts,
   type DocumentLink,
 } from "@/lib/documents/documents";
 
@@ -65,8 +66,8 @@ export function DocumentUpload({
         form.set("name", original.name);
         form.set("folder", folder);
         if (ownerOnly && canHide) form.set("ownerOnly", "on");
-        if (link && "billId" in link) form.set("billId", String(link.billId));
-        else if (link) form.set("expenseId", String(link.expenseId));
+        const linked = linkParts(link ?? null);
+        if (linked) form.set(linked[0], String(linked[1]));
         try {
           const result = await uploadDocument(form);
           if (result.error) problems.push(`${original.name}: ${result.error}`);

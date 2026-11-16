@@ -79,8 +79,11 @@ export function BillEditor({
   cancelHref,
   printedTotal = null,
   scannedSupplier = null,
+  scanDocumentId,
   kind = "bill",
 }: {
+  /** The scanned paper kept for Documents, attached to the bill when it is saved. */
+  scanDocumentId?: number;
   kind?: "bill" | "order";
   initial: BillDraft;
   sellerState: string | null;
@@ -197,6 +200,7 @@ export function BillEditor({
             fromOrderId: initial.fromOrderId,
             notes,
             lines: items,
+            scanDocumentId,
           });
       if (result?.error) setError(result.error);
     });

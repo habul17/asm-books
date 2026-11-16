@@ -6,6 +6,8 @@ import { z } from "zod";
 export const DOCUMENT_FOLDERS = {
   bills: "Purchase bills",
   receipts: "Expense receipts",
+  payments: "Payment slips",
+  returns: "Return slips",
   bank: "Bank",
   tax: "GST and tax",
   staff: "Staff",
@@ -101,17 +103,25 @@ export function parseDocumentDetails(form: FormData): { value: DocumentDetails; 
   return { value: parsed.data as DocumentDetails };
 }
 
-/** The record a document is attached to, if any. */
-export type DocumentLink = { billId: number } | { expenseId: number } | null;
+/** The kinds of record a document can be attached to, as their id field. */
+export const DOCUMENT_LINK_KEYS = ["billId", "expenseId", "paymentId", "vendorPaymentId", "purchaseReturnId"] as const;
+export type DocumentLinkKey = (typeof DOCUMENT_LINK_KEYS)[number];
+
+/** The record a document is attached to, if any: one id field, such as `{ billId: 12 }`. */
+export type DocumentLink = { [K in DocumentLinkKey]: { [P in K]: number } }[DocumentLinkKey] | null;
+
+/** The link as a field name and id, or null when not attached. */
+export function linkParts(link: DocumentLink): [DocumentLinkKey, number] | null {
+  if (!link) return null;
+  const key = DOCUMENT_LINK_KEYS.find((k) => k in link);
+  return key ? [key, (link as Record<string, number>)[key]] : null;
+}
 
 /** Reads the link sent with an upload. Anything unclear means "not attached". */
 export function parseDocumentLink(form: FormData): DocumentLink {
-  const id = (key: string) => {
+  for (const key of DOCUMENT_LINK_KEYS) {
     const n = Number(form.get(key));
-    return Number.isSafeInteger(n) && n > 0 ? n : null;
-  };
-  const billId = id("billId");
-  if (billId) return { billId };
-  const expenseId = id("expenseId");
-  return expenseId ? { expenseId } : null;
+    if (Number.isSafeInteger(n) && n > 0) return { [key]: n } as DocumentLink;
+  }
+  return null;
 }

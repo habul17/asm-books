@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { parseVendorPaymentInput } from "@/lib/payments/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanPaidSlip, type PaidSlipResult } from "@/server/bill-scan/payment-slip";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
@@ -46,6 +47,8 @@ export async function saveVendorPayment(id: number | null, _prev: ActionState, f
   } catch (err) {
     return failure("save", err);
   }
+  // A scanned paper used to fill the form is attached to what was saved.
+  await claimScan(scanIdOf(formData), { vendorPaymentId: savedId }, user);
   redirect(`/payments-made/${savedId}`);
 }
 
@@ -67,8 +70,8 @@ export async function cancelVendorPaymentAction(id: number, _prev: ActionState, 
 
 /** Reads a UPI screenshot, bank slip or cheque photo of money paid and returns values to check. Nothing is saved. */
 export async function scanSlipAction(formData: FormData): Promise<ScanAnswer<PaidSlipResult>> {
-  await requireUser();
-  return scanUpload(formData, "payment slip", scanPaidSlip);
+  const user = await requireUser();
+  return scanUpload(formData, "payment slip", scanPaidSlip, { user, folder: "payments", title: "Payment made slip" });
 }
 
 /** Deletes it for good, then goes back to the list. Owner only. */

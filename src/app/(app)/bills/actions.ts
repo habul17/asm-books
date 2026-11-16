@@ -12,6 +12,7 @@ import { parseBillInput } from "@/lib/bills/validation";
 import { parseProduct } from "@/lib/catalogue/product-validation";
 import { parseVendor } from "@/lib/vendors/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanBill, type BillScanResult } from "@/server/bill-scan";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { BillInputError, cancelBill, createBill, updateBill, deleteBill } from "@/server/bill-writes";
@@ -49,6 +50,8 @@ export async function saveBill(id: number | null, input: unknown): Promise<Actio
   } catch (err) {
     return failure("save", err);
   }
+  // A scanned paper used to fill the form is attached to what was saved.
+  await claimScan(scanIdOf(input), { billId: savedId }, user);
   redirect(`/bills/${savedId}`);
 }
 
@@ -73,8 +76,8 @@ export async function cancelBillAction(id: number, _prev: ActionState, formData:
  * Nothing is saved, and the file is not kept.
  */
 export async function scanBillAction(formData: FormData): Promise<ScanAnswer<BillScanResult>> {
-  await requireUser();
-  return scanUpload(formData, "bill", (file) => scanBill(file));
+  const user = await requireUser();
+  return scanUpload(formData, "bill", (file) => scanBill(file), { user, folder: "bills", title: "Bill scan" });
 }
 
 // Adding what a scanned bill names but the app does not know yet, without leaving the bill.

@@ -75,6 +75,7 @@ export function PurchaseReturnForm({
   const [lines, setLines] = useState<Line[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scanWarnings, setScanWarnings] = useState<string[] | null>(null);
+  const [scanDocumentId, setScanDocumentId] = useState<number | undefined>();
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
 
@@ -90,8 +91,9 @@ export function PurchaseReturnForm({
   };
 
   /** Rows read from a slip replace the list; a vendor read from it is kept only when none is chosen. */
-  const applyScan = (scan: PurchaseReturnScanResult) => {
+  const applyScan = (scan: PurchaseReturnScanResult, keptId?: number) => {
     setError(null);
+    setScanDocumentId(keptId);
     setScanWarnings(scan.warnings);
     if (scan.vendor && !vendor) setVendor(scan.vendor);
     setLines(scan.rows.map((item) => ({ ...lineOf(item), qty: String(item.qty) })));
@@ -125,6 +127,7 @@ export function PurchaseReturnForm({
           discountPct: 0,
           gstRate: l.gstRate,
         })),
+        scanDocumentId,
       });
       if (result?.error) setError(result.error);
     });
@@ -139,6 +142,7 @@ export function PurchaseReturnForm({
       }}
     >
       <ScanBox
+        keep
         ready={scanReady}
         noun="return slip"
         say="the supplier, and each part going back with how many"

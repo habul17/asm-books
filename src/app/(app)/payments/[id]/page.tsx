@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
 import { getPayment } from "@/server/payments";
 import { getBusiness } from "@/server/settings";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Payment" };
@@ -58,6 +59,7 @@ async function Payment({ params }: { params: PageProps<"/payments/[id]">["params
 
       <PaymentReceipt payment={payment} business={business} />
 
+      <DocumentAttachments link={{ paymentId: payment.id }} folder="payments" hint="Keep a photo of the payment screenshot or slip here." />
       <OwnerOnlyBlock>
         <div className="flex flex-col gap-3">
           {final && <CancelPaymentForm id={payment.id} />}

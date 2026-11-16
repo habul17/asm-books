@@ -18,6 +18,8 @@ interface Scanned {
   printedTotal: number | null;
   warnings: string[];
   flagged: number;
+  /** The copy of the paper kept for Documents, attached when the bill is saved. */
+  keptId?: number;
   /** The supplier as printed, when they are not a saved vendor. */
   supplier: { name: string | null; gstin: string | null } | null;
 }
@@ -42,12 +44,13 @@ export function NewBillWorkspace({
   const [scanned, setScanned] = useState<Scanned | null>(null);
   const isOrder = kind === "order";
 
-  const applyScan = (scan: BillScanResult) =>
+  const applyScan = (scan: BillScanResult, keptId?: number) =>
     setScanned((previous) => {
       const version = (previous?.version ?? 0) + 1;
       const vendor = scan.vendor ?? initial.vendor;
       return {
         version,
+        keptId,
         printedTotal: scan.printedTotal,
         warnings: isOrder ? scan.warnings.filter((w) => !BILL_ONLY.test(w)) : scan.warnings,
         flagged: scan.lines.filter((l) => l.flags.length > 0).length,
@@ -102,6 +105,7 @@ export function NewBillWorkspace({
         cancelHref={cancelHref}
         printedTotal={scanned?.printedTotal ?? null}
         scannedSupplier={scanned?.supplier ?? null}
+        scanDocumentId={scanned?.keptId}
       />
     </div>
   );

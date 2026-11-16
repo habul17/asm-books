@@ -54,33 +54,35 @@ function fromReceipt(base: ExpenseFormValues, r: ReceiptScanResult): ExpenseForm
 }
 
 export function ExpenseForm({ scanReady = false, ...props }: FormProps & { scanReady?: boolean }) {
-  const [scanned, setScanned] = useState<{ n: number; values: ExpenseFormValues; warnings: string[] } | null>(null);
+  const [scanned, setScanned] = useState<{ n: number; values: ExpenseFormValues; warnings: string[]; keptId?: number } | null>(null);
   if (props.id != null) return <ExpenseFields {...props} />;
   return (
     <div className="flex flex-col gap-5">
       <ScanBox
+        keep
         ready={scanReady}
         noun="receipt"
         say="what was paid for, how much, and to whom"
         help="Take a photo of the receipt (fuel, EB, rent, courier…). The form below is filled in for you to check."
         action={scanReceiptAction}
-        onScan={(r: ReceiptScanResult) =>
-          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, values: fromReceipt(props.initial, r), warnings: r.warnings }))
+        onScan={(r: ReceiptScanResult, keptId?: number) =>
+          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, keptId, values: fromReceipt(props.initial, r), warnings: r.warnings }))
         }
       />
       {scanned && <ScanWarnings warnings={scanned.warnings} />}
       {/* A new key starts the form again with the scanned values. */}
-      <ExpenseFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} />
+      <ExpenseFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} scanDocumentId={scanned?.keptId} />
     </div>
   );
 }
 
-function ExpenseFields({ id, initial, categories, vendors, backHref }: FormProps) {
+function ExpenseFields({ id, initial, categories, vendors, backHref, scanDocumentId }: FormProps & { scanDocumentId?: number }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(saveExpense.bind(null, id));
   const [vendorId, setVendorId] = useState(initial.vendorId == null ? "" : String(initial.vendorId));
 
   return (
     <form onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-5">
+      {scanDocumentId != null && <input type="hidden" name="scanDocumentId" value={scanDocumentId} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Category" htmlFor="e-category">
           <Input

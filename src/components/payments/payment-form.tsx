@@ -58,28 +58,29 @@ function slipWarnings(base: FormProps["initial"], r: Parameters<typeof fromSlip>
 }
 
 export function PaymentForm({ scanReady = false, ...props }: FormProps & { scanReady?: boolean }) {
-  const [scanned, setScanned] = useState<{ n: number; values: PaymentFormValues; warnings: string[] } | null>(null);
+  const [scanned, setScanned] = useState<{ n: number; values: PaymentFormValues; warnings: string[]; keptId?: number } | null>(null);
   if (props.id != null) return <PaymentFields {...props} />;
   return (
     <div className="flex flex-col gap-5">
       <ScanBox
+        keep
         ready={scanReady}
         noun="payment slip"
         say="who paid, how much, and how (UPI, cash, cheque)"
         help="Take a screenshot of the UPI payment or a photo of the cheque or bank slip. The form below is filled in for you to check."
         action={scanSlipAction}
-        onScan={(r: ReceivedSlipResult) =>
-          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, values: fromSlip(props.initial, r), warnings: slipWarnings(props.initial, r) }))
+        onScan={(r: ReceivedSlipResult, keptId?: number) =>
+          setScanned((prev) => ({ n: (prev?.n ?? 0) + 1, keptId, values: fromSlip(props.initial, r), warnings: slipWarnings(props.initial, r) }))
         }
       />
       {scanned && <ScanWarnings warnings={scanned.warnings} />}
       {/* A new key starts the form again with the scanned values. */}
-      <PaymentFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} />
+      <PaymentFields key={scanned?.n ?? 0} {...props} initial={scanned?.values ?? props.initial} scanDocumentId={scanned?.keptId} />
     </div>
   );
 }
 
-function PaymentFields({ id, initial, backHref }: FormProps) {
+function PaymentFields({ id, initial, backHref, scanDocumentId }: FormProps & { scanDocumentId?: number }) {
   const { state, pending, onSubmit, onChange, dirty } = useSaveForm(savePayment.bind(null, id));
   const [customer, setCustomer] = useState(initial.customer);
   const [amount, setAmount] = useState(initial.amount == null ? "" : String(initial.amount));
@@ -93,6 +94,7 @@ function PaymentFields({ id, initial, backHref }: FormProps) {
 
   return (
     <form onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-5">
+      {scanDocumentId != null && <input type="hidden" name="scanDocumentId" value={scanDocumentId} />}
       <input type="hidden" name="customerId" value={customer?.id ?? ""} />
 
       <div className="flex flex-col gap-1.5">

@@ -76,6 +76,9 @@ describe("parseDocumentLink", () => {
   it("reads one link at most", () => {
     expect(parseDocumentLink(form({ billId: "12" }))).toEqual({ billId: 12 });
     expect(parseDocumentLink(form({ expenseId: "7" }))).toEqual({ expenseId: 7 });
+    expect(parseDocumentLink(form({ paymentId: "3" }))).toEqual({ paymentId: 3 });
+    expect(parseDocumentLink(form({ vendorPaymentId: "4" }))).toEqual({ vendorPaymentId: 4 });
+    expect(parseDocumentLink(form({ purchaseReturnId: "5" }))).toEqual({ purchaseReturnId: 5 });
     expect(parseDocumentLink(form({ billId: "-1", expenseId: "abc" }))).toBeNull();
     expect(parseDocumentLink(form({}))).toBeNull();
   });

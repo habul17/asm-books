@@ -31,6 +31,9 @@ export function DocumentRows({ items }: { items: DocumentListItem[] }) {
                 {folderName(d.folder)} · {formatDate(d.docDate ?? addedOn(d.createdAt))}
                 {d.billNo && <> · bill {d.billNo}</>}
                 {d.expenseNumber && <> · expense {d.expenseNumber}</>}
+                {d.paymentNumber && <> · payment {d.paymentNumber}</>}
+                {d.vendorPaymentNumber && <> · payment made {d.vendorPaymentNumber}</>}
+                {d.purchaseReturnNumber && <> · return {d.purchaseReturnNumber}</>}
               </span>
               <span className="text-right text-xs text-muted-foreground">{d.uploadedByName}</span>
             </Link>

@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VendorBalance } from "@/components/vendors/vendor-balance";
 import { getBusiness } from "@/server/settings";
 import { getVendorPayment } from "@/server/vendor-payments";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { OwnerOnlyBlock } from "@/components/layout/owner-gate";
 
 export const metadata: Metadata = { title: "Payment made" };
@@ -57,6 +58,7 @@ async function Payment({ params }: { params: PageProps<"/payments-made/[id]">["p
 
       <PaymentVoucher payment={payment} business={business} />
 
+      <DocumentAttachments link={{ vendorPaymentId: payment.id }} folder="payments" hint="Keep a photo of the payment screenshot or receipt here." />
       <OwnerOnlyBlock>
         <div className="flex flex-col gap-3">
           {final && <CancelVendorPaymentForm id={payment.id} />}

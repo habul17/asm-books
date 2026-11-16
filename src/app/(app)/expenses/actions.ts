@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { parseExpenseInput } from "@/lib/expenses/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanReceipt, type ReceiptScanResult } from "@/server/bill-scan/receipt";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import {
@@ -46,6 +47,8 @@ export async function saveExpense(id: number | null, _prev: ActionState, formDat
   } catch (err) {
     return failure("save", err);
   }
+  // A scanned paper used to fill the form is attached to what was saved.
+  await claimScan(scanIdOf(formData), { expenseId: savedId }, user);
   redirect(`/expenses/${savedId}`);
 }
 
@@ -67,8 +70,8 @@ export async function cancelExpenseAction(id: number, _prev: ActionState, formDa
 
 /** Reads a photo or PDF of an expense receipt and returns values to check. Nothing is saved. */
 export async function scanReceiptAction(formData: FormData): Promise<ScanAnswer<ReceiptScanResult>> {
-  await requireUser();
-  return scanUpload(formData, "receipt", scanReceipt);
+  const user = await requireUser();
+  return scanUpload(formData, "receipt", scanReceipt, { user, folder: "receipts", title: "Receipt scan" });
 }
 
 /** Deletes it for good, then goes back to the list. Owner only. */

@@ -2,20 +2,20 @@ import { Suspense } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTip } from "@/components/ui/info-tip";
-import type { DocumentFolder } from "@/lib/documents/documents";
+import type { DocumentFolder, DocumentLink } from "@/lib/documents/documents";
 import { searchDocuments } from "@/server/documents";
 
 import { DocumentRows } from "./document-list";
 import { DocumentUpload } from "./document-upload";
 
-type Link = { billId: number } | { expenseId: number };
+type Link = NonNullable<DocumentLink>;
 
 async function Attached({ link }: { link: Link }) {
   const { items } = await searchDocuments({ query: "", folder: "all", ...link }, 50);
   return items.length > 0 ? <DocumentRows items={items} /> : null;
 }
 
-/** The scanned papers attached to a bill or an expense, with a button to add more. */
+/** The scanned papers attached to a record (bill, expense, payment, return), with a button to add more. */
 export function DocumentAttachments({ link, folder, hint }: { link: Link; folder: DocumentFolder; hint: string }) {
   return (
     <section aria-label="Attached files" className="flex flex-col gap-2 print:hidden">

@@ -1171,6 +1171,14 @@ export const documents = pgTable(
     ownerOnly: boolean("owner_only").notNull().default(false),
     billId: integer("bill_id").references(() => bills.id, { onDelete: "set null" }),
     expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "set null" }),
+    paymentId: integer("payment_id").references(() => payments.id, { onDelete: "set null" }),
+    vendorPaymentId: integer("vendor_payment_id").references(() => vendorPayments.id, { onDelete: "set null" }),
+    purchaseReturnId: integer("purchase_return_id").references(() => purchaseReturns.id, { onDelete: "set null" }),
+    /**
+     * A scanned file kept until the form it filled is saved. Hidden from lists; one
+     * never claimed by a save is removed a day later.
+     */
+    scanPending: boolean("scan_pending").notNull().default(false),
     uploadedBy: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },
@@ -1179,6 +1187,9 @@ export const documents = pgTable(
     index("documents_folder_idx").on(t.folder),
     index("documents_bill_idx").on(t.billId),
     index("documents_expense_idx").on(t.expenseId),
+    index("documents_payment_idx").on(t.paymentId),
+    index("documents_vendor_payment_idx").on(t.vendorPaymentId),
+    index("documents_purchase_return_idx").on(t.purchaseReturnId),
     check("documents_size_check", sql`${t.size} > 0`),
   ],
 );
