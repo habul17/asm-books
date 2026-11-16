@@ -10,6 +10,7 @@ import {
   invoices,
   priceLists,
   products,
+  recurringInvoices,
   salesDocs,
   stockMovements,
 } from "@/db/schema";
@@ -22,6 +23,7 @@ import { loadCustomFields } from "@/server/custom-fields";
 import { recordRecurringInvoice } from "@/server/recurring-writes";
 import { allocateSale, loadStockLots, saveSaleBatches } from "@/server/fifo";
 import { loadBusiness } from "@/server/settings";
+import { undoStockOf } from "@/server/stock-undo";
 
 import { purchasePriceAt } from "./product-search";
 
@@ -405,5 +407,72 @@ export async function cancelInvoice(id: number, reason: string, userId: number):
       note: existing.number,
       userId,
     });
+  });
+}
+
+/**
+ * Deletes an invoice for the owner. The newest invoice of its year is removed for
+ * good, so the next invoice takes its number and the series has no gap. An older
+ * one is cancelled (its stock comes back) and hidden everywhere; its number stays
+ * on record as cancelled, because GST wants invoice numbers without gaps.
+ * A quote, order or challan it was made from opens again.
+ */
+export async function deleteInvoice(id: number, userId: number): Promise<{ removed: boolean }> {
+  return withTransaction(async (tx) => {
+    const [inv] = await tx
+      .select({ id: invoices.id, number: invoices.number, fy: invoices.fy, seq: invoices.seq, status: invoices.status })
+      .from(invoices)
+      .where(and(eq(invoices.id, id), isNull(invoices.deletedAt)))
+      .for("update");
+    if (!inv) throw new InvoiceInputError("Invoice not found.");
+    const [returned] = await tx
+      .select({ number: creditNotes.number })
+      .from(creditNotes)
+      .where(and(eq(creditNotes.invoiceId, id), eq(creditNotes.status, "final")))
+      .limit(1);
+    if (returned) {
+      throw new InvoiceInputError(`Goods from this invoice were returned on credit note ${returned.number}. Cancel that credit note first.`);
+    }
+
+    await tx
+      .update(salesDocs)
+      .set({ status: "open", invoiceId: null })
+      .where(and(eq(salesDocs.invoiceId, id), eq(salesDocs.status, "closed")));
+
+    const [{ last }] = await tx
+      .select({ last: sql<number>`max(${invoices.seq})`.mapWith(Number) })
+      .from(invoices)
+      .where(eq(invoices.fy, inv.fy));
+    const [anyReturn] = await tx.select({ id: creditNotes.id }).from(creditNotes).where(eq(creditNotes.invoiceId, id)).limit(1);
+    const [repeats] = await tx
+      .select({ id: recurringInvoices.id })
+      .from(recurringInvoices)
+      .where(eq(recurringInvoices.invoiceId, id))
+      .limit(1);
+
+    if (inv.seq === last && !anyReturn && !repeats) {
+      // Sold pieces go back on the shelf; its FIFO batches go with its lines.
+      await undoStockOf(tx, "invoiceId", id, (m) => new InvoiceInputError(m));
+      await tx.delete(invoices).where(eq(invoices.id, id));
+      return { removed: true };
+    }
+
+    if (inv.status === "final") {
+      const lines = await tx
+        .select({ productId: invoiceLines.productId, qty: invoiceLines.qty })
+        .from(invoiceLines)
+        .where(eq(invoiceLines.invoiceId, id));
+      await moveStock(tx, qtyByProduct(lines), { kind: "sale_cancel", invoiceId: id, date: todayInIndia(), note: inv.number, userId });
+    }
+    await tx
+      .update(invoices)
+      .set({
+        status: "cancelled",
+        cancelledAt: inv.status === "final" ? new Date() : undefined,
+        cancelReason: inv.status === "final" ? "Deleted" : undefined,
+        deletedAt: new Date(),
+      })
+      .where(eq(invoices.id, id));
+    return { removed: false };
   });
 }

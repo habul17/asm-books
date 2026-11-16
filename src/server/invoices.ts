@@ -57,6 +57,7 @@ export async function searchInvoices(filters: InvoiceFilters, limit = INVOICE_LI
       ? await invoicesWithPayStatus(db, filters.status === "due" ? ["unpaid", "part-paid", "overdue"] : ["overdue"])
       : null;
   const conditions: (SQL | undefined)[] = [
+    isNull(invoices.deletedAt),
     filters.status === "final" || filters.status === "cancelled" ? eq(invoices.status, filters.status) : undefined,
     byPayment ? (byPayment.length ? inArray(invoices.id, byPayment) : sql`false`) : undefined,
     filters.customerId ? eq(invoices.customerId, filters.customerId) : undefined,

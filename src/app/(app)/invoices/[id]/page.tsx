@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
+import { deleteInvoiceAction } from "@/app/(app)/invoices/actions";
+import { DeleteButton } from "@/components/forms/delete-button";
 import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
 import { InvoiceBatches } from "@/components/invoices/invoice-batches";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
@@ -34,7 +36,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{inv.number}</span>
-          {!final && <Badge variant="destructive">cancelled</Badge>}
+          {!final && <Badge variant="destructive">{inv.deletedAt ? "deleted" : "cancelled"}</Badge>}
           {inv.pay && <PayBadge pay={inv.pay} />}
         </h1>
         {inv.pay && inv.pay.status !== "paid" && (
@@ -119,9 +121,20 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         />
       </div>
 
-      {final && (
+      {inv.deletedAt ? (
+        <p className="text-sm text-muted-foreground print:hidden">
+          This invoice was deleted. It is hidden from lists and reports; its number is kept as cancelled for GST.
+        </p>
+      ) : (
         <OwnerOnlyBlock>
-          <CancelInvoiceForm id={inv.id} />
+          <div className="flex flex-col gap-3">
+            {final && <CancelInvoiceForm id={inv.id} />}
+            <DeleteButton
+              noun="invoice"
+              action={deleteInvoiceAction.bind(null, inv.id)}
+              note="Stock comes back. Only the newest invoice is removed completely; an older one keeps its number as cancelled for GST."
+            />
+          </div>
         </OwnerOnlyBlock>
       )}
     </>

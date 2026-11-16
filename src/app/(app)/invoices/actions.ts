@@ -8,7 +8,7 @@ import { parseInvoiceInput } from "@/lib/invoices/validation";
 import { isOwner, requireUser } from "@/server/auth";
 import { scanOrder, type OrderScanResult } from "@/server/bill-scan/order";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
-import { cancelInvoice, createInvoice, InvoiceInputError, updateInvoice } from "@/server/invoice-writes";
+import { cancelInvoice, createInvoice, deleteInvoice, InvoiceInputError, updateInvoice } from "@/server/invoice-writes";
 import { pickCustomers, pickItems, priceItems } from "@/server/invoices";
 
 export interface ActionState {
@@ -59,6 +59,19 @@ export async function cancelInvoiceAction(id: number, _prev: ActionState, formDa
   }
   refresh();
   return { ok: true };
+}
+
+/** Deletes an invoice (see deleteInvoice for how the number is kept), then goes back to the list. Owner only. */
+export async function deleteInvoiceAction(id: number): Promise<ActionState & { href?: string }> {
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can delete. Please ask the owner." };
+  if (!idSchema.safeParse(id).success) return { error: "Invoice not found." };
+  try {
+    await deleteInvoice(id, user.id);
+  } catch (err) {
+    return failure("delete", err);
+  }
+  return { href: "/invoices" };
 }
 
 // Lookups for the invoice editor. They only read data.

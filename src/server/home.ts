@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
@@ -57,6 +57,7 @@ export async function getHomeSummary() {
         status: invoices.status,
       })
       .from(invoices)
+      .where(isNull(invoices.deletedAt))
       .orderBy(desc(invoices.createdAt), desc(invoices.id))
       .limit(5),
   ]);
