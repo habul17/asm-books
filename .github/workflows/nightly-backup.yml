@@ -1,0 +1,99 @@
+name: Nightly backup
+
+# Every night a full copy of the database is taken, checked, encrypted with
+# BACKUP_PASSPHRASE and uploaded to the owner's Google Drive. The newest
+# KEEP copies are kept there; older ones are deleted for good.
+# The repository is public, so the copy never leaves the runner unencrypted
+# and is never kept as a workflow artifact.
+# Setup and restore steps: docs/backups.md
+
+on:
+  schedule:
+    - cron: "30 20 * * *" # 02:00 India time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Back up database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      KEEP: 7
+      FOLDER: ASM Books backups
+      # rclone reads the Drive remote from these; drive.file only lets it see
+      # the files it created itself, never the rest of the Drive.
+      RCLONE_CONFIG_GDRIVE_TYPE: drive
+      RCLONE_CONFIG_GDRIVE_SCOPE: drive.file
+      RCLONE_CONFIG_GDRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
+    steps:
+      - name: Check secrets are set
+        id: check
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ] || [ -z "$RCLONE_CONFIG_GDRIVE_TOKEN" ]; then
+            echo "::warning::Nightly backup is not set up yet (BACKUP_DATABASE_URL, BACKUP_PASSPHRASE and GDRIVE_TOKEN secrets). See docs/backups.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PostgreSQL 18 client and rclone
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18 rclone
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: Dump, check and encrypt
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          name="asm-books-$(TZ=Asia/Kolkata date +%Y-%m-%d)"
+          pg_dump --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL" --file="$RUNNER_TEMP/$name.dump"
+          tables=$(pg_restore --list "$RUNNER_TEMP/$name.dump" | grep -c ' TABLE DATA ' || true)
+          if [ "$tables" -lt 10 ]; then
+            echo "::error::Backup looks incomplete ($tables tables)."
+            exit 1
+          fi
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "$RUNNER_TEMP/$name.dump.gpg" "$RUNNER_TEMP/$name.dump"
+          shred -u "$RUNNER_TEMP/$name.dump"
+          echo "BACKUP_FILE=$RUNNER_TEMP/$name.dump.gpg" >> "$GITHUB_ENV"
+          echo "Backed up $tables tables."
+
+      - name: Upload to Google Drive and remove old copies
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          dest="gdrive:$FOLDER"
+          # rclone checks the uploaded file's checksum; a failed upload stops here.
+          rclone copy "$BACKUP_FILE" "$dest" --quiet
+          rclone lsf "$dest" --files-only --include "$(basename "$BACKUP_FILE")" | grep -q . \
+            || { echo "::error::Upload to Google Drive could not be confirmed."; exit 1; }
+          shred -u "$BACKUP_FILE"
+          # Names carry the date, so sorting by name puts the newest first.
+          rclone lsf "$dest" --files-only --include "asm-books-*.dump.gpg" | sort -r | tail -n +"$((KEEP + 1))" |
+            while IFS= read -r old; do
+              rclone deletefile "$dest/$old" --drive-use-trash=false --quiet
+              echo "Removed $old"
+            done
+          echo "Copies kept: $(rclone lsf "$dest" --files-only --include "asm-books-*.dump.gpg" | wc -l)"
+
+      - name: Record the backup in the app
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          psql --dbname="$DATABASE_URL" --quiet --no-psqlrc -v ON_ERROR_STOP=1 -c \
+            "INSERT INTO settings (key, value) VALUES ('auto_backup', jsonb_build_object('at', now()))
+             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();"

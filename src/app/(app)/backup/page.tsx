@@ -43,6 +43,24 @@ async function Body() {
       </Card>
       <Card>
         <CardHeader>
+          <CardTitle>Automatic nightly backup</CardTitle>
+          <CardDescription>
+            Every night at 2 am a full, password-protected copy is saved to your Google Drive, in the folder ASM Books backups. The newest 7 are kept; older ones are deleted so Drive does not fill up.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm">
+          {info.lastAutoAt ? (
+            <p className={info.autoLate ? "text-destructive" : "text-muted-foreground"}>
+              Last nightly backup {formatDateTime(new Date(info.lastAutoAt))}.
+              {info.autoLate && " It has stopped running. Tell your developer."}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">Not set up yet. Your developer connects it to your Google Drive once.</p>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
           <CardTitle>Other safety nets</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">

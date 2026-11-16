@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, getTableColumns, getTableName, is } from "drizzle-orm";
+import { getTableColumns, getTableName, inArray, is } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
@@ -64,11 +64,18 @@ export function backupStream(user: CurrentUser): ReadableStream<Uint8Array> {
 export interface BackupInfo {
   lastDownloadAt: string | null;
   lastDownloadBy: string | null;
-  /** True when there is no download from the last 7 days. */
+  /** When the nightly backup last finished (written by the GitHub workflow), if it is set up. */
+  lastAutoAt?: string | null;
+  /** True when the nightly backup has missed a night or more. */
+  autoLate?: boolean;
+  /** True when there is no download from the last 7 days and no recent nightly backup. */
   stale?: boolean;
 }
 
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
+/** A nightly backup older than this means it has stopped running. */
+const AUTO_LATE_MS = 2 * 24 * 60 * 60 * 1000;
+const AUTO_BACKUP_KEY = "auto_backup";
 
 export async function recordBackupDownload(user: CurrentUser) {
   const value: BackupInfo = { lastDownloadAt: new Date().toISOString(), lastDownloadBy: user.name };
@@ -79,12 +86,21 @@ export async function recordBackupDownload(user: CurrentUser) {
 }
 
 export async function loadBackupInfo(): Promise<BackupInfo> {
-  const [row] = await getDb().select({ value: settings.value }).from(settings).where(eq(settings.key, BACKUP_KEY));
-  const v = (row?.value ?? {}) as Partial<BackupInfo>;
+  const rows = await getDb()
+    .select({ key: settings.key, value: settings.value })
+    .from(settings)
+    .where(inArray(settings.key, [BACKUP_KEY, AUTO_BACKUP_KEY]));
+  const v = (rows.find((r) => r.key === BACKUP_KEY)?.value ?? {}) as Partial<BackupInfo>;
+  const auto = (rows.find((r) => r.key === AUTO_BACKUP_KEY)?.value ?? {}) as { at?: unknown };
   const lastDownloadAt = typeof v.lastDownloadAt === "string" ? v.lastDownloadAt : null;
+  const lastAutoAt = typeof auto.at === "string" ? auto.at : null;
+  const age = (iso: string | null) => (iso ? Date.now() - new Date(iso).getTime() : Infinity);
+  const autoLate = lastAutoAt != null && age(lastAutoAt) > AUTO_LATE_MS;
   return {
     lastDownloadAt,
     lastDownloadBy: typeof v.lastDownloadBy === "string" ? v.lastDownloadBy : null,
-    stale: !lastDownloadAt || Date.now() - new Date(lastDownloadAt).getTime() > STALE_MS,
+    lastAutoAt,
+    autoLate,
+    stale: age(lastDownloadAt) > STALE_MS && age(lastAutoAt) > AUTO_LATE_MS,
   };
 }
