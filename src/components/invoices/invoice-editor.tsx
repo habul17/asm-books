@@ -156,6 +156,12 @@ export function InvoiceEditor({
   // null follows the customer's state; "" is a sale to another state whose state is not chosen yet.
   const [supply, setSupply] = useState(initial.placeOfSupply);
   const [nonGst, setNonGst] = useState(kind === "invoice" && (initial.nonGst ?? false));
+  // Non-GST bills are priced by a markup typed here instead of a price list.
+  const [markup, setMarkup] = useState("");
+  const markupPct = (() => {
+    const n = num(markup);
+    return nonGst && n != null && n >= 0 && n <= 1000 ? n : null;
+  })();
   const [notes, setNotes] = useState(initial.notes);
   const [extra, setExtra] = useState(initial.extra);
   const [lines, setLines] = useState(initial.lines);
@@ -215,6 +221,9 @@ export function InvoiceEditor({
 
   const addItem = (item: PickedItem) => {
     touch();
+    if (markupPct != null && !lines.some((l) => l.productId === item.id)) {
+      void repriceLines([lineFromItem(item)], null, markupPct);
+    }
     setLines((ls) => {
       const same = ls.find((l) => l.productId === item.id);
       if (same) {
@@ -249,11 +258,16 @@ export function InvoiceEditor({
   const changePriceList = async (listId: number | null) => {
     touch();
     setPriceListId(listId);
-    const ids = lines.filter((l) => l.productId != null && !l.rateEdited).map((l) => l.productId as number);
+    await repriceLines(lines, listId, null);
+  };
+
+  /** Prices the rows not typed by hand from a price list, or from purchase price + `markupPct` when it is given. */
+  const repriceLines = async (current: EditorLine[], listId: number | null, markupPct: number | null) => {
+    const ids = current.filter((l) => l.productId != null && !l.rateEdited).map((l) => l.productId as number);
     if (!ids.length) return;
     setRepricing(true);
     try {
-      const items = new Map((await repriceItems(ids, listId)).map((p) => [p.id, p]));
+      const items = new Map((await repriceItems(ids, listId, markupPct)).map((p) => [p.id, p]));
       setLines((ls) =>
         withFifoRates(
           ls.map((l) => {
@@ -327,7 +341,7 @@ export function InvoiceEditor({
       customerId: isWalkIn ? null : (customer?.id ?? null),
       walkInName: isWalkIn ? walkInName : "",
       walkInMobile: isWalkIn ? walkInMobile : "",
-      priceListId,
+      priceListId: nonGst ? null : priceListId,
       placeOfSupply: supply,
       notes,
       lines: lines.map((l) => ({
@@ -547,7 +561,10 @@ export function InvoiceEditor({
                     checked={nonGst}
                     onChange={(e) => {
                       touch();
-                      setNonGst(e.target.checked);
+                      const on = e.target.checked;
+                      setNonGst(on);
+                      // Back to GST: the rows go back to the price list's prices.
+                      if (!on && markup.trim() !== "") void repriceLines(lines, priceListId, null);
                     }}
                   />
                   <span>
@@ -609,22 +626,54 @@ export function InvoiceEditor({
               )}
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="inv-list">Price list</Label>
-              <NativeSelect
-                id="inv-list"
-                className="w-full"
-                value={priceListId ?? ""}
-                disabled={repricing}
-                onChange={(e) => void changePriceList(e.target.value ? Number(e.target.value) : null)}
-              >
-                <NativeSelectOption value="">— No price list (list price) —</NativeSelectOption>
-                {options.priceLists.map((l) => (
-                  <NativeSelectOption key={l.id} value={l.id}>
-                    {l.name}
-                    {l.enabled ? "" : " (off)"}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              {nonGst ? (
+                <>
+                  <Label htmlFor="inv-markup">Markup %</Label>
+                  <Input
+                    id="inv-markup"
+                    inputMode="decimal"
+                    placeholder="e.g. 38"
+                    value={markup}
+                    disabled={repricing}
+                    aria-invalid={markup.trim() !== "" && markupPct == null}
+                    onChange={(e) => {
+                      touch();
+                      setMarkup(e.target.value);
+                    }}
+                    onBlur={() => {
+                      if (markupPct != null) void repriceLines(lines, null, markupPct);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (markupPct != null) void repriceLines(lines, null, markupPct);
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Rate = purchase price + this %. Rates you typed by hand stay.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Label htmlFor="inv-list">Price list</Label>
+                  <NativeSelect
+                    id="inv-list"
+                    className="w-full"
+                    value={priceListId ?? ""}
+                    disabled={repricing}
+                    onChange={(e) => void changePriceList(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <NativeSelectOption value="">— No price list (list price) —</NativeSelectOption>
+                    {options.priceLists.map((l) => (
+                      <NativeSelectOption key={l.id} value={l.id}>
+                        {l.name}
+                        {l.enabled ? "" : " (off)"}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                </>
+              )}
             </div>
           </div>
         </CardContent>

@@ -85,11 +85,12 @@ export async function findItems(query: unknown, priceListId: unknown) {
   return pickItems(typeof query === "string" ? query : "", list.success ? list.data : null);
 }
 
-export async function repriceItems(productIds: unknown, priceListId: unknown) {
+export async function repriceItems(productIds: unknown, priceListId: unknown, markupPct: unknown = null) {
   const ids = z.array(idSchema).max(300).safeParse(productIds);
   const list = listIdSchema.safeParse(priceListId);
-  if (!ids.success || !list.success) return [];
-  return priceItems(ids.data, list.data);
+  const markup = z.number().min(0).max(1000).nullable().safeParse(markupPct);
+  if (!ids.success || !list.success || !markup.success) return [];
+  return priceItems(ids.data, list.data, markup.data);
 }
 
 /**

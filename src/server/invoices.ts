@@ -17,7 +17,7 @@ import {
   users,
 } from "@/db/schema";
 import { shownExtra } from "@/lib/custom-fields";
-import { computePrice } from "@/lib/pricing";
+import { computePrice, type PriceRule } from "@/lib/pricing";
 import { priceSteps, rateForQty, type PriceStep } from "@/lib/stock/fifo";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
@@ -297,7 +297,7 @@ interface ItemRow {
  */
 function toPickedItem(
   p: ItemRow,
-  list: Awaited<ReturnType<typeof loadList>>,
+  list: PriceRule | null,
   defaultGstRate: number,
   stock: StockLots | undefined,
 ): PickedItem {
@@ -347,12 +347,15 @@ export async function pickItems(query: string, priceListId: number | null) {
 }
 
 /** Current prices of the given products in a price list, for re-pricing the lines of an invoice. */
-export async function priceItems(productIds: number[], priceListId: number | null) {
+export async function priceItems(productIds: number[], priceListId: number | null, markupPct: number | null = null) {
   await requireUser();
   const ids = [...new Set(productIds)].filter((n) => Number.isSafeInteger(n) && n > 0).slice(0, 300);
   if (!ids.length) return [];
   const db = getDb();
-  const [list, business] = await Promise.all([loadList(priceListId), loadBusiness(db)]);
+  const [saved, business] = await Promise.all([markupPct == null ? loadList(priceListId) : null, loadBusiness(db)]);
+  // A markup typed on the bill: purchase price (first in, first out) plus that %, to the paisa, no fixed prices.
+  const list: (PriceRule & { id: number }) | null =
+    markupPct == null ? saved : { id: 0, base: "purchase", adjustType: "markup", adjustPct: markupPct, discountPct: 0, roundTo: 0 };
   const rows = await db
     .select(itemColumns(list?.id ?? 0))
     .from(products)
