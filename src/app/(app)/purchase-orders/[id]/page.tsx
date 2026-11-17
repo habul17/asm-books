@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { PrintButton } from "@/components/invoices/invoice-actions";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { PurchaseOrderStatusBadge } from "@/components/purchase-orders/purchase-order-list";
 import { deletePurchaseOrderAction } from "@/app/(app)/purchase-orders/actions";
@@ -75,6 +76,12 @@ async function Order({ params }: { params: PageProps<"/purchase-orders/[id]">["p
         createdAt={order.createdAt}
         details={order.expectedDate ? [{ label: "Expected By", value: formatDate(order.expectedDate) }] : []}
         showBank={false}
+      />
+
+      <DocumentAttachments
+        link={{ purchaseOrderId: order.id }}
+        folder="purchase_orders"
+        hint="The parts list or supplier's quotation this order was made from."
       />
 
       <PurchaseOrderStatusButtons

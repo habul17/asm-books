@@ -4,7 +4,18 @@ import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { bills, documentFiles, documents, expenses, payments, purchaseReturns, users, vendorPayments } from "@/db/schema";
+import {
+  bills,
+  documentFiles,
+  documents,
+  expenses,
+  invoices,
+  payments,
+  purchaseOrders,
+  purchaseReturns,
+  users,
+  vendorPayments,
+} from "@/db/schema";
 import { DOCUMENT_STORAGE_LIMIT, type DocumentFolder } from "@/lib/documents/documents";
 import { isOwner, requireUser, type CurrentUser } from "@/server/auth";
 
@@ -20,6 +31,8 @@ export interface DocumentFilters {
   paymentId?: number | null;
   vendorPaymentId?: number | null;
   purchaseReturnId?: number | null;
+  invoiceId?: number | null;
+  purchaseOrderId?: number | null;
 }
 
 /** Staff never see documents marked "owner only". */
@@ -45,6 +58,10 @@ const listColumns = {
   vendorPaymentNumber: vendorPayments.number,
   purchaseReturnId: documents.purchaseReturnId,
   purchaseReturnNumber: purchaseReturns.number,
+  invoiceId: documents.invoiceId,
+  invoiceNumber: invoices.number,
+  purchaseOrderId: documents.purchaseOrderId,
+  purchaseOrderNumber: purchaseOrders.number,
   uploadedByName: users.name,
   createdAt: documents.createdAt,
 };
@@ -62,6 +79,8 @@ export async function searchDocuments(filters: DocumentFilters, limit = DOCUMENT
     filters.paymentId ? eq(documents.paymentId, filters.paymentId) : undefined,
     filters.vendorPaymentId ? eq(documents.vendorPaymentId, filters.vendorPaymentId) : undefined,
     filters.purchaseReturnId ? eq(documents.purchaseReturnId, filters.purchaseReturnId) : undefined,
+    filters.invoiceId ? eq(documents.invoiceId, filters.invoiceId) : undefined,
+    filters.purchaseOrderId ? eq(documents.purchaseOrderId, filters.purchaseOrderId) : undefined,
     // A scan whose form was never saved is not a document yet.
     eq(documents.scanPending, false),
   ];
@@ -81,6 +100,8 @@ export async function searchDocuments(filters: DocumentFilters, limit = DOCUMENT
       .leftJoin(payments, eq(payments.id, documents.paymentId))
       .leftJoin(vendorPayments, eq(vendorPayments.id, documents.vendorPaymentId))
       .leftJoin(purchaseReturns, eq(purchaseReturns.id, documents.purchaseReturnId))
+      .leftJoin(invoices, eq(invoices.id, documents.invoiceId))
+      .leftJoin(purchaseOrders, eq(purchaseOrders.id, documents.purchaseOrderId))
       .leftJoin(users, eq(users.id, documents.uploadedBy))
       .where(where)
       .orderBy(desc(documents.createdAt), desc(documents.id))
@@ -104,6 +125,8 @@ export async function getDocument(id: number) {
     .leftJoin(payments, eq(payments.id, documents.paymentId))
     .leftJoin(vendorPayments, eq(vendorPayments.id, documents.vendorPaymentId))
     .leftJoin(purchaseReturns, eq(purchaseReturns.id, documents.purchaseReturnId))
+    .leftJoin(invoices, eq(invoices.id, documents.invoiceId))
+    .leftJoin(purchaseOrders, eq(purchaseOrders.id, documents.purchaseOrderId))
     .leftJoin(users, eq(users.id, documents.uploadedBy))
     .where(and(eq(documents.id, id), visibleTo(user)));
   return row ?? null;

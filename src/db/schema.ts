@@ -1180,6 +1180,10 @@ export const documents = pgTable(
     paymentId: integer("payment_id").references(() => payments.id, { onDelete: "set null" }),
     vendorPaymentId: integer("vendor_payment_id").references(() => vendorPayments.id, { onDelete: "set null" }),
     purchaseReturnId: integer("purchase_return_id").references(() => purchaseReturns.id, { onDelete: "set null" }),
+    /** A customer's order chit scanned into this invoice. */
+    invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    /** A parts list or quotation scanned into this purchase order. */
+    purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
     /**
      * A scanned file kept until the form it filled is saved. Hidden from lists; one
      * never claimed by a save is removed a day later.
@@ -1196,6 +1200,8 @@ export const documents = pgTable(
     index("documents_payment_idx").on(t.paymentId),
     index("documents_vendor_payment_idx").on(t.vendorPaymentId),
     index("documents_purchase_return_idx").on(t.purchaseReturnId),
+    index("documents_invoice_idx").on(t.invoiceId),
+    index("documents_purchase_order_idx").on(t.purchaseOrderId),
     check("documents_size_check", sql`${t.size} > 0`),
   ],
 );

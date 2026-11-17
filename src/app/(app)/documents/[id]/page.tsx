@@ -83,6 +83,22 @@ async function Document({ params }: { params: PageProps<"/documents/[id]">["para
             </Link>
           </span>
         )}
+        {doc.invoiceId != null && doc.invoiceNumber && (
+          <span>
+            Invoice{" "}
+            <Link href={`/invoices/${doc.invoiceId}`} className="font-mono font-medium text-foreground hover:underline">
+              {doc.invoiceNumber}
+            </Link>
+          </span>
+        )}
+        {doc.purchaseOrderId != null && doc.purchaseOrderNumber && (
+          <span>
+            Purchase order{" "}
+            <Link href={`/purchase-orders/${doc.purchaseOrderId}`} className="font-mono font-medium text-foreground hover:underline">
+              {doc.purchaseOrderNumber}
+            </Link>
+          </span>
+        )}
       </p>
 
       {isPdf ? (

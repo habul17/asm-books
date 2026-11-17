@@ -1,6 +1,7 @@
 "use client";
 
 import { scanBillAction } from "@/app/(app)/bills/actions";
+import { scanOrderListAction } from "@/app/(app)/purchase-orders/actions";
 import { ScanBox } from "@/components/forms/scan-box";
 import type { BillScanResult } from "@/server/bill-scan";
 
@@ -20,12 +21,13 @@ export function BillScanBox({
   if (kind === "order")
     return (
       <ScanBox
+        keep
         ready={ready}
         noun="list"
         say="the supplier, and each part with how many to order"
         help="Take a photo of a handwritten parts list or the supplier’s quotation. The order below is filled in for you to check."
         waitHelp="This can take 1 to 3 minutes for a long list. Please keep this screen open."
-        action={scanBillAction}
+        action={scanOrderListAction}
         onScan={onScan}
       />
     );

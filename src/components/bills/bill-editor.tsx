@@ -188,6 +188,7 @@ export function BillEditor({
             expectedDate: dueDate || null,
             notes,
             lines: items,
+            scanDocumentId,
           })
         : await saveBill(initial.id, {
             vendorId: vendor.id,

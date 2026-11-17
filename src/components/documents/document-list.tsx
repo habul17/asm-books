@@ -34,6 +34,8 @@ export function DocumentRows({ items }: { items: DocumentListItem[] }) {
                 {d.paymentNumber && <> · payment {d.paymentNumber}</>}
                 {d.vendorPaymentNumber && <> · payment made {d.vendorPaymentNumber}</>}
                 {d.purchaseReturnNumber && <> · return {d.purchaseReturnNumber}</>}
+                {d.invoiceNumber && <> · invoice {d.invoiceNumber}</>}
+                {d.purchaseOrderNumber && <> · order {d.purchaseOrderNumber}</>}
               </span>
               <span className="text-right text-xs text-muted-foreground">{d.uploadedByName}</span>
             </Link>

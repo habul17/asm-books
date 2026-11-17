@@ -3,7 +3,17 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 
 import { withTransaction } from "@/db";
-import { bills, documentFiles, documents, expenses, payments, purchaseReturns, vendorPayments } from "@/db/schema";
+import {
+  bills,
+  documentFiles,
+  documents,
+  expenses,
+  invoices,
+  payments,
+  purchaseOrders,
+  purchaseReturns,
+  vendorPayments,
+} from "@/db/schema";
 import {
   DOCUMENT_STORAGE_LIMIT,
   formatBytes,
@@ -43,6 +53,8 @@ const LINKED_TABLES = {
   paymentId: { table: payments, noun: "Payment" },
   vendorPaymentId: { table: vendorPayments, noun: "Payment" },
   purchaseReturnId: { table: purchaseReturns, noun: "Purchase return" },
+  invoiceId: { table: invoices, noun: "Invoice" },
+  purchaseOrderId: { table: purchaseOrders, noun: "Purchase order" },
 } as const;
 
 /** The link as document columns, after checking the record exists. */
@@ -89,6 +101,13 @@ export function scanIdOf(source: unknown): number | null {
         : null;
   const n = Number(raw);
   return raw != null && raw !== "" && Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** Every kept scan a form sends back: `scanDocumentIds` (several scans added up) and `scanDocumentId`. */
+export function scanIdsOf(source: unknown): number[] {
+  const many = source && typeof source === "object" && !(source instanceof FormData) ? (source as Record<string, unknown>).scanDocumentIds : null;
+  const ids = (Array.isArray(many) ? many.slice(0, 20) : []).map((raw) => scanIdOf({ scanDocumentId: raw }));
+  return [...new Set([...ids, scanIdOf(source)].filter((n): n is number => n != null))];
 }
 
 /** Removes scans that were never saved with a form. */

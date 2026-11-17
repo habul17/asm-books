@@ -8,6 +8,8 @@ export const DOCUMENT_FOLDERS = {
   receipts: "Expense receipts",
   payments: "Payment slips",
   returns: "Return slips",
+  orders: "Customer orders",
+  purchase_orders: "Purchase orders",
   bank: "Bank",
   tax: "GST and tax",
   staff: "Staff",
@@ -104,7 +106,15 @@ export function parseDocumentDetails(form: FormData): { value: DocumentDetails; 
 }
 
 /** The kinds of record a document can be attached to, as their id field. */
-export const DOCUMENT_LINK_KEYS = ["billId", "expenseId", "paymentId", "vendorPaymentId", "purchaseReturnId"] as const;
+export const DOCUMENT_LINK_KEYS = [
+  "billId",
+  "expenseId",
+  "paymentId",
+  "vendorPaymentId",
+  "purchaseReturnId",
+  "invoiceId",
+  "purchaseOrderId",
+] as const;
 export type DocumentLinkKey = (typeof DOCUMENT_LINK_KEYS)[number];
 
 /** The record a document is attached to, if any: one id field, such as `{ billId: 12 }`. */

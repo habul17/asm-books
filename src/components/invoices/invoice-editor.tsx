@@ -170,6 +170,8 @@ export function InvoiceEditor({
   const [saving, startSaving] = useTransition();
   const [repricing, setRepricing] = useState(false);
   const [scanWarnings, setScanWarnings] = useState<string[] | null>(null);
+  // Order chits read into this invoice, kept for Documents once it is saved.
+  const [scanDocumentIds, setScanDocumentIds] = useState<number[]>([]);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
   const touch = () => setDirty(true);
@@ -294,8 +296,9 @@ export function InvoiceEditor({
   };
 
   /** Rows read from a customer's order are added to the bill; the same part adds to its row. */
-  const addScannedOrder = (scan: OrderScanResult) => {
+  const addScannedOrder = (scan: OrderScanResult, keptId?: number) => {
     touch();
+    if (keptId != null) setScanDocumentIds((ids) => [...ids, keptId]);
     setScanWarnings(scan.warnings);
     if (scan.customer) {
       setMode("customer");
@@ -361,6 +364,7 @@ export function InvoiceEditor({
               paymentType: effectivePayment,
               cashMode,
               nonGst,
+              scanDocumentIds,
               extra,
               fromDocId: initial.fromDocId ?? null,
               repeatId: initial.repeatId ?? null,
@@ -379,6 +383,7 @@ export function InvoiceEditor({
     <div className="flex flex-col gap-4">
       {initial.id == null && (
         <ScanBox
+          keep={kind === "invoice"}
           ready={options.scanReady}
           noun="order"
           say="the customer, then each part and how many"

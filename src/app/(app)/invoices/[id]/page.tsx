@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
+import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { deleteInvoiceAction } from "@/app/(app)/invoices/actions";
 import { DeleteButton } from "@/components/forms/delete-button";
 import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
@@ -104,6 +105,12 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       />
 
       {final && <InvoiceBatches inv={inv} />}
+
+      <DocumentAttachments
+        link={{ invoiceId: inv.id }}
+        folder="orders"
+        hint="The customer's order chit or WhatsApp list for this invoice."
+      />
 
       {final && (
         <TransportForm

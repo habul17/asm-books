@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { parseInvoiceInput } from "@/lib/invoices/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { claimScan, scanIdsOf } from "@/server/document-writes";
 import { scanOrder, type OrderScanResult } from "@/server/bill-scan/order";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { cancelInvoice, createInvoice, deleteInvoice, InvoiceInputError, updateInvoice } from "@/server/invoice-writes";
@@ -42,6 +43,7 @@ export async function saveInvoice(id: number | null, input: unknown): Promise<Ac
   } catch (err) {
     return failure("save", err);
   }
+  for (const scanId of scanIdsOf(input)) await claimScan(scanId, { invoiceId: savedId }, user);
   redirect(`/invoices/${savedId}`);
 }
 
@@ -102,10 +104,14 @@ export async function scanOrderAction(
   chosenCustomerId: unknown,
   formData: FormData,
 ): Promise<ScanAnswer<OrderScanResult>> {
-  await requireUser();
+  const user = await requireUser();
   const list = listIdSchema.safeParse(priceListId);
   const chosen = idSchema.safeParse(chosenCustomerId);
-  return scanUpload(formData, "order", (file) =>
-    scanOrder(file, { listId: list.success ? list.data : null, chosenCustomerId: chosen.success ? chosen.data : null }),
+  // Kept only when the browser sends a copy, which it does for invoices (not quotes, orders or challans).
+  return scanUpload(
+    formData,
+    "order",
+    (file) => scanOrder(file, { listId: list.success ? list.data : null, chosenCustomerId: chosen.success ? chosen.data : null }),
+    { user, folder: "orders", title: "Customer order chit" },
   );
 }

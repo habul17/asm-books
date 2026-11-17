@@ -6,6 +6,9 @@ import { z } from "zod";
 
 import { parsePurchaseOrderInput, PURCHASE_ORDER_STATUSES, type PurchaseOrderStatus } from "@/lib/purchase-orders/validation";
 import { isOwner, requireUser } from "@/server/auth";
+import { scanBill, type BillScanResult } from "@/server/bill-scan";
+import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
+import { claimScan, scanIdOf } from "@/server/document-writes";
 import { BillInputError } from "@/server/bill-writes";
 import { createPurchaseOrder, deletePurchaseOrder, setPurchaseOrderStatus, updatePurchaseOrder } from "@/server/purchase-order-writes";
 
@@ -39,7 +42,14 @@ export async function savePurchaseOrder(id: number | null, input: unknown): Prom
   } catch (err) {
     return failure("save", err);
   }
+  await claimScan(scanIdOf(input), { purchaseOrderId: savedId }, user);
   redirect(`/purchase-orders/${savedId}`);
+}
+
+/** Reads a parts list or a supplier's quotation for a new purchase order, keeping a copy for Documents. */
+export async function scanOrderListAction(formData: FormData): Promise<ScanAnswer<BillScanResult>> {
+  const user = await requireUser();
+  return scanUpload(formData, "list", (file) => scanBill(file), { user, folder: "purchase_orders", title: "Purchase order list" });
 }
 
 /** Closes, reopens or cancels a purchase order. */
