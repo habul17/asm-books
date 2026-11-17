@@ -227,15 +227,7 @@ export function InvoiceDocument({
                   Code
                 </th>
                 <th className={headCell}>Qty</th>
-                <th className={headCell}>
-                  Rate
-                  {!nonGst && (
-                    <>
-                      <br />
-                      <span className="text-[10px]">(with Tax)</span>
-                    </>
-                  )}
-                </th>
+                <th className={headCell}>Rate</th>
                 {hasDiscount && (
                   <th className={headCell}>
                     Disc
@@ -276,12 +268,7 @@ export function InvoiceDocument({
                   <td className={right}>
                     {formatQty(l.qty)} {l.unit}
                   </td>
-                  <td className={right}>
-                    {amount(l.rate)}
-                    {l.qty > 0 && l.gstRate > 0 && (
-                      <span className="block text-[10px] font-normal">({amount(l.total / l.qty)})</span>
-                    )}
-                  </td>
+                  <td className={right}>{amount(l.rate)}</td>
                   {hasDiscount && <td className={right}>{l.discountPct || ""}</td>}
                   {!nonGst && (
                     <>
