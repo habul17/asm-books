@@ -30,8 +30,6 @@ export interface BusinessSettings {
   /** Start of every invoice number, e.g. INV → INV/26-27/0001. */
   invoicePrefix: string;
   invoiceTitle: string;
-  /** Name shown on a part's page for its newest purchase bill rate. */
-  referencePriceLabel: string;
   /** Start of every payment receipt number, e.g. RCPT → RCPT/26-27/0001. */
   receiptPrefix: string;
   /** Start of every credit note number, e.g. CN → CN/26-27/0001. */
@@ -88,7 +86,6 @@ export const DEFAULT_BUSINESS: BusinessSettings = {
   upiId: "",
   invoicePrefix: "INV",
   invoiceTitle: "Tax Invoice",
-  referencePriceLabel: "Reference price list",
   receiptPrefix: "RCPT",
   creditNotePrefix: "CN",
   vendorPaymentPrefix: "PAY",
@@ -201,10 +198,6 @@ const businessSchema = z.object({
     (v) => (typeof v === "string" ? v.trim() || "Tax Invoice" : "Tax Invoice"),
     z.string().max(60, "Invoice title can be at most 60 characters"),
   ),
-  referencePriceLabel: z.preprocess(
-    (v) => (typeof v === "string" ? v.trim() || "Reference price list" : "Reference price list"),
-    z.string().max(40, "The name can be at most 40 characters"),
-  ),
   receiptPrefix: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || "RCPT" : "RCPT"),
     z.string().regex(/^[A-Z0-9]{1,6}$/, "Receipt prefix: 1 to 6 letters or numbers"),
@@ -285,7 +278,7 @@ export function parseBusiness(form: FormData): { value: BusinessSettings; error?
  */
 export const BUSINESS_SECTIONS = {
   shop: ["name", "address", "city", "pincode", "stateCode", "gstin", "phone", "email"],
-  bills: ["invoiceTitle", "referencePriceLabel", "defaultGstRate", "defaultPriceListId", "terms", "allowWalkIn", "allowShortStock"],
+  bills: ["invoiceTitle", "defaultGstRate", "defaultPriceListId", "terms", "allowWalkIn", "allowShortStock"],
   numbers: [
     "invoicePrefix",
     "receiptPrefix",
