@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, PencilIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowLeftIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,18 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="text-sm">{children}</dd>
     </div>
+  );
+}
+
+function PriceChange({ change }: { change: number | null }) {
+  if (change == null || Math.abs(change) < 0.005) return null;
+  const up = change > 0;
+  const Icon = up ? ArrowUpIcon : ArrowDownIcon;
+  return (
+    <span className={up ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}>
+      <Icon className="inline size-3.5" aria-hidden />
+      <span className="sr-only">{up ? "Up" : "Down"}</span> {formatMoney(Math.abs(change))} vs previous
+    </span>
   );
 }
 
@@ -77,14 +89,8 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
             </strong>
           </Fact>
           <Fact label="Reference price list">
-            {p.referencePrice ? (
-              <>
-                <strong className="tabular-nums">{formatMoney(p.referencePrice.price)}</strong>
-                <span className="block text-xs text-muted-foreground">{p.referencePrice.name}</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground">No reference list set</span>
-            )}
+            <span className="tabular-nums">{formatMoney(p.newestPurchasePrice)}</span>{" "}
+            <PriceChange change={p.priceChange} />
           </Fact>
         </dl>
 

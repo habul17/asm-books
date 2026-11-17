@@ -19,8 +19,6 @@ import {
 import { folderPathResolver } from "@/lib/price-lists/folders";
 import { computePrice, type ComputedPrice } from "@/lib/pricing";
 
-import { loadBusiness } from "@/server/settings";
-
 import { loadStockLots } from "./fifo";
 import { productSearch, purchasePriceAt } from "./product-search";
 
@@ -153,8 +151,7 @@ export async function getProduct(id: number) {
   if (!product) return null;
 
   // First in, first out: selling prices follow the batch that sells next, not the newest bill.
-  const [lotsById, business] = await Promise.all([loadStockLots(db, [id]), loadBusiness(db)]);
-  const stock = lotsById.get(id);
+  const stock = (await loadStockLots(db, [id])).get(id);
   const lots = stock?.lots ?? [];
   const newestPurchasePrice = history[0]?.price ?? null;
   const purchasePrice = lots[0]?.cost ?? stock?.shortCost ?? newestPurchasePrice;
@@ -175,12 +172,13 @@ export async function getProduct(id: number) {
     canEdit: isOwner(user),
     purchasePrice,
     previousPurchasePrice,
+    newestPurchasePrice,
+    priceChange:
+      newestPurchasePrice != null && previousPurchasePrice != null ? newestPurchasePrice - previousPurchasePrice : null,
     /** Stock on hand by purchase bill, oldest (sells next) first. */
     lots,
     history,
     sellingPrices,
-    /** The price on the business's reference (default) price list, when it is switched on. */
-    referencePrice: sellingPrices.find((s) => s.id === business.defaultPriceListId) ?? null,
   };
 }
 
