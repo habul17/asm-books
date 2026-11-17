@@ -361,6 +361,8 @@ export const invoices = pgTable(
     /** State code of the buyer; with the seller's state it decides the tax type. */
     placeOfSupply: text("place_of_supply"),
     taxType: taxType("tax_type").notNull(),
+    /** Sold without GST: every line is at 0% and the bill prints without tax columns. */
+    nonGst: boolean("non_gst").notNull().default(false),
     priceListId: integer("price_list_id").references(() => priceLists.id, { onDelete: "restrict" }),
     paymentType: paymentType("payment_type").notNull().default("credit"),
     /**
@@ -394,6 +396,10 @@ export const invoices = pgTable(
     check("invoices_grand_total_check", sql`${t.grandTotal} >= 0`),
     check("invoices_walk_in_cash_check", sql`${t.customerId} IS NOT NULL OR ${t.paymentType} = 'cash'`),
     check("invoices_cash_mode_check", sql`${t.cashMode} IS NULL OR ${t.paymentType} = 'cash'`),
+    check(
+      "invoices_non_gst_check",
+      sql`NOT ${t.nonGst} OR (${t.cgstTotal} = 0 AND ${t.sgstTotal} = 0 AND ${t.igstTotal} = 0)`,
+    ),
   ],
 );
 

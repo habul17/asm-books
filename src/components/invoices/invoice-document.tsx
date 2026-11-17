@@ -97,6 +97,7 @@ export function InvoiceDocument({
   extra = [],
   showBank = true,
   payQr = false,
+  nonGst = false,
 }: {
   invoice: TaxDocumentData;
   business: BusinessSettings;
@@ -117,6 +118,8 @@ export function InvoiceDocument({
   showBank?: boolean;
   /** True prints a UPI "scan to pay" QR code for the total, when a UPI ID is saved. Only for bills the customer pays. */
   payQr?: boolean;
+  /** Sold without GST: the tax columns and the tax summary are left out. */
+  nonGst?: boolean;
 }) {
   const inter = inv.taxType === "inter";
   const summary = taxSummary(inv.lines);
@@ -142,7 +145,13 @@ export function InvoiceDocument({
   const showQr = showBank && payQr && UPI_ID_PATTERN.test(b.upiId) && inv.status !== "cancelled" && inv.grandTotal > 0;
   const terms = showBank ? b.terms : "";
   // Column widths in percent; the description gives up room for the discount column.
-  const widths = hasDiscount ? [5, 12, 16, 11, 11, 10, 6, 4.5, 9, 4.5, 11] : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
+  const widths = nonGst
+    ? hasDiscount
+      ? [5, 13, 28, 11, 11, 12, 7, 13]
+      : [5, 14, 32, 12, 12, 12, 13]
+    : hasDiscount
+      ? [5, 12, 16, 11, 11, 10, 6, 4.5, 9, 4.5, 11]
+      : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
 
   return (
     <article className="invoice-document relative mx-auto flex w-full max-w-[210mm] flex-col bg-white p-4 text-[12px] leading-snug font-bold text-black shadow-sm ring-1 ring-black/10 sm:min-h-[285mm] sm:p-8 print:min-h-[262mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
@@ -220,8 +229,12 @@ export function InvoiceDocument({
                 <th className={headCell}>Qty</th>
                 <th className={headCell}>
                   Rate
-                  <br />
-                  <span className="text-[10px]">(with Tax)</span>
+                  {!nonGst && (
+                    <>
+                      <br />
+                      <span className="text-[10px]">(with Tax)</span>
+                    </>
+                  )}
                 </th>
                 {hasDiscount && (
                   <th className={headCell}>
@@ -229,19 +242,23 @@ export function InvoiceDocument({
                     <br />%
                   </th>
                 )}
-                <th className={headCell}>
-                  Tax
-                  <br />%
-                </th>
-                <th className={headCell}>
-                  Tax
-                  <br />
-                  Amt ₹
-                </th>
-                <th className={headCell}>
-                  CESS
-                  <br />%
-                </th>
+                {!nonGst && (
+                  <>
+                    <th className={headCell}>
+                      Tax
+                      <br />%
+                    </th>
+                    <th className={headCell}>
+                      Tax
+                      <br />
+                      Amt ₹
+                    </th>
+                    <th className={headCell}>
+                      CESS
+                      <br />%
+                    </th>
+                  </>
+                )}
                 <th className={headCell}>
                   Total
                   <br />
@@ -266,9 +283,13 @@ export function InvoiceDocument({
                     )}
                   </td>
                   {hasDiscount && <td className={right}>{l.discountPct || ""}</td>}
-                  <td className={`${cell} text-center tabular-nums`}>{l.gstRate}</td>
-                  <td className={right}>{amount(lineTax(l))}</td>
-                  <td className={cell} />
+                  {!nonGst && (
+                    <>
+                      <td className={`${cell} text-center tabular-nums`}>{l.gstRate}</td>
+                      <td className={right}>{amount(lineTax(l))}</td>
+                      <td className={cell} />
+                    </>
+                  )}
                   <td className={right}>{amount(l.total)}</td>
                 </tr>
               ))}
@@ -286,9 +307,13 @@ export function InvoiceDocument({
                 <td className={right}>{qtyTotal.toFixed(3)}</td>
                 <td className={cell} />
                 {hasDiscount && <td className={cell} />}
-                <td className={cell} />
-                <td className={right}>{amount(taxTotal)}</td>
-                <td className={cell} />
+                {!nonGst && (
+                  <>
+                    <td className={cell} />
+                    <td className={right}>{amount(taxTotal)}</td>
+                    <td className={cell} />
+                  </>
+                )}
                 <td className={right}>{amount(linesTotal)}</td>
               </tr>
             </tbody>
@@ -297,6 +322,7 @@ export function InvoiceDocument({
 
         <div className="break-inside-avoid">
           <div className="px-1 pt-1">
+            {!nonGst && (
             <table className="border-collapse text-right text-[11px] tabular-nums">
               <thead>
                 <tr className="border-b border-black">
@@ -341,6 +367,7 @@ export function InvoiceDocument({
                 ))}
               </tbody>
             </table>
+            )}
             <p className="flex justify-end">
               <span>Rounded Off :</span>
               <span className="w-28 text-right tabular-nums">{amount(inv.roundOff)}</span>

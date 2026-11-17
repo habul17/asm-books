@@ -97,6 +97,7 @@ export async function getCreditNote(id: number) {
         note: creditNotes,
         invoiceNumber: invoices.number,
         invoiceDate: invoices.date,
+        invoiceNonGst: invoices.nonGst,
         createdByName: users.name,
         balanceNow: customerBalance,
       })
@@ -113,6 +114,8 @@ export async function getCreditNote(id: number) {
     ...head.note,
     invoiceNumber: head.invoiceNumber,
     invoiceDate: head.invoiceDate,
+    /** The invoice was sold without GST, so the note prints without tax columns too. */
+    invoiceNonGst: head.invoiceNonGst,
     createdByName: head.createdByName,
     balanceNow: head.note.customerId == null ? null : head.balanceNow,
     lines,

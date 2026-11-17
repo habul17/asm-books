@@ -36,6 +36,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{inv.number}</span>
+          {inv.nonGst && <Badge variant="outline">Non-GST</Badge>}
           {!final && <Badge variant="destructive">{inv.deletedAt ? "deleted" : "cancelled"}</Badge>}
           {inv.pay && <PayBadge pay={inv.pay} />}
         </h1>
@@ -91,6 +92,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         invoice={inv}
         business={business}
         payQr
+        nonGst={inv.nonGst}
         extra={inv.shownExtra}
         paymentTerms={inv.paymentType === "cash" ? PAYMENT_MODE_LABELS[inv.cashMode ?? "cash"] : "Credit"}
         user={inv.createdByName}

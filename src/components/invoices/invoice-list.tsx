@@ -43,6 +43,7 @@ export async function InvoiceList({ filters, pickForReturn }: { filters: Invoice
                   <span className="font-mono">{inv.number}</span> · {formatDate(inv.date)}
                 </span>
                 <span className="flex justify-end gap-1">
+                  {inv.nonGst && <Badge variant="outline">Non-GST</Badge>}
                   {inv.status === "cancelled" ? (
                     <Badge variant="destructive">cancelled</Badge>
                   ) : inv.pay ? (

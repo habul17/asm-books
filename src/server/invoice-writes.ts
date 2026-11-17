@@ -156,7 +156,7 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
       qty,
       rate: round2(l.rate),
       discountPct: l.discountPct,
-      gstRate: l.gstRate,
+      gstRate: input.nonGst ? 0 : l.gstRate,
       cost: old ? old.cost : (p?.purchase ?? null),
     };
   });
@@ -173,6 +173,7 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
     ...saleParty(customer, { name: input.walkInName, mobile: input.walkInMobile, fallbackName: "Cash Sale" }),
     placeOfSupply,
     taxType,
+    nonGst: input.nonGst,
     priceListId: input.priceListId,
     paymentType,
     cashMode: paymentType === "cash" ? input.cashMode : null,

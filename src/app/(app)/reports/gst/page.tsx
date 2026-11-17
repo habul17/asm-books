@@ -90,7 +90,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/gst">[
       </p>
       <section className="flex flex-col gap-2">
         <h2 className="px-1 text-sm font-semibold text-muted-foreground">Sales by GST rate (less returns)</h2>
-        {g.byRate.length === 0 ? (
+        {g.byRate.length === 0 && g.nonGst.count === 0 ? (
           <EmptyReport>No sales in this period.</EmptyReport>
         ) : (
           <div className="overflow-x-auto rounded-xl border">
@@ -110,6 +110,16 @@ async function Body({ searchParams }: { searchParams: PageProps<"/reports/gst">[
                     <td className="px-4 py-2 text-right whitespace-nowrap">{formatMoney(r.tax)}</td>
                   </tr>
                 ))}
+                {g.nonGst.count > 0 && (
+                  <tr>
+                    <td className="px-4 py-2">
+                      Non-GST
+                      <span className="block text-xs text-muted-foreground">{plural(g.nonGst.count, "invoice")}</span>
+                    </td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{formatMoney(g.nonGst.value)}</td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">—</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

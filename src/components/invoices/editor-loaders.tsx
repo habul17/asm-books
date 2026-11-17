@@ -73,6 +73,7 @@ async function fromRecurring(repeatId: number, options: EditorOptions): Promise<
     cashMode: inv.cashMode ?? "cash",
     priceListId: inv.priceListId,
     placeOfSupply: pickedSupply(inv.placeOfSupply, customer.stateCode, options),
+    nonGst: inv.nonGst,
     notes: inv.notes ?? "",
     extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
     lines: inv.lines.map((l) => editorLine(l, l.productId != null ? l.stockQty : null)),
@@ -154,6 +155,7 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     cashMode: inv.cashMode ?? "cash",
     priceListId: inv.priceListId,
     placeOfSupply: pickedSupply(inv.placeOfSupply, customer?.stateCode, options),
+    nonGst: inv.nonGst,
     notes: inv.notes ?? "",
     extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
     lines: inv.lines.map((l) =>

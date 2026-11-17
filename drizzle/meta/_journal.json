@@ -183,6 +183,13 @@
       "when": 1794810845218,
       "tag": "0025_document_scan_links",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794886902422,
+      "tag": "0026_invoice_non_gst",
+      "breakpoints": true
     }
   ]
 }

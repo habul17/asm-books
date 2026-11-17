@@ -336,7 +336,10 @@ export async function profitAndLoss(period: Period) {
 export async function gstSummary(period: Period) {
   await requireOwner();
   const db = getDb();
-  const [out, back, input, spent, sentBack, byRate, byRateBack] = await db.batch([
+  // Non-GST invoices, and returns against them, are kept out of the GST figures and shown on their own.
+  const gstSale = (p: Period) => and(invoiceInPeriod(p), eq(invoices.nonGst, false));
+  const gstReturn = (p: Period, nonGst = false) => and(returnInPeriod(p), eq(invoices.nonGst, nonGst));
+  const [out, back, input, spent, sentBack, byRate, byRateBack, nonGstSold, nonGstBack] = await db.batch([
     db
       .select({
         count: rowCount(),
@@ -346,7 +349,7 @@ export async function gstSummary(period: Period) {
         igst: total(sql`${invoices.igstTotal}`),
       })
       .from(invoices)
-      .where(invoiceInPeriod(period)),
+      .where(gstSale(period)),
     db
       .select({
         count: rowCount(),
@@ -356,7 +359,8 @@ export async function gstSummary(period: Period) {
         igst: total(sql`${creditNotes.igstTotal}`),
       })
       .from(creditNotes)
-      .where(returnInPeriod(period)),
+      .innerJoin(invoices, eq(invoices.id, creditNotes.invoiceId))
+      .where(gstReturn(period)),
     db
       .select({
         count: rowCount(),
@@ -401,7 +405,7 @@ export async function gstSummary(period: Period) {
       })
       .from(invoiceLines)
       .innerJoin(invoices, eq(invoices.id, invoiceLines.invoiceId))
-      .where(invoiceInPeriod(period))
+      .where(gstSale(period))
       .groupBy(invoiceLines.gstRate),
     db
       .select({
@@ -411,8 +415,18 @@ export async function gstSummary(period: Period) {
       })
       .from(creditNoteLines)
       .innerJoin(creditNotes, eq(creditNotes.id, creditNoteLines.creditNoteId))
-      .where(returnInPeriod(period))
+      .innerJoin(invoices, eq(invoices.id, creditNotes.invoiceId))
+      .where(gstReturn(period))
       .groupBy(creditNoteLines.gstRate),
+    db
+      .select({ count: rowCount(), value: total(sql`${invoices.taxableTotal}`) })
+      .from(invoices)
+      .where(and(invoiceInPeriod(period), eq(invoices.nonGst, true))),
+    db
+      .select({ value: total(sql`${creditNotes.taxableTotal}`) })
+      .from(creditNotes)
+      .innerJoin(invoices, eq(invoices.id, creditNotes.invoiceId))
+      .where(gstReturn(period, true)),
   ]);
 
   const zero = { count: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
@@ -455,6 +469,11 @@ export async function gstSummary(period: Period) {
     purchaseReturns: returnedToVendors,
     payable: minus({ ...output, count: 0 }, purchases),
     byRate: [...rates.values()].sort((a, b) => a.rate - b.rate),
+    /** Non-GST invoices in the period, less returns against them; not part of any GST figure above. */
+    nonGst: {
+      count: nonGstSold[0]?.count ?? 0,
+      value: round2((nonGstSold[0]?.value ?? 0) - (nonGstBack[0]?.value ?? 0)),
+    },
   };
 }
 

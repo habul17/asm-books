@@ -58,6 +58,8 @@ export interface EditorInitial {
   priceListId: number | null;
   /** State code picked for this sale; null follows the customer's state. */
   placeOfSupply: string | null;
+  /** Invoice sold without GST. */
+  nonGst?: boolean;
   notes: string;
   /** Custom field values as text, keyed by field id. */
   extra: Record<string, string>;
@@ -153,6 +155,7 @@ export function InvoiceEditor({
   const [priceListId, setPriceListId] = useState(initial.priceListId);
   // null follows the customer's state; "" is a sale to another state whose state is not chosen yet.
   const [supply, setSupply] = useState(initial.placeOfSupply);
+  const [nonGst, setNonGst] = useState(kind === "invoice" && (initial.nonGst ?? false));
   const [notes, setNotes] = useState(initial.notes);
   const [extra, setExtra] = useState(initial.extra);
   const [lines, setLines] = useState(initial.lines);
@@ -194,10 +197,10 @@ export function InvoiceEditor({
       qty: num(l.qty) ?? 0,
       rate: num(l.rate) ?? 0,
       discountPct: num(l.discountPct) ?? 0,
-      gstRate: l.gstRate,
+      gstRate: nonGst ? 0 : l.gstRate,
     }));
     return calcInvoice(parsed, taxType);
-  }, [lines, taxType]);
+  }, [lines, taxType, nonGst]);
 
   const creditAfter =
     !doc && !isWalkIn && customer && effectivePayment === "credit"
@@ -309,7 +312,7 @@ export function InvoiceEditor({
       setError("Type the customer's name.");
       return;
     }
-    if (supply === "") {
+    if (supply === "" && !nonGst) {
       setError("Choose the state you are selling to.");
       return;
     }
@@ -343,6 +346,7 @@ export function InvoiceEditor({
               ...payload,
               paymentType: effectivePayment,
               cashMode,
+              nonGst,
               extra,
               fromDocId: initial.fromDocId ?? null,
               repeatId: initial.repeatId ?? null,
@@ -535,6 +539,25 @@ export function InvoiceEditor({
             )}
             <div className="col-span-2 flex flex-col gap-1.5">
               <Label id="inv-tax-label">GST</Label>
+              {kind === "invoice" && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-4 accent-primary"
+                    checked={nonGst}
+                    onChange={(e) => {
+                      touch();
+                      setNonGst(e.target.checked);
+                    }}
+                  />
+                  <span>
+                    Non-GST supply
+                    <span className="block text-xs text-muted-foreground">No tax on this bill; it prints without tax columns.</span>
+                  </span>
+                </label>
+              )}
+              {!nonGst && (
+              <>
               <div
                 className="grid grid-cols-2 rounded-lg bg-muted p-0.5 text-sm"
                 role="radiogroup"
@@ -581,6 +604,8 @@ export function InvoiceEditor({
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
+              )}
+              </>
               )}
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
@@ -720,7 +745,9 @@ export function InvoiceEditor({
                       <NativeSelect
                         aria-label={`Item ${i + 1} GST`}
                         className="w-full"
-                        value={String(l.gstRate)}
+                        disabled={nonGst}
+                        title={nonGst ? "Non-GST supply: no tax" : undefined}
+                        value={nonGst ? "0" : String(l.gstRate)}
                         onChange={(e) => updateLine(l.key, { gstRate: Number(e.target.value) })}
                       >
                         {GST_RATES.map((r) => (
@@ -763,6 +790,10 @@ export function InvoiceEditor({
         <Card>
           <CardContent>
             <dl className="flex flex-col gap-1 text-sm">
+              {nonGst ? (
+                <TotalRow label="Items" value={calc.totals.taxableTotal} />
+              ) : (
+              <>
               <TotalRow label="Taxable value" value={calc.totals.taxableTotal} />
               {taxType === "inter" ? (
                 <TotalRow label="IGST" value={calc.totals.igstTotal} />
@@ -772,6 +803,8 @@ export function InvoiceEditor({
                   <TotalRow label="SGST" value={calc.totals.sgstTotal} />
                 </>
               )}
+              </>
+              )}
               <TotalRow label="Round off" value={calc.totals.roundOff} />
               <div className="mt-1 flex items-baseline justify-between border-t pt-2">
                 <dt className="font-medium">Total</dt>
@@ -779,7 +812,7 @@ export function InvoiceEditor({
               </div>
               <p className="text-xs text-muted-foreground">{amountInWords(calc.totals.grandTotal)}</p>
               <p className="text-xs text-muted-foreground">
-                {taxType === "inter" ? "IGST: sale to another state" : "CGST + SGST: sale within the state"}
+                {nonGst ? "Non-GST supply: no tax" : taxType === "inter" ? "IGST: sale to another state" : "CGST + SGST: sale within the state"}
                 {placeOfSupply && GST_STATES[placeOfSupply] ? ` · Place of supply: ${GST_STATES[placeOfSupply]}` : ""}
               </p>
             </dl>

@@ -1,0 +1,2 @@
+ALTER TABLE "invoices" ADD COLUMN "non_gst" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_non_gst_check" CHECK (NOT "invoices"."non_gst" OR ("invoices"."cgst_total" = 0 AND "invoices"."sgst_total" = 0 AND "invoices"."igst_total" = 0));

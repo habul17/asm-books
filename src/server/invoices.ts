@@ -87,6 +87,7 @@ export async function searchInvoices(filters: InvoiceFilters, limit = INVOICE_LI
         customerId: invoices.customerId,
         customerName: invoices.customerName,
         paymentType: invoices.paymentType,
+        nonGst: invoices.nonGst,
         grandTotal: invoices.grandTotal,
         status: invoices.status,
       })

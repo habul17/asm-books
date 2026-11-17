@@ -38,6 +38,8 @@ export const invoiceInputSchema = z.object({
     .refine((code) => Object.hasOwn(GST_STATES, code), "Choose a valid state")
     .nullable()
     .default(null),
+  /** Sold without GST: every line is saved at 0% and the bill prints without tax columns. */
+  nonGst: z.boolean().default(false),
   notes: z.string().trim().max(2000, "Notes can be at most 2000 characters"),
   /** Custom field values as typed, keyed by field id. They are checked against the fields on the server. */
   extra: z

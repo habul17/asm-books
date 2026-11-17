@@ -61,6 +61,7 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
       <InvoiceDocument
         invoice={note}
         business={business}
+        nonGst={note.invoiceNonGst}
         title="Credit Note"
         numberLabel="Note No"
         user={note.createdByName}
