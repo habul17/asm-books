@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate, formatMoney, formatQty } from "@/lib/format";
 import { round2 } from "@/lib/pricing";
 import { getProduct } from "@/server/catalogue";
+import { getBusiness } from "@/server/settings";
 
 import { MinStockForm } from "./min-stock-form";
 import { catalogueHref } from "./product-results";
@@ -36,7 +37,7 @@ function PriceChange({ change }: { change: number | null }) {
 }
 
 export async function ProductDetailPanel({ id, query }: { id: number; query: string }) {
-  const p = await getProduct(id);
+  const [p, business] = await Promise.all([getProduct(id), getBusiness()]);
   if (!p) {
     return (
       <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -88,7 +89,7 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
               {formatMoney(p.purchasePrice)}
             </strong>
           </Fact>
-          <Fact label="Reference price list">
+          <Fact label={business.referencePriceLabel}>
             <span className="tabular-nums">{formatMoney(p.newestPurchasePrice)}</span>{" "}
             <PriceChange change={p.priceChange} />
           </Fact>

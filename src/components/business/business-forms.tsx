@@ -114,6 +114,13 @@ export function BillsForm({
         <Field label="Invoice title" htmlFor="b-title" hint="Printed at the top of every invoice.">
           <Input id="b-title" name="invoiceTitle" defaultValue={b.invoiceTitle} maxLength={60} />
         </Field>
+        <Field
+          label="Name for the newest purchase rate"
+          htmlFor="b-ref-label"
+          hint="Shown on each part's page next to the newest purchase bill rate."
+        >
+          <Input id="b-ref-label" name="referencePriceLabel" defaultValue={b.referencePriceLabel} maxLength={40} />
+        </Field>
         <Field label="Default GST %" htmlFor="b-gst" hint="Used for parts that have no GST rate of their own.">
           <NativeSelect id="b-gst" name="defaultGstRate" defaultValue={String(b.defaultGstRate)} className="w-full">
             {GST_RATES.map((r) => (
