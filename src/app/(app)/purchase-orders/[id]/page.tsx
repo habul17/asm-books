@@ -95,7 +95,7 @@ async function Order({ params }: { params: PageProps<"/purchase-orders/[id]">["p
 
 export default function PurchaseOrderPage({ params }: PageProps<"/purchase-orders/[id]">) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Link
         href="/purchase-orders"
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"

@@ -73,7 +73,7 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
         </p>
       ) : (
         <OwnerOnlyBlock>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 print:hidden">
             {final && <CancelPurchaseReturnForm id={pr.id} />}
             <DeleteButton noun="purchase return" action={deletePurchaseReturnAction.bind(null, pr.id)} note="The returned pieces come back on the shelf. Only the newest is removed completely; an older one keeps its number as cancelled for GST." />
           </div>
@@ -85,7 +85,7 @@ async function PurchaseReturn({ params }: { params: PageProps<"/purchase-returns
 
 export default function PurchaseReturnPage({ params }: PageProps<"/purchase-returns/[id]">) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Link
         href="/purchase-returns"
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"

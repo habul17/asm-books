@@ -143,7 +143,7 @@ async function Doc({ params }: { params: Props["params"] }) {
 
 export default function SalesDocPage({ params }: Props) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Suspense fallback={<Skeleton className="h-[600px]" />}>
         <Doc params={params} />
       </Suspense>

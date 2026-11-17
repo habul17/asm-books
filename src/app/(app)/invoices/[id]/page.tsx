@@ -127,7 +127,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
         </p>
       ) : (
         <OwnerOnlyBlock>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 print:hidden">
             {final && <CancelInvoiceForm id={inv.id} />}
             <DeleteButton
               noun="invoice"
@@ -143,7 +143,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
 
 export default function InvoicePage({ params }: PageProps<"/invoices/[id]">) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Link
         href="/invoices"
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"

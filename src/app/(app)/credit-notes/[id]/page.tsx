@@ -77,7 +77,7 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
         </p>
       ) : (
         <OwnerOnlyBlock>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 print:hidden">
             {final && <CancelCreditNoteForm id={note.id} />}
             <DeleteButton noun="credit note" action={deleteCreditNoteAction.bind(null, note.id)} note="Returned stock comes back off the shelf. Only the newest is removed completely; an older one keeps its number as cancelled for GST." />
           </div>
@@ -89,7 +89,7 @@ async function CreditNote({ params }: { params: PageProps<"/credit-notes/[id]">[
 
 export default function CreditNotePage({ params }: PageProps<"/credit-notes/[id]">) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Link
         href="/credit-notes"
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"

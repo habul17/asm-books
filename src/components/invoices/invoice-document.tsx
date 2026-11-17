@@ -145,7 +145,7 @@ export function InvoiceDocument({
   const widths = hasDiscount ? [5, 12, 16, 11, 11, 10, 6, 4.5, 9, 4.5, 11] : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
 
   return (
-    <article className="invoice-document relative mx-auto flex w-full max-w-[210mm] flex-col bg-white p-4 text-[12px] leading-snug font-bold text-black shadow-sm ring-1 ring-black/10 sm:min-h-[285mm] sm:p-8 print:min-h-[272mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
+    <article className="invoice-document relative mx-auto flex w-full max-w-[210mm] flex-col bg-white p-4 text-[12px] leading-snug font-bold text-black shadow-sm ring-1 ring-black/10 sm:min-h-[285mm] sm:p-8 print:min-h-[262mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
       {inv.status === "cancelled" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
           <span className="-rotate-30 rounded-lg border-4 border-red-600/40 px-6 py-2 text-6xl font-bold tracking-widest text-red-600/40">
