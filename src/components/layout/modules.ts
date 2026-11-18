@@ -165,5 +165,8 @@ export const REPORT_GROUPS: { label: string; href: string | null }[][] = [
     { label: "Vendor Balances (what you owe)", href: "/reports/vendor-balances" },
     { label: "Expenses by Category", href: "/reports/expenses-by-category" },
   ],
-  [{ label: "Low Stock", href: "/reports/low-stock" }],
+  [
+    { label: "Low Stock", href: "/reports/low-stock" },
+    { label: "Slow Stock (not sold in 90 days)", href: "/reports/slow-stock" },
+  ],
 ];

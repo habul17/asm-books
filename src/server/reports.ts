@@ -16,6 +16,7 @@ import {
   moneyEntries,
   payments,
   products,
+  purchasePrices,
   purchaseReturns,
   stockAdjustmentLines,
   stockAdjustments,
@@ -572,4 +573,64 @@ export async function lowStock(limit = LOW_STOCK_LIMIT) {
     items: rows.slice(0, limit).map((r) => ({ ...r, minStock: r.minStock ?? shopMin })),
     more: rows.length > limit,
   };
+}
+
+/** Days without a sale after which a part on the shelf counts as slow stock. */
+export const SLOW_STOCK_DAYS = 90;
+export const SLOW_STOCK_LIMIT = 500;
+
+/** A part's newest purchase price, the rate stock is valued at. */
+export const newestPurchasePrice = sql<number | null>`(
+  SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
+  WHERE ${col(purchasePrices.productId)} = ${col(products.id)}
+  ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC LIMIT 1
+)`;
+
+const lastSold = sql<string | null>`(
+  SELECT max(${col(stockMovements.date)}) FROM ${stockMovements}
+  WHERE ${col(stockMovements.productId)} = ${col(products.id)} AND ${col(stockMovements.kind)} = 'sale'
+)`;
+
+const firstStocked = sql<string | null>`(
+  SELECT min(${col(stockMovements.date)}) FROM ${stockMovements}
+  WHERE ${col(stockMovements.productId)} = ${col(products.id)} AND ${col(stockMovements.qty)} > 0
+)`;
+
+/**
+ * Parts on the shelf that have not sold for SLOW_STOCK_DAYS: in stock, first stocked
+ * at least that long ago, and no sale since the cut-off. Parts bought recently are
+ * left out, so a new arrival is never called slow.
+ */
+export function slowStockWhere(today: string) {
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - SLOW_STOCK_DAYS);
+  const cutoff = d.toISOString().slice(0, 10);
+  return and(
+    eq(products.active, true),
+    gt(products.stockQty, 0),
+    sql`${firstStocked} <= ${cutoff}`,
+    sql`(${lastSold} IS NULL OR ${lastSold} <= ${cutoff})`,
+  );
+}
+
+/** Slow stock, the most money stuck first. */
+export async function slowStock(limit = SLOW_STOCK_LIMIT) {
+  await connection(); // Always read live data; never prerender at build time.
+  await requireOwner();
+  const value = sql<number>`${products.stockQty} * coalesce(${newestPurchasePrice}, 0)`.mapWith(Number);
+  const rows = await getDb()
+    .select({
+      id: products.id,
+      partNo: products.partNo,
+      description: products.description,
+      unit: products.unit,
+      stockQty: products.stockQty,
+      value,
+      lastSold,
+    })
+    .from(products)
+    .where(slowStockWhere(todayInIndia()))
+    .orderBy(desc(value), asc(products.partNo))
+    .limit(limit + 1);
+  return { items: rows.slice(0, limit), more: rows.length > limit };
 }

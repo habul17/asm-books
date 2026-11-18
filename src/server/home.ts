@@ -1,73 +1,267 @@
 import "server-only";
 
-import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, between, eq, gte, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { customers, invoices, payments } from "@/db/schema";
+import { bills, expenses, invoices, payments, products, purchaseOrders, salesDocs, vendors } from "@/db/schema";
+import { AGING_BUCKETS } from "@/lib/reports/aging";
+import type { Period } from "@/lib/reports/period";
 import { isOwner, requireUser } from "@/server/auth";
 
-import { customerBalance } from "./customers";
 import { todayInIndia } from "./invoice-writes";
+import { arAging } from "./receivables";
+import {
+  gstSummary,
+  lowStockWhere,
+  newestPurchasePrice,
+  profitAndLoss,
+  salesByCustomer,
+  salesByItem,
+  slowStockWhere,
+  vendorBalances,
+} from "./reports";
+import { loadBusiness } from "./settings";
+import { moneyToday } from "./statements";
+import { vendorBalance } from "./vendors";
 
-/** Numbers for the Home screen: sales and money received, money owed to us, latest bills. */
-export async function getHomeSummary() {
-  await connection(); // Always read live data; never prerender at build time.
-  const user = await requireUser();
-  const today = todayInIndia();
-  const monthStart = `${today.slice(0, 8)}01`;
-  const final = eq(invoices.status, "final");
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const pad = (n: number) => String(n).padStart(2, "0");
+const sum = (expr: SQL) => sql<number>`coalesce(sum(${expr}), 0)`.mapWith(Number);
+const count = () => sql<number>`count(*)`.mapWith(Number);
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+const period = (from: string, to: string): Period => ({ from, to, preset: "custom", label: "" });
+
+/** This month so far, and the same days of last month to compare it with. */
+function monthPeriods(today: string) {
+  const [y, m, d] = today.split("-").map(Number);
+  const ly = m === 1 ? y - 1 : y;
+  const lm = m === 1 ? 12 : m - 1;
+  const lastDay = new Date(Date.UTC(ly, lm, 0)).getUTCDate();
+  return {
+    current: period(`${y}-${pad(m)}-01`, today),
+    previous: period(`${ly}-${pad(lm)}-01`, `${ly}-${pad(lm)}-${pad(Math.min(d, lastDay))}`),
+  };
+}
+
+/** The last `n` months as YYYY-MM, oldest first, ending with this month. */
+function lastMonths(today: string, n: number): string[] {
+  const [y, m] = today.split("-").map(Number);
+  return Array.from({ length: n }, (_, i) => {
+    const t = y * 12 + (m - 1) - (n - 1 - i);
+    return `${Math.floor(t / 12)}-${pad((t % 12) + 1)}`;
+  });
+}
+
+/** Sales, purchases and expenses (all with GST) for a period. */
+async function monthFigures(p: Period) {
   const db = getDb();
-
-  const [salesRows, receivedRows, owedRows, recent] = await db.batch([
+  const rows = await db.batch([
     db
-      .select({
-        today: sql<number>`coalesce(sum(${invoices.grandTotal}) FILTER (WHERE ${invoices.date} = ${today}), 0)`.mapWith(
-          Number,
-        ),
-        todayCount: sql<number>`count(*) FILTER (WHERE ${invoices.date} = ${today})`.mapWith(Number),
-        month: sql<number>`coalesce(sum(${invoices.grandTotal}), 0)`.mapWith(Number),
-        monthCount: sql<number>`count(*)`.mapWith(Number),
-      })
+      .select({ value: sum(sql`${invoices.grandTotal}`) })
       .from(invoices)
-      .where(and(final, gte(invoices.date, monthStart))),
+      .where(and(eq(invoices.status, "final"), between(invoices.date, p.from, p.to))),
+    db
+      .select({ value: sum(sql`${bills.grandTotal}`) })
+      .from(bills)
+      .where(and(eq(bills.status, "final"), between(bills.date, p.from, p.to))),
+    db
+      .select({ value: sum(sql`${expenses.amount}`) })
+      .from(expenses)
+      .where(and(eq(expenses.status, "final"), between(expenses.date, p.from, p.to))),
+  ]);
+  const [sales, purchases, spent] = rows.map((r) => round2(r[0]?.value ?? 0));
+  return { sales, purchases, expenses: spent };
+}
+
+/**
+ * Unpaid vendor bills by due date. Payments are not tied to bills, so they pay off
+ * the oldest bills first and the newest ones are the unpaid ones (as for customers).
+ */
+async function payablesDue(today: string) {
+  const db = getDb();
+  const ranked = db
+    .select({
+      vendorId: bills.vendorId,
+      dueDate: bills.dueDate,
+      grandTotal: bills.grandTotal,
+      newer: sql<number>`(sum(${bills.grandTotal}) OVER (
+        PARTITION BY ${bills.vendorId} ORDER BY ${bills.date} DESC, ${bills.id} DESC
+      ) - ${bills.grandTotal})`.as("newer"),
+    })
+    .from(bills)
+    .where(eq(bills.status, "final"))
+    .as("ranked");
+  const unpaid = sql`least(${ranked.grandTotal}, ${vendorBalance} - ${ranked.newer})`;
+  const [row] = await db
+    .select({
+      overdue: sql<number>`coalesce(sum(${unpaid}) FILTER (WHERE ${ranked.dueDate} < ${today}), 0)`.mapWith(Number),
+      dueThisWeek: sql<number>`coalesce(sum(${unpaid}) FILTER (
+        WHERE ${ranked.dueDate} BETWEEN ${today} AND ${addDays(today, 7)}
+      ), 0)`.mapWith(Number),
+    })
+    .from(ranked)
+    .innerJoin(vendors, eq(vendors.id, ranked.vendorId))
+    .where(sql`${ranked.newer} < ${vendorBalance}`);
+  return { overdue: round2(row?.overdue ?? 0), dueThisWeek: round2(row?.dueThisWeek ?? 0) };
+}
+
+/** Stock and open orders. Staff see the counts; values are only shown to the owner. */
+async function stockAndOrders(today: string) {
+  const db = getDb();
+  const { defaultMinStock } = await loadBusiness();
+  const [stock, low, slow, orders, pos] = await db.batch([
     db
       .select({
-        today: sql<number>`coalesce(sum(${payments.amount}), 0)`.mapWith(Number),
-        todayCount: sql<number>`count(*)`.mapWith(Number),
+        value: sum(sql`greatest(${products.stockQty}, 0) * coalesce(${newestPurchasePrice}, 0)`),
+        parts: sql<number>`count(*) FILTER (WHERE ${products.stockQty} > 0)`.mapWith(Number),
       })
+      .from(products)
+      .where(eq(products.active, true)),
+    db
+      .select({
+        low: count(),
+        out: sql<number>`count(*) FILTER (WHERE ${products.stockQty} <= 0)`.mapWith(Number),
+      })
+      .from(products)
+      .where(lowStockWhere(defaultMinStock)),
+    db
+      .select({ count: count(), value: sum(sql`${products.stockQty} * coalesce(${newestPurchasePrice}, 0)`) })
+      .from(products)
+      .where(slowStockWhere(today)),
+    db
+      .select({ count: count(), value: sum(sql`${salesDocs.grandTotal}`) })
+      .from(salesDocs)
+      .where(and(eq(salesDocs.kind, "order"), eq(salesDocs.status, "open"))),
+    db
+      .select({ count: count(), value: sum(sql`${purchaseOrders.grandTotal}`) })
+      .from(purchaseOrders)
+      .where(eq(purchaseOrders.status, "open")),
+  ]);
+  return {
+    stock: {
+      value: round2(stock[0]?.value ?? 0),
+      parts: stock[0]?.parts ?? 0,
+      low: low[0]?.low ?? 0,
+      out: low[0]?.out ?? 0,
+      slowCount: slow[0]?.count ?? 0,
+      slowValue: round2(slow[0]?.value ?? 0),
+    },
+    orders: {
+      sales: { count: orders[0]?.count ?? 0, value: round2(orders[0]?.value ?? 0) },
+      purchase: { count: pos[0]?.count ?? 0, value: round2(pos[0]?.value ?? 0) },
+    },
+  };
+}
+
+/** Today's sales and money received, and sales and purchases for each of `months`. */
+async function salesFigures(today: string, months: string[]) {
+  const db = getDb();
+  const since = `${months[0]}-01`;
+  const month = (date: typeof invoices.date | typeof bills.date) => sql<string>`to_char(${date}, 'YYYY-MM')`;
+  const [todaySales, todayReceived, monthlySales, monthlyBought] = await db.batch([
+    db
+      .select({ value: sum(sql`${invoices.grandTotal}`), count: count() })
+      .from(invoices)
+      .where(and(eq(invoices.status, "final"), eq(invoices.date, today))),
+    db
+      .select({ value: sum(sql`${payments.amount}`), count: count() })
       .from(payments)
       .where(and(eq(payments.status, "final"), eq(payments.date, today))),
     db
-      .select({
-        receivable: sql<number>`coalesce(sum(greatest(${customerBalance}, 0)), 0)`.mapWith(Number),
-        owingCount: sql<number>`count(*) FILTER (WHERE ${customerBalance} > 0)`.mapWith(Number),
-        overLimit: sql<number>`count(*) FILTER (
-          WHERE ${customers.creditLimit} IS NOT NULL AND ${customerBalance} > ${customers.creditLimit}
-        )`.mapWith(Number),
-      })
-      .from(customers),
-    db
-      .select({
-        id: invoices.id,
-        number: invoices.number,
-        date: invoices.date,
-        customerName: invoices.customerName,
-        grandTotal: invoices.grandTotal,
-        status: invoices.status,
-      })
+      .select({ month: month(invoices.date), value: sum(sql`${invoices.grandTotal}`) })
       .from(invoices)
-      .where(isNull(invoices.deletedAt))
-      .orderBy(desc(invoices.createdAt), desc(invoices.id))
-      .limit(5),
+      .where(and(eq(invoices.status, "final"), gte(invoices.date, since)))
+      .groupBy(month(invoices.date)),
+    db
+      .select({ month: month(bills.date), value: sum(sql`${bills.grandTotal}`) })
+      .from(bills)
+      .where(and(eq(bills.status, "final"), gte(bills.date, since)))
+      .groupBy(month(bills.date)),
   ]);
-
+  const byMonth = (rows: { month: string; value: number }[]) => new Map(rows.map((r) => [r.month, round2(r.value)]));
+  const sold = byMonth(monthlySales);
+  const bought = byMonth(monthlyBought);
   return {
-    /** Staff do not see sales and money totals. */
-    showTotals: isOwner(user),
-    sales: salesRows[0] ?? { today: 0, todayCount: 0, month: 0, monthCount: 0 },
-    received: receivedRows[0] ?? { today: 0, todayCount: 0 },
-    owed: owedRows[0] ?? { receivable: 0, owingCount: 0, overLimit: 0 },
-    recent,
+    today: {
+      sales: round2(todaySales[0]?.value ?? 0),
+      invoices: todaySales[0]?.count ?? 0,
+      received: round2(todayReceived[0]?.value ?? 0),
+      payments: todayReceived[0]?.count ?? 0,
+    },
+    chart: months.map((m) => ({ month: m, sales: sold.get(m) ?? 0, purchases: bought.get(m) ?? 0 })),
   };
 }
+
+/** Everything about money on the Home screen; only for the owner. */
+async function ownerFigures(today: string) {
+  const { current, previous } = monthPeriods(today);
+  const [sales, now, before, profitNow, profitBefore, owed, owing, due, money, gst, items, buyers] = await Promise.all([
+    salesFigures(today, lastMonths(today, 6)),
+    monthFigures(current),
+    monthFigures(previous),
+    profitAndLoss(current),
+    profitAndLoss(previous),
+    arAging(),
+    vendorBalances(),
+    payablesDue(today),
+    moneyToday(),
+    gstSummary(current),
+    salesByItem(current, 5000),
+    salesByCustomer(current),
+  ]);
+  const gstOf = (t: { cgst: number; sgst: number; igst: number }) => round2(t.cgst + t.sgst + t.igst);
+  return {
+    today: sales.today,
+    chart: sales.chart,
+    month: {
+      /** The same days of last month that this month is compared with. */
+      comparedTo: previous,
+      now: { ...now, profit: profitNow.net },
+      before: { ...before, profit: profitBefore.net },
+    },
+    receivable: {
+      total: owed.total,
+      customers: owed.rows.length,
+      buckets: AGING_BUCKETS.map((b, i) => ({ label: b.label, value: owed.totals[i] ?? 0 })),
+    },
+    payable: { total: owing.owed, vendors: owing.items.filter((v) => v.balance > 0).length, ...due },
+    money: { cash: money.cash, bank: money.bank, total: money.total, openingSet: money.openingSet },
+    gst: { output: gstOf(gst.output), input: gstOf(gst.input), payable: gstOf(gst.payable) },
+    topParts: items.items
+      .filter((r) => r.productId != null && r.qty > 0)
+      .sort((a, b) => b.qty - a.qty || b.taxable - a.taxable)
+      .slice(0, 5)
+      .map((r) => ({ id: r.productId as number, partNo: r.partNo, description: r.description, unit: r.unit, qty: r.qty })),
+    topCustomers: buyers.items
+      .filter((r) => r.net > 0)
+      .slice(0, 5)
+      .map((r) => ({ id: r.customerId, name: r.name, value: r.net, count: r.count })),
+  };
+}
+
+/** Numbers for the Home screen. Staff see stock and open-order counts only. */
+export async function getHomeDashboard() {
+  await connection(); // Always read live data; never prerender at build time.
+  const user = await requireUser();
+  const today = todayInIndia();
+  const owner = isOwner(user);
+  const [{ stock, orders }, figures] = await Promise.all([stockAndOrders(today), owner ? ownerFigures(today) : null]);
+  if (owner) return { today, owner, stock, orders, figures };
+  // Staff never receive money values, not even hidden ones.
+  return {
+    today,
+    owner,
+    stock: { ...stock, value: null, slowValue: null },
+    orders: { sales: { count: orders.sales.count, value: null }, purchase: { count: orders.purchase.count, value: null } },
+    figures,
+  };
+}
+
+export type HomeDashboard = Awaited<ReturnType<typeof getHomeDashboard>>;

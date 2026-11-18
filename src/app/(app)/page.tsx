@@ -2,26 +2,16 @@ import { BellIcon, ChevronRightIcon, CircleArrowDownIcon, PlusIcon, UserPlusIcon
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { cn } from "cn";
 
+import { AgingCard, CardHead, Change, MonthChart, Rows, Section, Tile } from "@/components/home/dashboard";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
-import { formatDate, formatMoney } from "@/lib/format";
-import { getHomeSummary } from "@/server/home";
+import { formatDate, formatMoney, formatQty } from "@/lib/format";
+import { getHomeDashboard, type HomeDashboard } from "@/server/home";
 import { getReminders } from "@/server/reminders";
 
 export const metadata: Metadata = { title: "Home" };
-
-function Stat({ label, value, note, href }: { label: string; value: string; note: string; href: string }) {
-  return (
-    <Link href={href} className="flex flex-col gap-1 rounded-2xl border bg-card p-4 hover:bg-muted/60">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-2xl font-semibold tabular-nums">{value}</span>
-      <span className="text-xs text-muted-foreground">{note}</span>
-    </Link>
-  );
-}
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -55,79 +45,254 @@ async function Reminders() {
   );
 }
 
-async function Summary() {
-  const { showTotals, sales, received, owed, recent } = await getHomeSummary();
+type Figures = NonNullable<HomeDashboard["figures"]>;
+
+function Today({ f }: { f: Figures }) {
   return (
-    <>
-      {showTotals && (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Sales today" value={formatMoney(sales.today)} note={plural(sales.todayCount, "invoice")} href="/invoices" />
-        <Stat
-          label="Received today"
-          value={formatMoney(received.today)}
-          note={plural(received.todayCount, "payment")}
+    <Section title="Today">
+      <div className="grid grid-cols-2 gap-3">
+        <Tile label="Sales" value={formatMoney(f.today.sales)} note={plural(f.today.invoices, "invoice")} href="/invoices" />
+        <Tile
+          label="Received"
+          value={formatMoney(f.today.received)}
+          note={plural(f.today.payments, "payment")}
           href="/payments"
         />
-        <Stat
-          label="Sales this month"
-          value={formatMoney(sales.month)}
-          note={plural(sales.monthCount, "invoice")}
-          href="/invoices"
-        />
-        <Stat
-          label="Customers owe you"
-          value={formatMoney(owed.receivable)}
-          note={
-            plural(owed.owingCount, "customer") + (owed.overLimit > 0 ? ` · ${owed.overLimit} over credit limit` : "")
-          }
-          href="/customers"
-        />
       </div>
-      )}
+    </Section>
+  );
+}
 
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold text-muted-foreground">Latest invoices</h2>
-          <Link href="/invoices" className="text-sm font-medium hover:underline">
-            See all
-          </Link>
-        </div>
-        {recent.length === 0 ? (
-          <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No invoices yet.
-          </p>
+function ThisMonth({ f }: { f: Figures }) {
+  const { now, before, comparedTo } = f.month;
+  const tiles = [
+    { label: "Sales", key: "sales", href: "/reports/sales" },
+    { label: "Purchases", key: "purchases", href: "/bills" },
+    { label: "Expenses", key: "expenses", href: "/reports/expenses-by-category" },
+    { label: "Profit", key: "profit", href: "/reports/profit-and-loss" },
+  ] as const;
+  return (
+    <Section title="This month" note={`Compared with ${formatDate(comparedTo.from)} to ${formatDate(comparedTo.to)}`}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {tiles.map((t) => (
+          <Tile
+            key={t.key}
+            label={t.label}
+            value={formatMoney(now[t.key])}
+            note={<Change now={now[t.key]} before={before[t.key]} />}
+            href={t.href}
+            negative={now[t.key] < 0}
+          />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function OwedAndOwing({ f }: { f: Figures }) {
+  const p = f.payable;
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Section title="Money to collect">
+        <AgingCard
+          total={f.receivable.total}
+          customers={f.receivable.customers}
+          buckets={f.receivable.buckets}
+          href="/reports/ar-aging"
+        />
+      </Section>
+      <Section title="Money to pay">
+        <Rows
+          header={<CardHead label="You owe vendors" value={formatMoney(p.total)} note={plural(p.vendors, "vendor")} />}
+          rows={[
+            {
+              label: "Overdue",
+              note: "Bills past their due date",
+              value: formatMoney(p.overdue),
+              href: "/reports/vendor-balances",
+              negative: p.overdue > 0,
+            },
+            {
+              label: "Due in the next 7 days",
+              value: formatMoney(p.dueThisWeek),
+              href: "/reports/vendor-balances",
+            },
+          ]}
+        />
+      </Section>
+    </div>
+  );
+}
+
+function MoneyAndGst({ f }: { f: Figures }) {
+  const g = f.gst;
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Section title="Cash and bank">
+        <Rows
+          rows={[
+            { label: "Cash in hand", value: formatMoney(f.money.cash), href: "/banking", negative: f.money.cash < 0 },
+            { label: "In the bank", value: formatMoney(f.money.bank), href: "/banking", negative: f.money.bank < 0 },
+            {
+              label: "Total",
+              note: f.money.openingSet ? undefined : "Opening balances not entered yet",
+              value: formatMoney(f.money.total),
+              href: "/banking",
+              strong: true,
+              negative: f.money.total < 0,
+            },
+          ]}
+        />
+      </Section>
+      <Section title="GST this month">
+        <Rows
+          rows={[
+            { label: "GST on sales", value: formatMoney(g.output), href: "/reports/gst" },
+            { label: "GST on purchases and expenses", value: formatMoney(g.input), href: "/reports/gst" },
+            g.payable >= 0
+              ? { label: "GST to pay", value: formatMoney(g.payable), href: "/reports/gst", strong: true }
+              : { label: "GST credit to carry forward", value: formatMoney(-g.payable), href: "/reports/gst", strong: true },
+          ]}
+        />
+      </Section>
+    </div>
+  );
+}
+
+function Stock({ d }: { d: HomeDashboard }) {
+  const s = d.stock;
+  return (
+    <Section title="Stock">
+      <Rows
+        rows={[
+          ...(s.value != null
+            ? [
+                {
+                  label: "Stock value",
+                  note: `${plural(s.parts, "part")} in stock, at purchase price`,
+                  value: formatMoney(s.value),
+                  href: "/catalogue",
+                },
+              ]
+            : []),
+          { label: "Low on stock", note: "A few left", value: String(s.low - s.out), href: "/reports/low-stock" },
+          { label: "Out of stock", value: String(s.out), href: "/reports/low-stock", negative: s.out > 0 },
+          ...(s.slowValue != null
+            ? [
+                {
+                  label: "Not sold in 90 days",
+                  note: plural(s.slowCount, "part"),
+                  value: formatMoney(s.slowValue),
+                  href: "/reports/slow-stock",
+                },
+              ]
+            : []),
+        ]}
+      />
+    </Section>
+  );
+}
+
+function TopLists({ f }: { f: Figures }) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Section title="Top parts this month" note="By quantity sold">
+        {f.topParts.length === 0 ? (
+          <Empty>No parts sold yet this month.</Empty>
         ) : (
-          <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-            {recent.map((inv) => (
-              <li key={inv.id}>
-                <Link
-                  href={`/invoices/${inv.id}`}
-                  className={cn(
-                    "grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-4 py-3 hover:bg-muted/60",
-                    inv.status === "cancelled" && "opacity-60",
-                  )}
-                >
-                  <span className="truncate font-medium">{inv.customerName}</span>
-                  <span className={cn("text-right font-medium tabular-nums", inv.status === "cancelled" && "line-through")}>
-                    {formatMoney(inv.grandTotal)}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    <span className="font-mono">{inv.number}</span> · {formatDate(inv.date)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <Rows
+            rows={f.topParts.map((p) => ({
+              label: p.description,
+              note: <span className="font-mono">{p.partNo}</span>,
+              value: `${formatQty(p.qty)} ${p.unit}`,
+              href: `/catalogue?id=${p.id}`,
+            }))}
+          />
         )}
-      </section>
+      </Section>
+      <Section title="Top customers this month" note="By sales">
+        {f.topCustomers.length === 0 ? (
+          <Empty>No sales yet this month.</Empty>
+        ) : (
+          <Rows
+            rows={f.topCustomers.map((c) => ({
+              label: c.name,
+              note: plural(c.count, "invoice"),
+              value: formatMoney(c.value),
+              href: c.id == null ? "/reports/sales-by-customer" : customersHref({ id: c.id }),
+            }))}
+          />
+        )}
+      </Section>
+    </div>
+  );
+}
+
+function OpenOrders({ d }: { d: HomeDashboard }) {
+  const { sales, purchase } = d.orders;
+  const figure = (o: { value: number | null }) => (o.value == null ? undefined : formatMoney(o.value));
+  return (
+    <Section title="Open orders">
+      <Rows
+        rows={[
+          {
+            label: "Customer orders",
+            note: `${plural(sales.count, "order")} not billed yet`,
+            value: figure(sales),
+            href: "/sales/orders?status=open",
+          },
+          {
+            label: "Purchase orders",
+            note: `${plural(purchase.count, "order")} not received yet`,
+            value: figure(purchase),
+            href: "/purchase-orders?status=open",
+          },
+        ]}
+      />
+    </Section>
+  );
+}
+
+function Empty({ children }: { children: string }) {
+  return <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">{children}</p>;
+}
+
+async function Dashboard() {
+  const d = await getHomeDashboard();
+  const f = d.figures;
+  if (!f) {
+    return (
+      <>
+        <Stock d={d} />
+        <OpenOrders d={d} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Today f={f} />
+      <ThisMonth f={f} />
+      <OwedAndOwing f={f} />
+      <Section title="Sales and purchases" note="Last 6 months, with GST">
+        <MonthChart rows={f.chart} href="/reports/sales" />
+      </Section>
+      <MoneyAndGst f={f} />
+      <Stock d={d} />
+      <TopLists f={f} />
+      <OpenOrders d={d} />
     </>
   );
 }
 
-function SummarySkeleton() {
+function DashboardSkeleton() {
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3">
+        {[0, 1].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-28 rounded-2xl" />
         ))}
@@ -139,7 +304,7 @@ function SummarySkeleton() {
 
 export default function HomePage() {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Home</h1>
         <div className="flex flex-wrap gap-2">
@@ -157,8 +322,8 @@ export default function HomePage() {
       <Suspense fallback={null}>
         <Reminders />
       </Suspense>
-      <Suspense fallback={<SummarySkeleton />}>
-        <Summary />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <Dashboard />
       </Suspense>
     </div>
   );
