@@ -1,0 +1,1 @@
+ALTER TABLE "invoice_lines" ADD COLUMN "list_rate" numeric(12, 2);

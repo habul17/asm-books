@@ -48,7 +48,7 @@ interface ExistingInvoice {
   customerId: number | null;
   priceListId: number | null;
   extra: ExtraValues;
-  lines: { productId: number | null; cost: number | null; qty: number }[];
+  lines: { productId: number | null; cost: number | null; qty: number; listRate: number | null }[];
 }
 
 type Customer = typeof customers.$inferSelect;
@@ -158,6 +158,8 @@ async function prepare(tx: Tx, input: InvoiceInput, existing: ExistingInvoice | 
       discountPct: l.discountPct,
       gstRate: input.nonGst ? 0 : l.gstRate,
       cost: old ? old.cost : (p?.purchase ?? null),
+      // A row saved earlier keeps its price-list rate unless the editor worked out a new one.
+      listRate: l.productId == null ? null : (l.listRate ?? old?.listRate ?? null),
     };
   });
 
@@ -362,7 +364,12 @@ async function lockInvoice(tx: Tx, id: number) {
     );
   }
   const lines = await tx
-    .select({ productId: invoiceLines.productId, cost: invoiceLines.cost, qty: invoiceLines.qty })
+    .select({
+      productId: invoiceLines.productId,
+      cost: invoiceLines.cost,
+      qty: invoiceLines.qty,
+      listRate: invoiceLines.listRate,
+    })
     .from(invoiceLines)
     .where(eq(invoiceLines.invoiceId, id));
   return { ...inv, lines };

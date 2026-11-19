@@ -427,6 +427,8 @@ export const invoiceLines = pgTable(
     total: money("total").notNull(),
     /** Purchase price at the time of sale, for profit reports. */
     cost: cost("cost"),
+    /** The rate the price list or markup gave for this row; `rate` differs when it was changed by hand. */
+    listRate: money("list_rate"),
   },
   (t) => [
     unique("invoice_lines_invoice_line_unique").on(t.invoiceId, t.lineNo),

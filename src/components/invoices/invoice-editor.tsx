@@ -43,6 +43,12 @@ export interface EditorLine {
   rateEdited: boolean;
   /** First in, first out: the selling price as the sale reaches newer purchase bills. */
   steps?: PriceStep[];
+  /** Owner only: the purchase price in the same steps. */
+  costSteps?: PriceStep[];
+  /** The rate the price list or markup gives for this row, kept when the rate is changed by hand. */
+  listRate?: number | null;
+  /** Owner only: the purchase price of the pieces in this row (the highest, if they span bills). */
+  buyRate?: number | null;
 }
 
 export interface EditorInitial {
@@ -105,6 +111,9 @@ export function lineFromItem(item: PickedItem): EditorLine {
     available: item.stockQty,
     rateEdited: false,
     steps: item.steps,
+    costSteps: item.costSteps,
+    listRate: item.price,
+    buyRate: item.costSteps ? rateForQty(item.costSteps, 1) : null,
   };
 }
 
@@ -121,10 +130,13 @@ export function withFifoRates(lines: EditorLine[]): EditorLine[] {
     const qty = num(l.qty) ?? 0;
     const skip = taken.get(l.productId) ?? 0;
     taken.set(l.productId, skip + Math.max(qty, 0));
-    if (l.rateEdited || qty <= 0) return l;
+    if (qty <= 0) return l;
     const price = rateForQty(l.steps, qty, skip);
-    const rate = price != null ? String(price) : "";
-    return rate === l.rate ? l : { ...l, rate };
+    const buyRate = l.costSteps ? rateForQty(l.costSteps, qty, skip) : null;
+    const rate = l.rateEdited ? l.rate : price != null ? String(price) : "";
+    return rate === l.rate && price === l.listRate && buyRate === (l.buyRate ?? null)
+      ? l
+      : { ...l, rate, listRate: price, buyRate };
   });
 }
 
@@ -265,7 +277,9 @@ export function InvoiceEditor({
 
   /** Prices the rows not typed by hand from a price list, or from purchase price + `markupPct` when it is given. */
   const repriceLines = async (current: EditorLine[], listId: number | null, markupPct: number | null) => {
-    const ids = current.filter((l) => l.productId != null && !l.rateEdited).map((l) => l.productId as number);
+    // Rows typed by hand keep their rate but still get the new list rate; rows saved earlier are left alone.
+    const fresh = (l: EditorLine) => l.productId != null && (!l.rateEdited || l.steps != null);
+    const ids = current.filter(fresh).map((l) => l.productId as number);
     if (!ids.length) return;
     setRepricing(true);
     try {
@@ -273,9 +287,10 @@ export function InvoiceEditor({
       setLines((ls) =>
         withFifoRates(
           ls.map((l) => {
-            const item = l.productId == null || l.rateEdited ? undefined : items.get(l.productId);
+            const item = fresh(l) ? items.get(l.productId as number) : undefined;
             if (!item) return l;
-            return { ...l, rate: item.price != null ? String(item.price) : "", steps: item.steps };
+            const rate = l.rateEdited ? l.rate : item.price != null ? String(item.price) : "";
+            return { ...l, rate, steps: item.steps, costSteps: item.costSteps };
           }),
         ),
       );
@@ -354,6 +369,7 @@ export function InvoiceEditor({
         rate: num(l.rate) ?? 0,
         discountPct: num(l.discountPct) ?? 0,
         gstRate: l.gstRate,
+        listRate: l.productId != null ? (l.listRate ?? null) : null,
       })),
     };
     startSaving(async () => {
@@ -757,6 +773,10 @@ export function InvoiceEditor({
                             {" "}
                             · stock {formatQty(l.available)}
                           </span>
+                        )}
+                        {l.buyRate != null && <> · buy {formatMoney(l.buyRate)}</>}
+                        {l.listRate != null && num(l.rate) !== l.listRate && (
+                          <> · {nonGst ? "markup" : "list"} price {formatMoney(l.listRate)}</>
                         )}
                       </span>
                     </div>

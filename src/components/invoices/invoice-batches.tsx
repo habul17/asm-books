@@ -10,6 +10,7 @@ import type { InvoiceDetail } from "@/server/invoices";
 export function InvoiceBatches({ inv }: { inv: InvoiceDetail }) {
   if (!inv.batches?.length) return null;
   const byLine = Map.groupBy(inv.batches, (b) => b.lineNo);
+  const label = inv.nonGst ? "Markup price" : "Price list rate";
   return (
     <section className="flex flex-col gap-3 rounded-xl border p-4 print:hidden">
       <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -41,6 +42,7 @@ export function InvoiceBatches({ inv }: { inv: InvoiceDetail }) {
                   </li>
                 ))}
               </ul>
+              {l.listRate != null && <RateNote listRate={l.listRate} rate={l.rate} qty={l.qty} label={label} />}
               {known && (
                 <p className="pl-4">
                   Cost {formatMoney(cost)} · sold for {formatMoney(l.taxable)} ·{" "}
@@ -53,5 +55,26 @@ export function InvoiceBatches({ inv }: { inv: InvoiceDetail }) {
         })}
       </ul>
     </section>
+  );
+}
+
+/** The rate the price list or markup gave, and how much was added to it (or taken off) by hand. */
+function RateNote({ listRate, rate, qty, label }: { listRate: number; rate: number; qty: number; label: string }) {
+  const diff = Math.round((rate - listRate) * 100) / 100;
+  return (
+    <p className="pl-4">
+      {label} {formatMoney(listRate)} · sold at {formatMoney(rate)}
+      {diff === 0 ? (
+        <span className="text-muted-foreground"> · no change</span>
+      ) : (
+        <>
+          {" · "}
+          <span className="font-medium">
+            {formatMoney(Math.abs(diff))} {diff > 0 ? "added" : "less"} per piece
+          </span>{" "}
+          <span className="text-muted-foreground">({formatMoney(Math.abs(diff * qty))} in all)</span>
+        </>
+      )}
+    </p>
   );
 }

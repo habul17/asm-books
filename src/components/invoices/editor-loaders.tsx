@@ -14,7 +14,11 @@ import { staffEditLimit } from "@/lib/edit-window";
 type DocLine = SalesDocDetail["lines"][number];
 
 /** A saved line as the editor shows it. The price already agreed is kept unless the user changes it. */
-const editorLine = (l: Omit<DocLine, "docId">, available: number | null): EditorInitial["lines"][number] => ({
+const editorLine = (
+  l: Omit<DocLine, "docId">,
+  available: number | null,
+  listRate: number | null = null,
+): EditorInitial["lines"][number] => ({
   key: `e${l.id}`,
   productId: l.productId,
   partNo: l.partNo,
@@ -26,6 +30,7 @@ const editorLine = (l: Omit<DocLine, "docId">, available: number | null): Editor
   gstRate: l.gstRate,
   available,
   rateEdited: true,
+  listRate,
 });
 
 /** Keeps a state that was picked by hand; otherwise the editor keeps following the customer. */
@@ -159,7 +164,11 @@ export async function EditInvoiceEditor({ id }: { id: number }) {
     notes: inv.notes ?? "",
     extra: Object.fromEntries(Object.entries(inv.extra).map(([fieldId, value]) => [fieldId, String(value)])),
     lines: inv.lines.map((l) =>
-      editorLine(l, l.productId != null && l.stockQty != null ? l.stockQty + (soldHere.get(l.productId) ?? 0) : null),
+      editorLine(
+        l,
+        l.productId != null && l.stockQty != null ? l.stockQty + (soldHere.get(l.productId) ?? 0) : null,
+        l.listRate,
+      ),
     ),
     originalCredit: inv.paymentType === "credit" ? inv.grandTotal : 0,
   };

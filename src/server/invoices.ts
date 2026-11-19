@@ -109,8 +109,8 @@ export type InvoiceListItem = Awaited<ReturnType<typeof searchInvoices>>["items"
 
 /** Line columns without the purchase cost, which never leaves the server. */
 const lineColumns = Object.fromEntries(
-  Object.entries(getTableColumns(invoiceLines)).filter(([key]) => key !== "cost"),
-) as Omit<ReturnType<typeof getTableColumns<typeof invoiceLines>>, "cost">;
+  Object.entries(getTableColumns(invoiceLines)).filter(([key]) => key !== "cost" && key !== "listRate"),
+) as Omit<ReturnType<typeof getTableColumns<typeof invoiceLines>>, "cost" | "listRate">;
 
 /** One invoice with its lines. Profit is only included for the owner. */
 export async function getInvoice(id: number) {
@@ -126,7 +126,7 @@ export async function getInvoice(id: number) {
       .leftJoin(users, eq(users.id, invoices.createdBy))
       .where(eq(invoices.id, id)),
     db
-      .select({ line: lineColumns, cost: invoiceLines.cost, stockQty: products.stockQty })
+      .select({ line: lineColumns, cost: invoiceLines.cost, listRate: invoiceLines.listRate, stockQty: products.stockQty })
       .from(invoiceLines)
       .leftJoin(products, eq(products.id, invoiceLines.productId))
       .where(eq(invoiceLines.invoiceId, id))
@@ -162,7 +162,8 @@ export async function getInvoice(id: number) {
     /** Filled-in custom fields, as printed on the invoice. */
     shownExtra: shownExtra(fields, head.invoice.extra),
     // Costs stay on the server; only the profit total is shared, and only with the owner.
-    lines: lines.map(({ line, stockQty }) => ({ ...line, stockQty })),
+    // The price-list rate is worked out from the purchase price, so it is owner only too.
+    lines: lines.map(({ line, stockQty, listRate }) => ({ ...line, stockQty, listRate: isOwner ? listRate : null })),
     profit: isOwner && allCosted ? Math.round((head.invoice.taxableTotal - cost) * 100) / 100 : null,
     /** Owner only: the purchase bills each row's pieces came from (first in, first out). */
     batches,
@@ -292,14 +293,16 @@ interface ItemRow {
 }
 
 /**
- * Selling price from the list (or the product's list price without one). Purchase prices never leave the server.
+ * Selling price from the list (or the product's list price without one).
  * First in, first out: `steps` give the price as a sale reaches newer purchase bills; `price` is for one piece.
+ * Purchase prices (`costSteps`) are sent to the owner only.
  */
 function toPickedItem(
   p: ItemRow,
   list: PriceRule | null,
   defaultGstRate: number,
   stock: StockLots | undefined,
+  owner: boolean,
 ): PickedItem {
   const priceFor = (purchase: number | null) =>
     list ? computePrice(list, { purchase, previous_purchase: p.previousPurchase, list: p.list }, p.manualPrice).price : p.list;
@@ -313,6 +316,9 @@ function toPickedItem(
     stockQty: p.stockQty,
     price: rateForQty(steps, 1),
     steps,
+    ...(owner
+      ? { costSteps: stock ? priceSteps(stock.lots, stock.shortCost, (cost) => cost) : [{ from: 0, price: p.purchase }] }
+      : {}),
   };
 }
 
@@ -327,11 +333,13 @@ export interface PickedItem {
   price: number | null;
   /** Selling price steps as a sale reaches newer purchase bills (first in, first out). Sales only. */
   steps?: PriceStep[];
+  /** Owner only: purchase price steps, in the same order as `steps`. */
+  costSteps?: PriceStep[];
 }
 
 /** Products matching the search, priced for the chosen price list. */
 export async function pickItems(query: string, priceListId: number | null) {
-  await requireUser();
+  const owner = (await requireUser()).role === "owner";
   const db = getDb();
   const [list, business] = await Promise.all([loadList(priceListId), loadBusiness(db)]);
   const { where, rank } = productSearch(query);
@@ -343,12 +351,12 @@ export async function pickItems(query: string, priceListId: number | null) {
     .orderBy(rank, asc(products.sort), asc(products.id))
     .limit(PICK_LIMIT);
   const stock = await loadStockLots(db, rows.map((r) => r.id));
-  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id)));
+  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id), owner));
 }
 
 /** Current prices of the given products in a price list, for re-pricing the lines of an invoice. */
 export async function priceItems(productIds: number[], priceListId: number | null, markupPct: number | null = null) {
-  await requireUser();
+  const owner = (await requireUser()).role === "owner";
   const ids = [...new Set(productIds)].filter((n) => Number.isSafeInteger(n) && n > 0).slice(0, 300);
   if (!ids.length) return [];
   const db = getDb();
@@ -361,5 +369,5 @@ export async function priceItems(productIds: number[], priceListId: number | nul
     .from(products)
     .where(inArray(products.id, ids));
   const stock = await loadStockLots(db, ids);
-  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id)));
+  return rows.map((r) => toPickedItem(r, list, business.defaultGstRate, stock.get(r.id), owner));
 }

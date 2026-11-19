@@ -21,6 +21,8 @@ const lineSchema = z.object({
   rate: z.number({ error: "rate is not valid" }).min(0, "rate cannot be negative").max(1_000_000_000, "rate is too large"),
   discountPct: z.number({ error: "discount is not valid" }).min(0, "discount cannot be negative").max(100, "discount cannot be more than 100%"),
   gstRate: z.number({ error: "GST % is not valid" }).refine(isGstRate, "GST % is not one of the allowed rates"),
+  /** The rate the price list or markup gave, before any change by hand; null when not known. */
+  listRate: z.number().min(0).max(1_000_000_000).nullable().default(null),
 });
 
 export const invoiceInputSchema = z.object({
