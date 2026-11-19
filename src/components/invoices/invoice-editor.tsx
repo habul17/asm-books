@@ -46,11 +46,9 @@ export interface EditorLine {
   rateEdited: boolean;
   /** First in, first out: the selling price as the sale reaches newer purchase bills. */
   steps?: PriceStep[];
-  /** Owner only: the purchase price in the same steps. */
-  costSteps?: PriceStep[];
   /** The rate the price list or markup gives for this row, kept when the rate is changed by hand. */
   listRate?: number | null;
-  /** Owner only: the purchase price of the pieces in this row (the highest, if they span bills). */
+  /** Owner only: the price on the newest purchase bill. */
   buyRate?: number | null;
   /** Owner only: the highest price paid for this part on any purchase bill. */
   highestBuy?: number | null;
@@ -117,9 +115,8 @@ export function lineFromItem(item: PickedItem): EditorLine {
     available: item.stockQty,
     rateEdited: false,
     steps: item.steps,
-    costSteps: item.costSteps,
     listRate: item.price,
-    buyRate: item.costSteps ? rateForQty(item.costSteps, 1) : null,
+    buyRate: item.newestCost ?? null,
     highestBuy: item.highestCost ?? null,
   };
 }
@@ -139,11 +136,8 @@ export function withFifoRates(lines: EditorLine[]): EditorLine[] {
     taken.set(l.productId, skip + Math.max(qty, 0));
     if (qty <= 0) return l;
     const price = rateForQty(l.steps, qty, skip);
-    const buyRate = l.costSteps ? rateForQty(l.costSteps, qty, skip) : null;
     const rate = l.rateEdited ? l.rate : price != null ? String(price) : "";
-    return rate === l.rate && price === l.listRate && buyRate === (l.buyRate ?? null)
-      ? l
-      : { ...l, rate, listRate: price, buyRate };
+    return rate === l.rate && price === l.listRate ? l : { ...l, rate, listRate: price };
   });
 }
 
@@ -297,7 +291,7 @@ export function InvoiceEditor({
             const item = fresh(l) ? items.get(l.productId as number) : undefined;
             if (!item) return l;
             const rate = l.rateEdited ? l.rate : item.price != null ? String(item.price) : "";
-            return { ...l, rate, steps: item.steps, costSteps: item.costSteps, highestBuy: item.highestCost ?? null };
+            return { ...l, rate, steps: item.steps, buyRate: item.newestCost ?? null, highestBuy: item.highestCost ?? null };
           }),
         ),
       );
@@ -784,7 +778,7 @@ export function InvoiceEditor({
                           </span>
                         )}
                         {l.buyRate != null && <> · buy {formatMoney(l.buyRate)}</>}
-                        {l.highestBuy != null && l.highestBuy !== l.buyRate && <> · highest {formatMoney(l.highestBuy)}</>}
+                        {l.highestBuy != null && <> · highest {formatMoney(l.highestBuy)}</>}
                         {l.listRate != null && num(l.rate) !== l.listRate && (
                           <> · {nonGst ? "markup" : "list"} price {formatMoney(l.listRate)}</>
                         )}

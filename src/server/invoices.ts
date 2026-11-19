@@ -310,7 +310,7 @@ interface ItemRow {
 /**
  * Selling price from the list (or the product's list price without one).
  * First in, first out: `steps` give the price as a sale reaches newer purchase bills; `price` is for one piece.
- * Purchase prices (`costSteps`) are sent to the owner only.
+ * Purchase prices (`newestCost`, `highestCost`) are sent to the owner only.
  */
 function toPickedItem(
   p: ItemRow,
@@ -338,7 +338,7 @@ function toPickedItem(
     steps,
     ...(owner
       ? {
-          costSteps: stock ? priceSteps(stock.lots, stock.shortCost, (cost) => cost) : [{ from: 0, price: p.purchase }],
+          newestCost: p.purchase,
           highestCost: highest(p.highestPurchase, p.purchase, stock?.shortCost, ...(stock?.lots.map((l) => l.cost) ?? [])),
         }
       : {}),
@@ -358,8 +358,8 @@ export interface PickedItem {
   price: number | null;
   /** Selling price steps as a sale reaches newer purchase bills (first in, first out). Sales only. */
   steps?: PriceStep[];
-  /** Owner only: purchase price steps, in the same order as `steps`. */
-  costSteps?: PriceStep[];
+  /** Owner only: the price on the newest purchase bill. */
+  newestCost?: number | null;
   /** Owner only: the highest price paid for this part on any purchase bill. */
   highestCost?: number | null;
 }
