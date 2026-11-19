@@ -164,3 +164,75 @@
     font-size: 100% !important;
   }
 }
+
+/* Notes: the editor, styled like Apple Notes. */
+@layer components {
+  .note-body {
+    --note-accent: oklch(0.77 0.16 75);
+    min-height: 50svh;
+    font-size: 1rem;
+    line-height: 1.55;
+    word-break: break-word;
+  }
+  .note-body > * + * { margin-top: 0.35em; }
+  .note-body h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+  .note-body h2 { font-size: 1.35rem; font-weight: 700; line-height: 1.25; margin-top: 0.6em; }
+  .note-body h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.5em; }
+  .note-body ul { list-style: disc; padding-left: 1.5rem; }
+  .note-body ol { list-style: decimal; padding-left: 1.5rem; }
+  .note-body li > p { margin: 0; }
+  .note-body blockquote { border-left: 3px solid var(--border); padding-left: 0.9rem; color: var(--muted-foreground); }
+  .note-body pre { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.875rem; background: var(--muted); border-radius: 0.6rem; padding: 0.6rem 0.8rem; white-space: pre-wrap; }
+  .note-body code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.9em; background: var(--muted); border-radius: 0.3rem; padding: 0.05rem 0.3rem; }
+  .note-body pre code { background: none; padding: 0; }
+  .note-body a { color: var(--note-accent); text-decoration: underline; text-underline-offset: 3px; }
+  .note-body mark { background: color-mix(in oklch, var(--note-accent) 35%, transparent); color: inherit; border-radius: 0.2rem; padding: 0 0.1rem; }
+  .note-body hr { border-color: var(--border); margin: 1rem 0; }
+
+  /* Checklists: round ticks that fill with the accent colour. */
+  .note-body ul[data-type="taskList"] { list-style: none; padding-left: 0; }
+  .note-body ul[data-type="taskList"] ul[data-type="taskList"] { padding-left: 1.6rem; }
+  .note-body ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 0.6rem; }
+  .note-body ul[data-type="taskList"] > li > label { flex-shrink: 0; margin-top: 0.15em; user-select: none; }
+  .note-body ul[data-type="taskList"] > li > div { flex: 1; min-width: 0; }
+  .note-body ul[data-type="taskList"] > li input[type="checkbox"] {
+    appearance: none;
+    display: grid;
+    place-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 9999px;
+    border: 1.5px solid var(--muted-foreground);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .note-body ul[data-type="taskList"] > li input[type="checkbox"]::after {
+    content: "";
+    width: 0.4rem;
+    height: 0.7rem;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translateY(-1px) rotate(45deg);
+    opacity: 0;
+  }
+  .note-body ul[data-type="taskList"] > li input[type="checkbox"]:checked { background: var(--note-accent); border-color: var(--note-accent); }
+  .note-body ul[data-type="taskList"] > li input[type="checkbox"]:checked::after { opacity: 1; }
+  .note-body ul[data-type="taskList"] > li[data-checked="true"] > div { color: var(--muted-foreground); }
+
+  /* Tables. */
+  .note-body table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 0.5rem 0; overflow: hidden; }
+  .note-body td, .note-body th { border: 1px solid var(--border); padding: 0.4rem 0.6rem; vertical-align: top; position: relative; }
+  .note-body th { font-weight: 600; text-align: left; }
+  .note-body .selectedCell::after { content: ""; position: absolute; inset: 0; background: color-mix(in oklch, var(--note-accent) 20%, transparent); pointer-events: none; }
+  .note-body .tableWrapper { overflow-x: auto; }
+
+  /* The grey "Title" hint on an empty first line. */
+  .note-body .is-empty[data-placeholder]::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+  .note-body .ProseMirror-selectednode { outline: none; }
+}

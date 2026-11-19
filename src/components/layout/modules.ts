@@ -1,5 +1,4 @@
 import {
-  CalendarCheckIcon,
   DatabaseBackupIcon,
   KeyRoundIcon,
   UserCogIcon,
@@ -16,6 +15,7 @@ import {
   HouseIcon,
   LandmarkIcon,
   ListChecksIcon,
+  NotebookPenIcon,
   PackageCheckIcon,
   PackageIcon,
   PackageOpenIcon,
@@ -48,7 +48,7 @@ export interface ModuleGroup {
 
 export const HOME: AppModule = { label: "Home", icon: HouseIcon, href: "/" };
 export const REMINDERS: AppModule = { label: "Reminders", icon: BellIcon, href: "/reminders" };
-export const TASKS: AppModule = { label: "Tasks", icon: CalendarCheckIcon, href: "/tasks" };
+export const NOTES: AppModule = { label: "Notes", icon: NotebookPenIcon, href: "/notes" };
 export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking", ownerOnly: true };
 export const CUSTOMERS: AppModule = { label: "Customers", icon: UsersIcon, href: "/customers" };
 export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href: "/invoices" };
@@ -82,7 +82,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
 export const MODULE_GROUPS: ModuleGroup[] = [
-  { title: null, modules: [HOME, REMINDERS, TASKS, BANKING] },
+  { title: null, modules: [HOME, REMINDERS, NOTES, BANKING] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
   { title: "Inventory", modules: [INVENTORY_ADJUSTMENTS] },
   {
@@ -142,7 +142,9 @@ export function isActive(pathname: string | null, href: string | null): boolean 
 }
 
 /** Full-screen forms hide the bottom tabs so their own save bar stays reachable. */
-export const isFormPage = (pathname: string | null) => pathname != null && /\/(new|edit)$/.test(pathname);
+/** Full-screen pages that hide the phone tab bar: forms, and an open note. */
+export const isFormPage = (pathname: string | null) =>
+  pathname != null && (/\/(new|edit)$/.test(pathname) || /^\/notes\/[^/]+\/\d+$/.test(pathname));
 
 /** Reports grouped like the Reports screen. A null href shows "Soon". */
 export const REPORT_GROUPS: { label: string; href: string | null }[][] = [

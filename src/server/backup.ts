@@ -16,7 +16,7 @@ const BACKUP_KEY = "backup";
  * completely, and so are the bytes of uploaded documents: they are too big for
  * this file (their names and details in `documents` are kept).
  */
-const SKIP_TABLES = new Set(["sessions", "document_files"]);
+const SKIP_TABLES = new Set(["sessions", "document_files", "note_files"]);
 const SKIP_COLUMNS: Record<string, string[]> = { users: ["passwordHash", "failedLogins", "lockedUntil"] };
 
 /** Every table of the app, in schema order. */

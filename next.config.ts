@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     // Bill scans upload one photo or PDF (up to 4 MB) through a server action.
     serverActions: { bodySizeLimit: "5mb" },
   },
+  async redirects() {
+    // Tasks became Notes.
+    return [{ source: "/tasks/:path*", destination: "/notes", permanent: false }];
+  },
   async headers() {
     return [
       {

@@ -1325,7 +1325,7 @@ export const recurringInvoices = pgTable(
 // Tasks
 // ---------------------------------------------------------------------------
 
-/** A to-do for the shop: call a customer, pay a bill, order a part. */
+/** No longer used: Tasks became Notes. Kept until a later migration drops it, so the old app keeps working during the switch. */
 export const tasks = pgTable(
   "tasks",
   {
@@ -1346,3 +1346,97 @@ export const tasks = pgTable(
     check("tasks_done_check", sql`${t.done} = (${t.doneAt} IS NOT NULL)`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Notes
+// ---------------------------------------------------------------------------
+
+/** A folder of notes. Each person has their own; notes outside a folder sit in "Notes". */
+export const noteFolders = pgTable(
+  "note_folders",
+  {
+    id: id(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("note_folders_user_name_uq").on(t.userId, sql`lower(${t.name})`)],
+);
+
+/**
+ * A note, private to the person who wrote it. The body is the editor's JSON.
+ * A locked note keeps only its title in the clear: the body is encrypted in
+ * the browser and stored in `cipher`, so the server never sees it.
+ */
+export const notes = pgTable(
+  "notes",
+  {
+    id: id(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    folderId: integer("folder_id").references(() => noteFolders.id, { onDelete: "set null" }),
+    title: text("title").notNull().default(""),
+    /** The first line after the title, shown under it in the list. */
+    preview: text("preview").notNull().default(""),
+    body: jsonb("body"),
+    /** All the note's words, for search. Empty for a locked note. */
+    searchText: text("search_text").notNull().default(""),
+    pinned: boolean("pinned").notNull().default(false),
+    locked: boolean("locked").notNull().default(false),
+    /** Base64 of the 12-byte IV followed by the AES-GCM ciphertext. */
+    cipher: text("cipher"),
+    /** Goes up by one on every save, so two devices cannot overwrite each other. */
+    version: integer("version").notNull().default(1),
+    /** When the words last changed; pinning or moving does not count. */
+    editedAt: timestamp("edited_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set while the note is in Recently Deleted. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("notes_user_idx").on(t.userId, t.deletedAt, t.editedAt),
+    check("notes_locked_check", sql`${t.locked} = (${t.cipher} IS NOT NULL) AND (NOT ${t.locked} OR ${t.body} IS NULL)`),
+  ],
+);
+
+/** A photo or file inside a note. A locked note's files are encrypted in the browser too. */
+export const noteFiles = pgTable(
+  "note_files",
+  {
+    /** 32 random hex characters, so addresses cannot be guessed. */
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    noteId: integer("note_id")
+      .notNull()
+      .references(() => notes.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    encrypted: boolean("encrypted").notNull().default(false),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("note_files_note_idx").on(t.noteId)],
+);
+
+/**
+ * The password check for a person's locked notes, as in Apple Notes: one
+ * password for all of them. Only a salt and an encrypted test phrase are
+ * kept; the password and the key never reach the server.
+ */
+export const noteLocks = pgTable("note_locks", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  salt: text("salt").notNull(),
+  iterations: integer("iterations").notNull(),
+  /** Base64 of IV + ciphertext of a known phrase; decrypting it proves the password. */
+  check: text("check").notNull(),
+  hint: text("hint"),
+  ...timestamps,
+});
