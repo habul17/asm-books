@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { BottomTabs, BottomTabsView, Sidebar, SidebarLinks } from "@/components/layout/app-nav";
+import { RefreshButton } from "@/components/layout/refresh-button";
 import { ReminderBell, ReminderBellView } from "@/components/layout/reminder-bell";
 import { viewerIsOwner } from "@/server/auth";
 
@@ -23,9 +24,12 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <aside className="sticky top-0 hidden h-svh flex-col gap-6 overflow-x-hidden overflow-y-auto border-r px-3 py-4 md:flex print:hidden">
         <div className="flex items-center justify-between gap-2 pr-1 pl-3">
           <Brand />
-          <Suspense fallback={<ReminderBellView count={0} />}>
-            <ReminderBell />
-          </Suspense>
+          <div className="flex items-center gap-1">
+            <RefreshButton />
+            <Suspense fallback={<ReminderBellView count={0} />}>
+              <ReminderBell />
+            </Suspense>
+          </div>
         </div>
         <Suspense fallback={<SidebarLinks pathname={null} isOwner={false} />}>
           <SidebarForViewer />
@@ -37,6 +41,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <div className="flex h-14 items-center gap-3 px-4">
             <Brand />
             <div className="ml-auto flex items-center gap-1">
+              <RefreshButton />
               <Suspense fallback={<ReminderBellView count={0} />}>
                 <ReminderBell />
               </Suspense>
