@@ -80,9 +80,16 @@ export function DeleteButton({ kind, id }: { kind: "folder" | "list"; id: number
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={onClick} className="w-fit">
-        <Trash2Icon /> {armed ? "Click again to delete" : `Delete ${kind === "folder" ? "folder" : "price list"}`}
+    <div className="flex max-w-xs flex-col gap-1">
+      <Button
+        type="button"
+        variant={kind === "list" && !armed ? "outline" : "destructive"}
+        size="sm"
+        disabled={pending}
+        onClick={onClick}
+        className="w-fit"
+      >
+        <Trash2Icon /> {armed ? "Tap again to delete" : kind === "folder" ? "Delete folder" : "Delete"}
       </Button>
       <ErrorText error={error} />
     </div>

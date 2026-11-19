@@ -132,10 +132,13 @@ export async function PriceListPanel({
       <CardHeader className="gap-2">
         <BackLink />
         <p className="text-xs text-muted-foreground">{path || "Top level"}</p>
-        <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
-          {list.name}
-          {!list.enabled && <Badge variant="outline">off</Badge>}
-        </CardTitle>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
+            {list.name}
+            {!list.enabled && <Badge variant="outline">off</Badge>}
+          </CardTitle>
+          {canEdit && <DeleteButton key={list.id} kind="list" id={list.id} />}
+        </div>
         <p className="text-sm text-muted-foreground">{describeRule(list)}</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -147,7 +150,6 @@ export async function PriceListPanel({
           </summary>
           <div className="flex flex-col gap-6 border-t p-4">
             <PriceListForm list={list} folders={folders} rename={rename} />
-            <DeleteButton kind="list" id={list.id} />
           </div>
         </details>
         )}

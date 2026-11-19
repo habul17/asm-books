@@ -264,7 +264,7 @@ export const customers = pgTable(
     notes: text("notes"),
     /** Custom field values keyed by custom_fields.id. */
     extra: jsonb("extra").$type<Record<string, string | number>>().notNull().default({}),
-    /** Customers are never deleted (history must stay); they are switched off instead. */
+    /** A customer with history is never deleted (old bills must stay); it is switched off instead. */
     active: boolean("active").notNull().default(true),
     ...timestamps,
   },

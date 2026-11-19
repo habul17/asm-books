@@ -16,6 +16,8 @@ import { PAYMENT_MODE_LABELS } from "@/lib/payments/validation";
 
 import { Balance } from "./balance";
 import { CustomerForm } from "./customer-form";
+import { DeleteCustomerButton } from "./delete-customer-button";
+import { viewerIsOwner } from "@/server/auth";
 import { billScanReady } from "@/server/bill-scan";
 
 function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
@@ -82,7 +84,7 @@ export async function EditCustomerPanel({ id, backHref, viewHref }: { id: number
 }
 
 export async function CustomerPanel({ id, backHref, editHref }: { id: number; backHref: string; editHref: string }) {
-  const [c, options] = await Promise.all([getCustomer(id), getCustomerOptions()]);
+  const [c, options, owner] = await Promise.all([getCustomer(id), getCustomerOptions(), viewerIsOwner()]);
   if (!c) return <NotFound backHref={backHref} />;
   const extras = shownExtra(options.fields, c.extra);
 
@@ -96,9 +98,12 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
             {!c.active && <Badge variant="outline">inactive</Badge>}
             {c.groupName && <Badge variant="secondary">{c.groupName}</Badge>}
           </CardTitle>
-          <Link href={editHref} scroll={false} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <PencilIcon /> Edit
-          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link href={editHref} scroll={false} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <PencilIcon /> Edit
+            </Link>
+            {owner && <DeleteCustomerButton id={c.id} active={c.active} />}
+          </div>
         </div>
         {(c.mobile || c.email) && (
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

@@ -1,15 +1,25 @@
 "use server";
 
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNull, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getDb } from "@/db";
-import { customerGroups, customers, customFields, priceLists } from "@/db/schema";
+import {
+  creditNotes,
+  customerGroups,
+  customers,
+  customFields,
+  invoices,
+  payments,
+  priceLists,
+  recurringInvoices,
+  salesDocs,
+} from "@/db/schema";
 import { customersHref } from "@/lib/customers/href";
 import { groupSchema, parseCustomer } from "@/lib/customers/validation";
-import { requireUser } from "@/server/auth";
+import { isOwner, requireUser } from "@/server/auth";
 import { scanContact } from "@/server/bill-scan/contact";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import type { ContactDraft } from "@/lib/contacts/scan";
@@ -58,7 +68,7 @@ async function groupNameTaken(name: string, exceptId: number | null) {
 // Customers
 // ---------------------------------------------------------------------------
 
-/** Creates a customer (id null) or updates one. Customers are never deleted. */
+/** Creates a customer (id null) or updates one. */
 export async function saveCustomer(id: number | null, _prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireUser();
   if (id != null && !idSchema.safeParse(id).success) return { error: "Invalid customer" };
@@ -101,6 +111,70 @@ export async function saveCustomer(id: number | null, _prev: ActionState, formDa
     return { error: FAILED };
   }
   redirect(customersHref({ id: savedId }));
+}
+
+export interface DeleteCustomerState extends ActionState {
+  /** True when the customer has history, so it can only be made inactive. */
+  hasHistory?: boolean;
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * Deletes a customer with no history. One with invoices, payments, returns,
+ * quotes or recurring invoices is kept, because old bills must not change.
+ */
+export async function deleteCustomer(id: number): Promise<DeleteCustomerState> {
+  if (!isOwner(await requireUser())) return { error: "Only the owner can delete customers." };
+  if (!idSchema.safeParse(id).success) return { error: "Invalid customer" };
+  const db = getDb();
+  try {
+    const [[inv], [pay], [cn], [docs], [rec]] = await db.batch([
+      db.select({ n: count() }).from(invoices).where(eq(invoices.customerId, id)),
+      db.select({ n: count() }).from(payments).where(eq(payments.customerId, id)),
+      db.select({ n: count() }).from(creditNotes).where(eq(creditNotes.customerId, id)),
+      db.select({ n: count() }).from(salesDocs).where(eq(salesDocs.customerId, id)),
+      db.select({ n: count() }).from(recurringInvoices).where(eq(recurringInvoices.customerId, id)),
+    ]);
+    const history = [
+      inv.n && plural(inv.n, "invoice"),
+      pay.n && plural(pay.n, "payment"),
+      cn.n && plural(cn.n, "credit note"),
+      docs.n && plural(docs.n, "quote or order"),
+      rec.n && plural(rec.n, "recurring invoice"),
+    ].filter(Boolean);
+    if (history.length > 0) {
+      return {
+        error: `This customer has ${history.join(", ")}, so it cannot be deleted. You can make it inactive: it is hidden from search and its bills stay.`,
+        hasHistory: true,
+      };
+    }
+    const deleted = await db.delete(customers).where(eq(customers.id, id)).returning({ id: customers.id });
+    if (deleted.length === 0) return { error: "Customer not found" };
+  } catch (err) {
+    logError("deleteCustomer", err);
+    return { error: FAILED };
+  }
+  redirect(customersHref({}));
+}
+
+/** Hides a customer from search; its history is kept. */
+export async function deactivateCustomer(id: number): Promise<ActionState> {
+  if (!isOwner(await requireUser())) return { error: "Only the owner can do this." };
+  if (!idSchema.safeParse(id).success) return { error: "Invalid customer" };
+  try {
+    const done = await getDb()
+      .update(customers)
+      .set({ active: false })
+      .where(eq(customers.id, id))
+      .returning({ id: customers.id });
+    if (done.length === 0) return { error: "Customer not found" };
+  } catch (err) {
+    logError("deactivateCustomer", err);
+    return { error: FAILED };
+  }
+  refresh();
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------

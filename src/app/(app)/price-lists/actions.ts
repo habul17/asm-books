@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getDb } from "@/db";
-import { priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
+import { customerGroups, customers, priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
 import { priceListsHref } from "@/lib/price-lists/href";
 import { isOwner, requireUser } from "@/server/auth";
 
@@ -184,12 +184,32 @@ export async function updatePriceList(id: number, _prev: ActionState, formData: 
   return { ok: true };
 }
 
-/** Soft delete: the list is hidden but kept, because old invoices refer to it. */
+const names = (rows: { name: string }[], total: number) =>
+  rows.map((r) => r.name).join(", ") + (total > rows.length ? ` and ${total - rows.length} more` : "");
+
+/**
+ * Soft delete: the list is hidden but kept, because old invoices refer to it.
+ * A list still given to customers or groups is not deleted, so nobody's prices change unnoticed.
+ */
 export async function deletePriceList(id: number): Promise<ActionState> {
   if (!(await signedInAsOwner())) return { error: OWNER_ONLY };
   if (!idSchema.safeParse(id).success) return { error: "Invalid price list" };
   try {
-    const deleted = await getDb()
+    const db = getDb();
+    const [[{ people }], someCustomers, [{ groups }], someGroups] = await db.batch([
+      db.select({ people: count() }).from(customers).where(eq(customers.priceListId, id)),
+      db.select({ name: customers.name }).from(customers).where(eq(customers.priceListId, id)).orderBy(customers.name).limit(3),
+      db.select({ groups: count() }).from(customerGroups).where(eq(customerGroups.priceListId, id)),
+      db.select({ name: customerGroups.name }).from(customerGroups).where(eq(customerGroups.priceListId, id)).orderBy(customerGroups.name).limit(3),
+    ]);
+    const users = [
+      people > 0 ? `${people === 1 ? "customer" : "customers"} ${names(someCustomers, people)}` : null,
+      groups > 0 ? `${groups === 1 ? "group" : "groups"} ${names(someGroups, groups)}` : null,
+    ].filter(Boolean);
+    if (users.length > 0) {
+      return { error: `This list is used by ${users.join(" and ")}. Give them another price list first.` };
+    }
+    const deleted = await db
       .update(priceLists)
       .set({ deletedAt: new Date() })
       .where(and(eq(priceLists.id, id), isNull(priceLists.deletedAt)))
