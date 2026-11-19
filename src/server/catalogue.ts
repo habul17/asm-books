@@ -20,7 +20,7 @@ import { folderPathResolver } from "@/lib/price-lists/folders";
 import { computePrice, type ComputedPrice } from "@/lib/pricing";
 
 import { loadStockLots } from "./fifo";
-import { productSearch, purchasePriceAt } from "./product-search";
+import { productSearch, purchasePriceAt, realPurchasePrice } from "./product-search";
 
 export const SEARCH_LIMIT = 50;
 
@@ -121,7 +121,7 @@ export async function getProduct(id: number) {
         source: purchasePrices.source,
       })
       .from(purchasePrices)
-      .where(eq(purchasePrices.productId, id))
+      .where(and(eq(purchasePrices.productId, id), realPurchasePrice))
       .orderBy(desc(purchasePrices.date), desc(purchasePrices.id)),
     db
       .select({

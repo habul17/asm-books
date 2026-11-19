@@ -10,11 +10,17 @@ const MAX_WORDS = 8;
 /** Escapes LIKE wildcards so user input is matched literally. */
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
+/**
+ * True for a real purchase price. The prices imported from the first Excel price list were only
+ * placeholders, so they are never shown, compared or used as a cost; only bills (and prices typed in) count.
+ */
+export const realPurchasePrice = sql`(${col(purchasePrices.source)} IS NULL OR ${col(purchasePrices.source)} NOT LIKE 'excel:%')`;
+
 /** The newest (offset 0) or previous (offset 1) purchase price of the product in the outer query. */
 export const purchasePriceAt = (offset: 0 | 1) =>
   sql<number | null>`(
     SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
-    WHERE ${col(purchasePrices.productId)} = ${col(products.id)}
+    WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${realPurchasePrice}
     ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC
     LIMIT 1 OFFSET ${sql.raw(String(offset))}
   )`.mapWith(Number);

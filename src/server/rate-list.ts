@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb, withTransaction } from "@/db";
@@ -19,7 +19,7 @@ import { requireOwner } from "@/server/auth";
 import { readDocument } from "@/server/bill-scan";
 import { BillScanError, type BillFile } from "@/server/bill-scan/reader";
 import { todayInIndia } from "@/server/invoice-writes";
-import { purchasePriceAt } from "@/server/product-search";
+import { purchasePriceAt, realPurchasePrice } from "@/server/product-search";
 import { loadBusiness } from "@/server/settings";
 
 const RATE_LIST_TASK = {
@@ -106,7 +106,7 @@ export async function applyRateList(input: unknown): Promise<{ updated: number; 
         const [latest] = await tx
           .select({ price: purchasePrices.price })
           .from(purchasePrices)
-          .where(eq(purchasePrices.productId, u.productId))
+          .where(and(eq(purchasePrices.productId, u.productId), realPurchasePrice))
           .orderBy(desc(purchasePrices.date), desc(purchasePrices.id))
           .limit(1);
         if (latest && Math.abs(latest.price - u.price) < 0.005) continue;

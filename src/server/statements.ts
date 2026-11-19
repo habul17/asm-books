@@ -6,6 +6,7 @@ import { connection } from "next/server";
 
 import { getDb } from "@/db";
 import { col } from "@/db/sql";
+import { realPurchasePrice } from "@/server/product-search";
 import {
   bills,
   creditNotes,
@@ -183,11 +184,11 @@ const stockQtyAt = (asOf: string) => sql`(${col(products.stockQty)} - coalesce((
 /** A part's purchase price on a date; a part first priced later is valued at its first price. */
 const purchasePriceAt = (asOf: string) => sql`coalesce((
   SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
-  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${col(purchasePrices.date)} <= ${asOf}
+  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${col(purchasePrices.date)} <= ${asOf} AND ${realPurchasePrice}
   ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC LIMIT 1
 ), (
   SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
-  WHERE ${col(purchasePrices.productId)} = ${col(products.id)}
+  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${realPurchasePrice}
   ORDER BY ${col(purchasePrices.date)}, ${col(purchasePrices.id)} LIMIT 1
 ))`;
 

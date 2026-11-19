@@ -6,6 +6,8 @@ import type { getDb, Tx } from "@/db";
 import { billLines, bills, invoiceLineBatches, products, purchasePrices } from "@/db/schema";
 import { lotsOnHand, newestCost, takeOldestFirst, unitCost, type Batch, type Lot, type Portion } from "@/lib/stock/fifo";
 
+import { realPurchasePrice } from "./product-search";
+
 type Db = ReturnType<typeof getDb> | Tx;
 
 export interface StockLots {
@@ -42,11 +44,11 @@ export async function loadStockLots(
       .from(billLines)
       .innerJoin(bills, eq(bills.id, billLines.billId))
       .where(and(inArray(billLines.productId, ids), eq(bills.status, "final"))),
-    // The price known before any bill (price list import or typed in), for older stock.
+    // The price known before any bill (typed in), for older stock; Excel placeholder prices do not count.
     db
       .selectDistinctOn([purchasePrices.productId], { productId: purchasePrices.productId, price: purchasePrices.price })
       .from(purchasePrices)
-      .where(and(inArray(purchasePrices.productId, ids), notLike(purchasePrices.source, "bill:%")))
+      .where(and(inArray(purchasePrices.productId, ids), notLike(purchasePrices.source, "bill:%"), realPurchasePrice))
       .orderBy(purchasePrices.productId, sql`${purchasePrices.date} DESC`, sql`${purchasePrices.id} DESC`),
   ]);
   const batches = new Map<number, Batch[]>();

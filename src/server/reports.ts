@@ -28,6 +28,7 @@ import { parsePeriod, type Period } from "@/lib/reports/period";
 import { requireOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
+import { realPurchasePrice } from "./product-search";
 import { todayInIndia } from "./invoice-writes";
 import { loadBusiness } from "./settings";
 import { vendorBalance } from "./vendors";
@@ -582,7 +583,7 @@ export const SLOW_STOCK_LIMIT = 500;
 /** A part's newest purchase price, the rate stock is valued at. */
 export const newestPurchasePrice = sql<number | null>`(
   SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
-  WHERE ${col(purchasePrices.productId)} = ${col(products.id)}
+  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${realPurchasePrice}
   ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC LIMIT 1
 )`;
 
