@@ -337,7 +337,10 @@ function toPickedItem(
     price: rateForQty(steps, 1),
     steps,
     ...(owner
-      ? { costSteps: stock ? priceSteps(stock.lots, stock.shortCost, (cost) => cost) : [{ from: 0, price: p.purchase }] }
+      ? {
+          costSteps: stock ? priceSteps(stock.lots, stock.shortCost, (cost) => cost) : [{ from: 0, price: p.purchase }],
+          highestCost: highest(p.highestPurchase, p.purchase, stock?.shortCost, ...(stock?.lots.map((l) => l.cost) ?? [])),
+        }
       : {}),
   };
 }
@@ -357,6 +360,8 @@ export interface PickedItem {
   steps?: PriceStep[];
   /** Owner only: purchase price steps, in the same order as `steps`. */
   costSteps?: PriceStep[];
+  /** Owner only: the highest price paid for this part on any purchase bill. */
+  highestCost?: number | null;
 }
 
 /** Products matching the search, priced for the chosen price list. */

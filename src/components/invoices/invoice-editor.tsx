@@ -52,6 +52,8 @@ export interface EditorLine {
   listRate?: number | null;
   /** Owner only: the purchase price of the pieces in this row (the highest, if they span bills). */
   buyRate?: number | null;
+  /** Owner only: the highest price paid for this part on any purchase bill. */
+  highestBuy?: number | null;
 }
 
 export interface EditorInitial {
@@ -118,6 +120,7 @@ export function lineFromItem(item: PickedItem): EditorLine {
     costSteps: item.costSteps,
     listRate: item.price,
     buyRate: item.costSteps ? rateForQty(item.costSteps, 1) : null,
+    highestBuy: item.highestCost ?? null,
   };
 }
 
@@ -294,7 +297,7 @@ export function InvoiceEditor({
             const item = fresh(l) ? items.get(l.productId as number) : undefined;
             if (!item) return l;
             const rate = l.rateEdited ? l.rate : item.price != null ? String(item.price) : "";
-            return { ...l, rate, steps: item.steps, costSteps: item.costSteps };
+            return { ...l, rate, steps: item.steps, costSteps: item.costSteps, highestBuy: item.highestCost ?? null };
           }),
         ),
       );
@@ -781,6 +784,7 @@ export function InvoiceEditor({
                           </span>
                         )}
                         {l.buyRate != null && <> · buy {formatMoney(l.buyRate)}</>}
+                        {l.highestBuy != null && l.highestBuy !== l.buyRate && <> · highest {formatMoney(l.highestBuy)}</>}
                         {l.listRate != null && num(l.rate) !== l.listRate && (
                           <> · {nonGst ? "markup" : "list"} price {formatMoney(l.listRate)}</>
                         )}
