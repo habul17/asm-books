@@ -17,7 +17,9 @@ import {
   ListIcon,
   ListOrderedIcon,
   LoaderIcon,
+  MicIcon,
   PaperclipIcon,
+  SquareIcon,
   QuoteIcon,
   StrikethroughIcon,
   TableIcon,
@@ -30,7 +32,8 @@ import { saveLockedNoteAction, saveNoteAction, uploadNoteFileAction } from "@/ap
 import { encryptBytes, encryptText } from "@/lib/notes/lock";
 import { NOTE_FILE_MAX, NOTE_IMAGE_TYPES, type NoteNode, noteSummary } from "@/lib/notes/notes";
 
-import { NoteFile, NoteImage } from "./note-nodes";
+import { NoteAudio, NoteFile, NoteImage } from "./note-nodes";
+import { canRecordVoice, useVoiceNote } from "./note-recorder";
 
 export interface NoteSummary {
   title: string;
@@ -111,8 +114,10 @@ async function shrinkPhoto(file: File): Promise<Blob> {
 }
 
 /** Uploads one file into the note (encrypted first for a locked note) and returns the node to insert. */
-export async function uploadIntoNote(noteId: number, file: File, key: CryptoKey | null) {
+/** `seconds` is the length of a voice note just recorded. */
+export async function uploadIntoNote(noteId: number, file: File, key: CryptoKey | null, seconds = 0) {
   const isImage = NOTE_IMAGE_TYPES.has(file.type);
+  const isAudio = file.type.startsWith("audio/");
   const blob = isImage ? await shrinkPhoto(file) : file;
   if (blob.size > NOTE_FILE_MAX) throw new Error(`"${file.name}" is bigger than 4 MB.`);
   const mimeType = blob.type || file.type || "application/octet-stream";
@@ -126,8 +131,15 @@ export async function uploadIntoNote(noteId: number, file: File, key: CryptoKey 
   const res = await uploadNoteFileAction(noteId, form);
   if (!res.ok || !res.value) throw new Error(res.error ?? "Could not add the file.");
   return {
-    type: isImage ? "noteImage" : "noteFile",
-    attrs: { fileId: res.value, encrypted: !!key, mimeType, name: file.name.slice(0, 200), size: blob.size },
+    type: isImage ? "noteImage" : isAudio ? "noteAudio" : "noteFile",
+    attrs: {
+      fileId: res.value,
+      encrypted: !!key,
+      mimeType,
+      name: file.name.slice(0, 200),
+      size: blob.size,
+      duration: Math.round(seconds * 10) / 10,
+    },
   };
 }
 
@@ -231,6 +243,7 @@ export function NoteEditor({
       TableKit.configure({ table: { resizable: false } }),
       NoteImage,
       NoteFile,
+      NoteAudio,
       Placeholder.configure({
         placeholder: ({ editor: e, node }) => (node.type.name === "heading" && e.state.doc.firstChild === node ? "Title" : ""),
       }),
@@ -269,12 +282,12 @@ export function NoteEditor({
     return true;
   }
   const addFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], seconds?: number) => {
       const e = editorRef.current;
       if (!e) return;
       for (const f of files) {
         try {
-          const node = await uploadIntoNote(noteId, f, lockKey);
+          const node = await uploadIntoNote(noteId, f, lockKey, seconds);
           e.chain().focus().insertContent([node, { type: "paragraph" }]).run();
         } catch (err) {
           onError(err instanceof Error ? err.message : "Could not add the file.");
@@ -338,7 +351,7 @@ export function NoteEditor({
     <>
       <div className="sticky top-14 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:top-0">
         {header}
-        {!readOnly && <Toolbar editor={editor} onFiles={addFiles} />}
+        {!readOnly && <Toolbar editor={editor} onFiles={addFiles} onError={onError} />}
       </div>
       {children}
       <EditorContent editor={editor} className="flex-1 px-5 pt-3 pb-32 md:px-8" />
@@ -386,7 +399,15 @@ const STYLES = [
   { key: "mono", label: "Monostyled", className: "font-mono text-sm" },
 ] as const;
 
-function Toolbar({ editor, onFiles }: { editor: Editor; onFiles: (files: File[]) => Promise<void> }) {
+function Toolbar({
+  editor,
+  onFiles,
+  onError,
+}: {
+  editor: Editor;
+  onFiles: (files: File[], seconds?: number) => Promise<void>;
+  onError: (message: string) => void;
+}) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -413,6 +434,14 @@ function Toolbar({ editor, onFiles }: { editor: Editor; onFiles: (files: File[])
     }),
   });
   const [uploading, setUploading] = useState(false);
+  const voice = useVoiceNote(
+    (file, seconds) => {
+      setUploading(true);
+      void onFiles([file], seconds).finally(() => setUploading(false));
+    },
+    onError,
+  );
+  const [micOk] = useState(canRecordVoice);
   const photoInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const c = () => editor.chain().focus();
@@ -514,6 +543,11 @@ function Toolbar({ editor, onFiles }: { editor: Editor; onFiles: (files: File[])
         <ToolButton label="Attach file" onClick={() => fileInput.current?.click()}>
           <PaperclipIcon />
         </ToolButton>
+        {micOk && voice.seconds == null && (
+          <ToolButton label="Record voice note" onClick={() => void voice.start()}>
+            <MicIcon />
+          </ToolButton>
+        )}
         {s.table && (
           <div className="ml-1 flex shrink-0 items-center gap-0.5 border-l pl-1 text-xs">
             {(
@@ -553,6 +587,24 @@ function Toolbar({ editor, onFiles }: { editor: Editor; onFiles: (files: File[])
           }}
         />
       </div>
+      {voice.seconds != null && (
+        <div className="flex items-center gap-3 border-t px-4 py-2" role="status">
+          <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
+          <span className="flex-1 text-sm font-medium tabular-nums">
+            Recording {Math.floor(voice.seconds / 60)}:{String(voice.seconds % 60).padStart(2, "0")}
+          </span>
+          <button type="button" onClick={voice.cancel} className="text-sm text-muted-foreground hover:text-foreground">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={voice.stop}
+            className="flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-sm font-medium text-white"
+          >
+            <SquareIcon className="size-3.5 fill-current" /> Done
+          </button>
+        </div>
+      )}
     </div>
   );
 }

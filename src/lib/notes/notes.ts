@@ -49,7 +49,10 @@ const NODE_TYPES = new Set([
   "tableHeader",
   "noteImage",
   "noteFile",
+  "noteAudio",
 ]);
+/** Parts of a note that hold an uploaded file. */
+export const FILE_NODES = new Set(["noteImage", "noteFile", "noteAudio"]);
 const MARK_TYPES = new Set(["bold", "italic", "underline", "strike", "code", "link", "highlight"]);
 const SAFE_LINK = /^(https?:|mailto:|tel:)/i;
 const MAX_DEPTH = 40;
@@ -64,7 +67,7 @@ export function isSafeNoteBody(body: unknown): body is NoteNode {
     const node = n as NoteNode;
     if (typeof node.type !== "string" || !NODE_TYPES.has(node.type)) return false;
     if (node.text !== undefined && typeof node.text !== "string") return false;
-    if (node.type === "noteImage" || node.type === "noteFile") {
+    if (FILE_NODES.has(node.type)) {
       if (typeof node.attrs?.fileId !== "string" || !NOTE_FILE_ID.test(node.attrs.fileId)) return false;
     }
     if (node.marks !== undefined) {
@@ -91,6 +94,7 @@ export function noteLines(body: NoteNode | null | undefined): string[] {
   const walk = (n: NoteNode) => {
     if (n.type === "noteImage") return void lines.push("Photo");
     if (n.type === "noteFile") return void lines.push(String(n.attrs?.name ?? "File"));
+    if (n.type === "noteAudio") return void lines.push("Voice note");
     if (BLOCKS.has(n.type)) {
       let s = "";
       const text = (c: NoteNode) => {
@@ -111,10 +115,10 @@ export function noteLines(body: NoteNode | null | undefined): string[] {
 /** Title (first line), preview (the next line) and the words for search. */
 export function noteSummary(body: NoteNode | null | undefined) {
   const lines = noteLines(body);
-  const words = lines.filter((l) => l !== "Photo");
+  const words = lines.filter((l) => l !== "Photo" && l !== "Voice note");
   return {
     title: (words[0] ?? "").slice(0, 200),
-    preview: (words[1] ?? (lines.length > 1 ? "Photo" : "")).slice(0, 200),
+    preview: (words[1] ?? (lines.length > 1 ? lines[1] : "")).slice(0, 200),
     searchText: lines.join("\n").slice(0, 100_000),
   };
 }
@@ -123,7 +127,7 @@ export function noteSummary(body: NoteNode | null | undefined) {
 export function noteFileIds(body: NoteNode | null | undefined): string[] {
   const ids: string[] = [];
   const walk = (n: NoteNode) => {
-    if ((n.type === "noteImage" || n.type === "noteFile") && typeof n.attrs?.fileId === "string") ids.push(n.attrs.fileId);
+    if (FILE_NODES.has(n.type) && typeof n.attrs?.fileId === "string") ids.push(n.attrs.fileId);
     n.content?.forEach(walk);
   };
   if (body) walk(body);

@@ -41,6 +41,7 @@ import {
 import { decryptBytes, decryptText, encryptBytes, encryptText } from "@/lib/notes/lock";
 import {
   DELETED_DAYS,
+  FILE_NODES,
   type FolderKey,
   folderHref,
   noteFullDate,
@@ -453,7 +454,7 @@ function ListPane({
 
 /** Goes through a note's photos and files, replacing each as `swap` says. */
 async function swapFiles(node: NoteNode, swap: (attrs: Record<string, unknown>) => Promise<Record<string, unknown> | null>) {
-  if ((node.type === "noteImage" || node.type === "noteFile") && node.attrs) {
+  if (FILE_NODES.has(node.type) && node.attrs) {
     const next = await swap(node.attrs);
     if (next) node.attrs = next;
   }

@@ -68,3 +68,10 @@ it("reads folder keys from the address", () => {
   expect(parseFolderKey("0")).toBeNull();
   expect(parseFolderKey("x")).toBeNull();
 });
+
+it("accepts voice notes and lists them as a line", () => {
+  const body = doc(p("Call notes"), { type: "noteAudio", attrs: { fileId, encrypted: false, duration: 12 } });
+  expect(isSafeNoteBody(body)).toBe(true);
+  expect(noteSummary(body)).toMatchObject({ title: "Call notes", preview: "Voice note" });
+  expect(noteFileIds(body)).toEqual([fileId]);
+});
