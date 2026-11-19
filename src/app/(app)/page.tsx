@@ -55,7 +55,7 @@ function Today({ f }: { f: Figures }) {
         <Tile
           label="Received"
           value={formatMoney(f.today.received)}
-          note={plural(f.today.payments, "payment")}
+          note={`${formatMoney(f.today.cashSales)} cash sales + ${plural(f.today.payments, "payment")}`}
           href="/payments"
         />
       </div>
@@ -85,6 +85,37 @@ function ThisMonth({ f }: { f: Figures }) {
           />
         ))}
       </div>
+    </Section>
+  );
+}
+
+function Earned({ f }: { f: Figures }) {
+  const e = f.earned;
+  return (
+    <Section title="Profit from money received" note="This month">
+      <Rows
+        rows={[
+          {
+            label: "Money received",
+            note: `${formatMoney(e.cashSales)} cash sales + ${formatMoney(e.payments)} payments`,
+            value: formatMoney(e.received),
+            href: "/payments",
+          },
+          {
+            label: "Profit in it",
+            note:
+              e.untraced > 0
+                ? `${formatMoney(e.untraced)} was for old dues, advances or parts without a cost, not counted`
+                : "Before GST",
+            value: formatMoney(e.profit),
+            href: "/payments",
+            strong: true,
+            negative: e.profit < 0,
+          },
+          { label: "Ashi", note: "50% of the profit", value: formatMoney(e.ashi), href: "/payments", negative: e.ashi < 0 },
+          { label: "Dad", note: "50% of the profit", value: formatMoney(e.dad), href: "/payments", negative: e.dad < 0 },
+        ]}
+      />
     </Section>
   );
 }
@@ -272,6 +303,7 @@ async function Dashboard() {
     <>
       <Today f={f} />
       <ThisMonth f={f} />
+      <Earned f={f} />
       <OwedAndOwing f={f} />
       <Section title="Sales and purchases" note="Last 6 months, with GST">
         <MonthChart rows={f.chart} href="/reports/sales" />
