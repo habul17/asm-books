@@ -8,10 +8,10 @@ import { getDb } from "@/db";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
 import { categories, priceListFolders, priceListItems, priceLists, products } from "@/db/schema";
-import { computePrice, round2, type PriceRule } from "@/lib/pricing";
+import { computePrice, highest, round2, type PriceRule } from "@/lib/pricing";
 
 import { loadStockLots } from "./fifo";
-import { productSearch, purchasePriceAt } from "./product-search";
+import { highestPurchasePrice, productSearch, purchasePriceAt } from "./product-search";
 
 export const PRICES_PAGE = 100;
 export const PRICES_MAX = 2000;
@@ -101,6 +101,7 @@ export async function getListPrices(
         list: products.listPrice,
         purchase: purchasePriceAt(0),
         previousPurchase: purchasePriceAt(1),
+        highestPurchase: highestPurchasePrice,
         manualPrice: priceListItems.manualPrice,
       })
       .from(products)
@@ -116,7 +117,7 @@ export async function getListPrices(
   const items = rows.map((row): ListPriceRow => {
     const s = stock.get(row.id);
     const p = { ...row, purchase: s?.lots[0]?.cost ?? s?.shortCost ?? row.purchase };
-    const bases = { purchase: p.purchase, previous_purchase: p.previousPurchase, list: p.list };
+    const bases = { purchase: p.purchase, previous_purchase: p.previousPurchase, highest_purchase: highest(p.highestPurchase, p.purchase), list: p.list };
     const rule = computePrice(list, bases);
     const price = p.manualPrice ?? rule.price;
     return {

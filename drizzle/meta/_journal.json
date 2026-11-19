@@ -218,6 +218,13 @@
       "when": 1795116736990,
       "tag": "0030_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795119835303,
+      "tag": "0031_highest_purchase_base",
+      "breakpoints": true
     }
   ]
 }

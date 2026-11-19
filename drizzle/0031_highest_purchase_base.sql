@@ -1,0 +1,1 @@
+ALTER TYPE "public"."price_base" ADD VALUE 'highest_purchase';

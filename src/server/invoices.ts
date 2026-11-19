@@ -17,7 +17,7 @@ import {
   users,
 } from "@/db/schema";
 import { shownExtra } from "@/lib/custom-fields";
-import { computePrice, type PriceRule } from "@/lib/pricing";
+import { computePrice, highest, type PriceRule } from "@/lib/pricing";
 import { priceSteps, rateForQty, type PriceStep } from "@/lib/stock/fifo";
 import { col } from "@/db/sql";
 import { requireUser } from "@/server/auth";
@@ -28,7 +28,7 @@ import { loadBusiness } from "@/server/settings";
 import { loadCustomFields } from "./custom-fields";
 import { billScanReady } from "./bill-scan";
 import { customerBalance } from "./customers";
-import { productSearch, purchasePriceAt } from "./product-search";
+import { highestPurchasePrice, productSearch, purchasePriceAt } from "./product-search";
 import { canChangeToday } from "@/lib/edit-window";
 
 export const INVOICE_LIMIT = 100;
@@ -285,6 +285,7 @@ const itemColumns = (listId: number) => ({
   list: products.listPrice,
   purchase: purchasePriceAt(0),
   previousPurchase: purchasePriceAt(1),
+  highestPurchase: highestPurchasePrice,
   manualPrice: sql<number | null>`(
     SELECT ${col(priceListItems.manualPrice)} FROM ${priceListItems}
     WHERE ${col(priceListItems.productId)} = ${col(products.id)} AND ${col(priceListItems.priceListId)} = ${listId}
@@ -302,6 +303,7 @@ interface ItemRow {
   list: number | null;
   purchase: number | null;
   previousPurchase: number | null;
+  highestPurchase: number | null;
   manualPrice: number | null;
 }
 
@@ -318,7 +320,11 @@ function toPickedItem(
   owner: boolean,
 ): PickedItem {
   const priceFor = (purchase: number | null) =>
-    list ? computePrice(list, { purchase, previous_purchase: p.previousPurchase, list: p.list }, p.manualPrice).price : p.list;
+    list ? computePrice(
+          list,
+          { purchase, previous_purchase: p.previousPurchase, highest_purchase: highest(p.highestPurchase, purchase), list: p.list },
+          p.manualPrice,
+        ).price : p.list;
   const steps = stock ? priceSteps(stock.lots, stock.shortCost, priceFor) : [{ from: 0, price: priceFor(p.purchase) }];
   return {
     id: p.id,

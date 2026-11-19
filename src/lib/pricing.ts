@@ -4,6 +4,7 @@
 export const PRICE_BASES = {
   purchase: "Current purchase price",
   previous_purchase: "Previous purchase price",
+  highest_purchase: "Highest purchase price",
   list: "List price",
   manual: "Manual prices only",
 } as const;
@@ -23,6 +24,8 @@ export interface PriceRule {
 export interface PriceBases {
   purchase: number | null;
   previous_purchase: number | null;
+  /** The highest price paid on any purchase bill. */
+  highest_purchase: number | null;
   list: number | null;
 }
 
@@ -32,6 +35,12 @@ export interface ComputedPrice {
   price: number | null;
   /** True when a fixed price for this product overrides the rule. */
   manual: boolean;
+}
+
+/** The largest of the prices given, ignoring missing ones; null when there are none. */
+export function highest(...prices: (number | null | undefined)[]): number | null {
+  const known = prices.filter((p): p is number => p != null && Number.isFinite(p));
+  return known.length ? Math.max(...known) : null;
 }
 
 export const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;

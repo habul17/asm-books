@@ -157,7 +157,7 @@ export const settings = pgTable("settings", {
 // Price lists
 // ---------------------------------------------------------------------------
 
-export const priceBase = pgEnum("price_base", ["purchase", "previous_purchase", "list", "manual"]);
+export const priceBase = pgEnum("price_base", ["purchase", "previous_purchase", "list", "manual", "highest_purchase"]);
 export const adjustType = pgEnum("adjust_type", ["markup", "markdown"]);
 
 /** Folders for organising price lists; can be nested. */

@@ -45,7 +45,7 @@ export function describeRule(l: {
   roundTo: number;
 }): string {
   if (l.base === "manual") return "Manual prices only";
-  const base = { purchase: "Purchase", previous_purchase: "Prev. purchase", list: "List price" }[l.base] ?? l.base;
+  const base = { purchase: "Purchase", previous_purchase: "Prev. purchase", highest_purchase: "Highest purchase", list: "List price" }[l.base] ?? l.base;
   const parts = [`${base} ${l.adjustType === "markdown" ? "−" : "+"}${l.adjustPct}%`];
   if (l.discountPct) parts.push(`${l.discountPct}% disc.`);
   if (l.roundTo) parts.push(`round up ₹${l.roundTo}`);

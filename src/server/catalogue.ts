@@ -17,7 +17,7 @@ import {
   purchasePrices,
 } from "@/db/schema";
 import { folderPathResolver } from "@/lib/price-lists/folders";
-import { computePrice, type ComputedPrice } from "@/lib/pricing";
+import { computePrice, highest, type ComputedPrice } from "@/lib/pricing";
 
 import { loadStockLots } from "./fifo";
 import { productSearch, purchasePriceAt, realPurchasePrice } from "./product-search";
@@ -161,7 +161,13 @@ export async function getProduct(id: number) {
 
   const folderPath = folderPathResolver(folders);
 
-  const bases = { purchase: purchasePrice, previous_purchase: previousPurchasePrice, list: product.listPrice };
+  const highestPurchasePrice = highest(...history.map((h) => h.price), purchasePrice);
+  const bases = {
+    purchase: purchasePrice,
+    previous_purchase: previousPurchasePrice,
+    highest_purchase: highestPurchasePrice,
+    list: product.listPrice,
+  };
   const sellingPrices: SellingPrice[] = lists.map((l) => ({
     id: l.id,
     name: l.name,

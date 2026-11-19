@@ -16,6 +16,12 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
  */
 export const realPurchasePrice = sql`(${col(purchasePrices.source)} IS NULL OR ${col(purchasePrices.source)} NOT LIKE 'excel:%')`;
 
+/** The highest price ever paid for the product in the outer query, on any purchase bill. */
+export const highestPurchasePrice = sql<number | null>`(
+  SELECT max(${col(purchasePrices.price)}) FROM ${purchasePrices}
+  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${realPurchasePrice}
+)`.mapWith(Number);
+
 /** The newest (offset 0) or previous (offset 1) purchase price of the product in the outer query. */
 export const purchasePriceAt = (offset: 0 | 1) =>
   sql<number | null>`(
