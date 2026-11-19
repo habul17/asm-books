@@ -769,7 +769,7 @@ export function InvoiceEditor({
                         placeholder="Item description"
                         onChange={(e) => updateLine(l.key, { description: e.target.value })}
                       />
-                      <span className="truncate text-xs text-muted-foreground">
+                      <span className="text-xs break-words text-muted-foreground">
                         {i + 1}. {l.partNo ? <span className="font-mono">{l.partNo}</span> : "Custom item"}
                         {l.available != null && (
                           <span className={short ? "font-medium text-destructive" : undefined}>
@@ -777,8 +777,8 @@ export function InvoiceEditor({
                             · stock {formatQty(l.available)}
                           </span>
                         )}
-                        {l.buyRate != null && <> · buy {formatMoney(l.buyRate)}</>}
-                        {l.highestBuy != null && <> · highest {formatMoney(l.highestBuy)}</>}
+                        {l.buyRate != null && <> · <span className="whitespace-nowrap">buy {formatMoney(l.buyRate)}</span></>}
+                        {l.highestBuy != null && <> · <span className="whitespace-nowrap">highest {formatMoney(l.highestBuy)}</span></>}
                         {l.listRate != null && num(l.rate) !== l.listRate && (
                           <> · {nonGst ? "markup" : "list"} price {formatMoney(l.listRate)}</>
                         )}
