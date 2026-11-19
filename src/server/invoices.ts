@@ -126,7 +126,13 @@ export async function getInvoice(id: number) {
       .leftJoin(users, eq(users.id, invoices.createdBy))
       .where(eq(invoices.id, id)),
     db
-      .select({ line: lineColumns, cost: invoiceLines.cost, listRate: invoiceLines.listRate, stockQty: products.stockQty })
+      .select({
+        line: lineColumns,
+        cost: invoiceLines.cost,
+        listRate: invoiceLines.listRate,
+        stockQty: products.stockQty,
+        photo: products.photo,
+      })
       .from(invoiceLines)
       .leftJoin(products, eq(products.id, invoiceLines.productId))
       .where(eq(invoiceLines.invoiceId, id))
@@ -163,7 +169,12 @@ export async function getInvoice(id: number) {
     shownExtra: shownExtra(fields, head.invoice.extra),
     // Costs stay on the server; only the profit total is shared, and only with the owner.
     // The price-list rate is worked out from the purchase price, so it is owner only too.
-    lines: lines.map(({ line, stockQty, listRate }) => ({ ...line, stockQty, listRate: isOwner ? listRate : null })),
+    lines: lines.map(({ line, stockQty, photo, listRate }) => ({
+      ...line,
+      stockQty,
+      photo,
+      listRate: isOwner ? listRate : null,
+    })),
     profit: isOwner && allCosted ? Math.round((head.invoice.taxableTotal - cost) * 100) / 100 : null,
     /** Owner only: the purchase bills each row's pieces came from (first in, first out). */
     batches,
@@ -267,6 +278,7 @@ const itemColumns = (listId: number) => ({
   id: products.id,
   partNo: products.partNo,
   description: products.description,
+  photo: products.photo,
   unit: products.unit,
   gstRate: products.gstRate,
   stockQty: products.stockQty,
@@ -283,6 +295,7 @@ interface ItemRow {
   id: number;
   partNo: string;
   description: string;
+  photo: string | null;
   unit: string;
   gstRate: number | null;
   stockQty: number;
@@ -311,6 +324,7 @@ function toPickedItem(
     id: p.id,
     partNo: p.partNo,
     description: p.description,
+    photo: p.photo,
     unit: p.unit,
     gstRate: p.gstRate ?? defaultGstRate,
     stockQty: p.stockQty,
@@ -326,6 +340,8 @@ export interface PickedItem {
   id: number;
   partNo: string;
   description: string;
+  /** Photo id, for `/photos/<id>`; null when the part has none. */
+  photo: string | null;
   unit: string;
   gstRate: number;
   stockQty: number;

@@ -32,6 +32,7 @@ export interface ProductSearchResult {
     id: number;
     partNo: string;
     description: string;
+    photo: string | null;
     category: string | null;
     categoryGroup: string | null;
     stockQty: number;
@@ -58,6 +59,7 @@ export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promi
         id: products.id,
         partNo: products.partNo,
         description: products.description,
+        photo: products.photo,
         category: categories.name,
         categoryGroup: group.name,
         stockQty: products.stockQty,

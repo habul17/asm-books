@@ -11,6 +11,7 @@ import { round2 } from "@/lib/pricing";
 import { getProduct } from "@/server/catalogue";
 
 import { MinStockForm } from "./min-stock-form";
+import { PartPhoto } from "./part-photo";
 import { catalogueHref } from "./product-results";
 import { QuickMarkup } from "./quick-markup";
 
@@ -75,6 +76,12 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        {p.photo && (
+          <a href={`/photos/${p.photo}`} target="_blank" rel="noopener" className="w-fit" title="Open the photo">
+            <PartPhoto photo={p.photo} size="lg" />
+            <span className="sr-only">Open the photo of {p.partNo}</span>
+          </a>
+        )}
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Fact label="Brand">{p.brand ?? "—"}</Fact>
           <Fact label="Category">{[p.categoryGroup, p.category].filter(Boolean).join(" › ") || "—"}</Fact>

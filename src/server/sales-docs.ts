@@ -1,11 +1,11 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
-import { invoices, salesDocLines, salesDocs, users } from "@/db/schema";
+import { invoices, products, salesDocLines, salesDocs, users } from "@/db/schema";
 import type { SalesDocKind, SalesDocStatus } from "@/lib/sales-docs/kinds";
 import { EWAY_BILL_LIMIT } from "@/lib/transport";
 import { requireUser } from "@/server/auth";
@@ -78,7 +78,12 @@ export async function getSalesDoc(kind: SalesDocKind, id: number) {
       .leftJoin(invoices, eq(invoices.id, salesDocs.invoiceId))
       .leftJoin(sourceDocs, eq(sourceDocs.id, salesDocs.sourceId))
       .where(and(eq(salesDocs.id, id), eq(salesDocs.kind, kind))),
-    db.select().from(salesDocLines).where(eq(salesDocLines.docId, id)).orderBy(asc(salesDocLines.lineNo)),
+    db
+      .select({ ...getTableColumns(salesDocLines), photo: products.photo })
+      .from(salesDocLines)
+      .leftJoin(products, eq(products.id, salesDocLines.productId))
+      .where(eq(salesDocLines.docId, id))
+      .orderBy(asc(salesDocLines.lineNo)),
     // Documents made from this one, e.g. the challans of an order.
     db
       .select({ id: salesDocs.id, kind: salesDocs.kind, number: salesDocs.number, status: salesDocs.status })

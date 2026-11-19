@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, between, eq, gte, sql, type SQL } from "drizzle-orm";
+import { and, between, eq, gte, inArray, isNotNull, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
@@ -297,6 +297,16 @@ async function profitReceived(p: Period) {
 }
 
 /** Everything about money on the Home screen; only for the owner. */
+/** Photo ids of these parts, by part id. */
+async function partPhotos(ids: number[]) {
+  if (!ids.length) return new Map<number, string>();
+  const rows = await getDb()
+    .select({ id: products.id, photo: products.photo })
+    .from(products)
+    .where(and(inArray(products.id, ids), isNotNull(products.photo)));
+  return new Map(rows.map((r) => [r.id, r.photo as string]));
+}
+
 async function ownerFigures(today: string) {
   const { current, previous } = monthPeriods(today);
   const [sales, now, before, profitNow, profitBefore, owed, owing, due, money, gst, items, buyers, earned] = await Promise.all([
@@ -315,6 +325,11 @@ async function ownerFigures(today: string) {
     profitReceived(current),
   ]);
   const gstOf = (t: { cgst: number; sgst: number; igst: number }) => round2(t.cgst + t.sgst + t.igst);
+  const topParts = items.items
+    .filter((r) => r.productId != null && r.qty > 0)
+    .sort((a, b) => b.qty - a.qty || b.taxable - a.taxable)
+    .slice(0, 5);
+  const photos = await partPhotos(topParts.map((r) => r.productId as number));
   return {
     today: sales.today,
     chart: sales.chart,
@@ -334,11 +349,14 @@ async function ownerFigures(today: string) {
     payable: { total: owing.owed, vendors: owing.items.filter((v) => v.balance > 0).length, ...due },
     money: { cash: money.cash, bank: money.bank, total: money.total, openingSet: money.openingSet },
     gst: { output: gstOf(gst.output), input: gstOf(gst.input), payable: gstOf(gst.payable) },
-    topParts: items.items
-      .filter((r) => r.productId != null && r.qty > 0)
-      .sort((a, b) => b.qty - a.qty || b.taxable - a.taxable)
-      .slice(0, 5)
-      .map((r) => ({ id: r.productId as number, partNo: r.partNo, description: r.description, unit: r.unit, qty: r.qty })),
+    topParts: topParts.map((r) => ({
+      id: r.productId as number,
+      partNo: r.partNo,
+      description: r.description,
+      unit: r.unit,
+      qty: r.qty,
+      photo: photos.get(r.productId as number) ?? null,
+    })),
     topCustomers: buyers.items
       .filter((r) => r.net > 0)
       .slice(0, 5)

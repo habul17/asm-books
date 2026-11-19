@@ -92,7 +92,8 @@ export const products = pgTable(
     /** Null means "use the default GST rate from settings". */
     gstRate: percent("gst_rate"),
     listPrice: money("list_price"),
-    photo: text("photo"),
+    /** The part's photo, from `product_photos`; null when it has none. */
+    photo: text("photo").references(() => productPhotos.id, { onDelete: "set null" }),
     /** Cached running total of stock_movements; updated in the same transaction. */
     stockQty: quantity("stock_qty").notNull().default(0),
     minStock: quantity("min_stock"),
@@ -106,6 +107,18 @@ export const products = pgTable(
     check("products_list_price_check", sql`${t.listPrice} IS NULL OR ${t.listPrice} >= 0`),
   ],
 );
+
+/**
+ * A part's photo, kept once and shared by every part that shows it (one catalogue
+ * picture often covers several part numbers). The id is a hash of the bytes, so a
+ * photo's address never changes and browsers can keep it.
+ */
+export const productPhotos = pgTable("product_photos", {
+  id: text("id").primaryKey(),
+  mimeType: text("mime_type").notNull(),
+  data: bytea("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** Every purchase price ever recorded. The newest row is the current price. */
 export const purchasePrices = pgTable(

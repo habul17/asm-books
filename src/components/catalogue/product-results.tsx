@@ -3,6 +3,8 @@ import { cn } from "cn";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/format";
+
+import { PartPhoto } from "./part-photo";
 import { searchProducts } from "@/server/catalogue";
 
 function href(query: string, id?: number) {
@@ -41,10 +43,11 @@ export async function ProductResults({ query, selectedId }: { query: string; sel
                   data-product-result
                   aria-current={selected ? "true" : undefined}
                   className={cn(
-                    "grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none",
+                    "grid grid-cols-[auto_5.5rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none",
                     selected && "bg-muted",
                   )}
                 >
+                  <PartPhoto photo={p.photo} />
                   <span className={cn("truncate font-mono font-semibold", !p.active && "text-muted-foreground line-through")}>
                     {p.partNo}
                   </span>
@@ -72,7 +75,8 @@ export function ProductResultsSkeleton() {
       <Skeleton className="h-5 w-32" />
       <div className="divide-y rounded-xl border">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-3">
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+            <Skeleton className="size-9 rounded-md" />
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-4 flex-1" />
             <Skeleton className="h-4 w-14" />

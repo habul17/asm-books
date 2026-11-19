@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { AgingCard, CardHead, Change, MonthChart, Rows, Section, Tile } from "@/components/home/dashboard";
+import { PartPhoto } from "@/components/catalogue/part-photo";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
@@ -233,6 +234,7 @@ function TopLists({ f }: { f: Figures }) {
         ) : (
           <Rows
             rows={f.topParts.map((p) => ({
+              icon: <PartPhoto photo={p.photo} />,
               label: p.description,
               note: <span className="font-mono">{p.partNo}</span>,
               value: `${formatQty(p.qty)} ${p.unit}`,

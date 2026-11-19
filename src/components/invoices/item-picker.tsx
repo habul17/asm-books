@@ -4,6 +4,7 @@ import { SearchIcon } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
 
 import { findItems } from "@/app/(app)/invoices/actions";
+import { PartPhoto } from "@/components/catalogue/part-photo";
 import { Input } from "@/components/ui/input";
 import { formatMoney, formatQty } from "@/lib/format";
 import type { PickedItem } from "@/server/invoices";
@@ -17,6 +18,8 @@ interface PickerItem {
   description: string;
   stockQty: number;
   price?: number | null;
+  /** Photo id; the picker shows a photo column only when its search returns this. */
+  photo?: string | null;
 }
 
 /**
@@ -101,8 +104,9 @@ export function ItemPicker<T extends PickerItem = PickedItem>({
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(item)}
-                className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm ${i === active ? "bg-muted" : ""}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-1.5 text-sm ${i === active ? "bg-muted" : ""}`}
               >
+                {"photo" in item && <PartPhoto photo={item.photo} />}
                 <span className="w-16 shrink-0 font-mono text-xs">{item.partNo}</span>
                 <span className="min-w-0 flex-1 truncate">{item.description}</span>
                 <span

@@ -22,6 +22,7 @@ const editorLine = (
   key: `e${l.id}`,
   productId: l.productId,
   partNo: l.partNo,
+  photo: l.photo,
   description: l.description,
   unit: l.unit,
   qty: formatQty(l.qty),

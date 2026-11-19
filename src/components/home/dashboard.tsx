@@ -56,6 +56,8 @@ export function Change({ now, before }: { now: number; before: number }) {
 }
 
 export interface Row {
+  /** Shown before the label, e.g. a part's photo. */
+  icon?: ReactNode;
   label: ReactNode;
   note?: ReactNode;
   value?: ReactNode;
@@ -73,6 +75,7 @@ export function Rows({ rows, header }: { rows: Row[]; header?: ReactNode }) {
         {rows.map((row, i) => (
           <li key={i}>
             <Link href={row.href} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+              {row.icon}
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className={cn("truncate", row.strong && "font-semibold")}>{row.label}</span>
                 {row.note != null && <span className="truncate text-xs text-muted-foreground">{row.note}</span>}

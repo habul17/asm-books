@@ -204,6 +204,13 @@
       "when": 1795077417139,
       "tag": "0028_invoice_line_list_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795086907742,
+      "tag": "0029_product_photos",
+      "breakpoints": true
     }
   ]
 }

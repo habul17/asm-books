@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { repriceItems, saveInvoice, scanOrderAction } from "@/app/(app)/invoices/actions";
 import { saveSalesDoc } from "@/app/(app)/sales/actions";
+import { PartPhoto } from "@/components/catalogue/part-photo";
 import { ScanBox, ScanWarnings } from "@/components/forms/scan-box";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +32,8 @@ export interface EditorLine {
   key: string;
   productId: number | null;
   partNo: string | null;
+  /** Photo id of the part; null for a custom item or a part without one. */
+  photo?: string | null;
   description: string;
   unit: string;
   qty: string;
@@ -102,6 +105,7 @@ export function lineFromItem(item: PickedItem): EditorLine {
     key: newKey(),
     productId: item.id,
     partNo: item.partNo,
+    photo: item.photo,
     description: item.description,
     unit: item.unit,
     qty: "1",
@@ -758,7 +762,9 @@ export function InvoiceEditor({
                     key={l.key}
                     className="grid grid-cols-4 items-end gap-2 border-b py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_5rem_6.5rem_4.5rem_5.5rem_7rem_2.25rem] md:items-center md:py-2"
                   >
-                    <div className="col-span-3 flex min-w-0 flex-col gap-1 md:col-span-1">
+                    <div className="col-span-3 flex min-w-0 items-start gap-2 md:col-span-1">
+                      {l.productId != null && <PartPhoto photo={l.photo} />}
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <Input
                         aria-label={`Item ${i + 1} description`}
                         value={l.description}
@@ -779,6 +785,7 @@ export function InvoiceEditor({
                           <> · {nonGst ? "markup" : "list"} price {formatMoney(l.listRate)}</>
                         )}
                       </span>
+                      </div>
                     </div>
                     <div className="flex justify-end md:order-last">
                       <Button
