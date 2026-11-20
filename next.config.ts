@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // Invoice PDFs are printed by a headless browser on the server.
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  outputFileTracingIncludes: {
+    "/invoices/*/pdf": ["./node_modules/@sparticuz/chromium/bin/**", "./src/server/pdf-fonts/**"],
+  },
   experimental: {
     // Bill scans upload one photo or PDF (up to 4 MB) through a server action.
     serverActions: { bodySizeLimit: "5mb" },

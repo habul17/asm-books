@@ -8,7 +8,7 @@ import { CreditNoteList } from "@/components/credit-notes/credit-note-list";
 import { DocumentAttachments } from "@/components/documents/document-attachments";
 import { deleteInvoiceAction } from "@/app/(app)/invoices/actions";
 import { DeleteButton } from "@/components/forms/delete-button";
-import { CancelInvoiceForm, PrintButton } from "@/components/invoices/invoice-actions";
+import { CancelInvoiceForm, PrintButton, SharePdfButton } from "@/components/invoices/invoice-actions";
 import { InvoiceBatches } from "@/components/invoices/invoice-batches";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { PayBadge } from "@/components/invoices/pay-badge";
@@ -46,6 +46,7 @@ async function Invoice({ params }: { params: PageProps<"/invoices/[id]">["params
             <HandCoinsIcon /> Receive payment
           </Link>
         )}
+        <SharePdfButton id={inv.id} number={inv.number} />
         <PrintButton />
         {final && inv.canChange && (
           <Link href={`/invoices/${inv.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
