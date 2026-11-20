@@ -164,6 +164,18 @@
     font-size: 100% !important;
   }
 }
+/*
+ * iPhone and iPad Safari add their own page margins when printing, so the
+ * printable area is shorter than A4. A one-page invoice is kept short enough
+ * to fit; longer invoices still flow onto more pages as usual.
+ */
+@supports (-webkit-touch-callout: none) {
+  @media print {
+    .invoice-document {
+      min-height: 225mm !important;
+    }
+  }
+}
 
 /* Notes: the editor, styled like Apple Notes. */
 @layer components {
