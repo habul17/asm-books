@@ -209,8 +209,9 @@ export function InvoiceDocument({
           </dl>
         </section>
 
-        <div className="flex flex-1 flex-col overflow-x-auto border-t border-black print:overflow-visible">
-          <table className="w-full min-w-[640px] flex-1 table-fixed border-collapse print:min-w-0">
+        {/* In print the table grows from its own height (not from zero), or Chrome overlaps page 2's rows. */}
+        <div className="flex flex-1 flex-col overflow-x-auto border-t border-black print:flex-[1_0_auto] print:overflow-visible">
+          <table className="w-full min-w-[640px] flex-1 table-fixed border-collapse print:min-w-0 print:flex-[1_0_auto]">
             <colgroup>
               {widths.map((w, i) => (
                 <col key={i} style={{ width: `${w}%` }} />
