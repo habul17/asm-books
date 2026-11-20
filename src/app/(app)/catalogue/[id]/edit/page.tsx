@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { FreshOnShow } from "@/components/forms/fresh-on-show";
+import { PartPhotoEditor } from "@/components/catalogue/part-photo-editor";
 import { ProductForm } from "@/components/catalogue/product-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProduct, getProductFormOptions } from "@/server/catalogue";
+import { relatedPartsWithoutPhoto } from "@/server/product-photos";
 import { getBusiness } from "@/server/settings";
 
 export const metadata: Metadata = { title: "Edit part" };
@@ -22,7 +24,13 @@ async function Form({ params }: { params: PageProps<"/catalogue/[id]/edit">["par
       </p>
     );
   }
-  return <ProductForm product={product} options={options} defaultGstRate={business.defaultGstRate} cancelHref={back} />;
+  const related = await relatedPartsWithoutPhoto(product.id, product.partNo);
+  return (
+    <>
+      <PartPhotoEditor productId={product.id} partNo={product.partNo} photo={product.photo} related={related} />
+      <ProductForm product={product} options={options} defaultGstRate={business.defaultGstRate} cancelHref={back} />
+    </>
+  );
 }
 
 export default function EditProductPage({ params }: PageProps<"/catalogue/[id]/edit">) {

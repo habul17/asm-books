@@ -5,10 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { parseMinStock } from "@/lib/catalogue/min-stock";
+import { PART_PHOTO_MAX_BYTES } from "@/lib/catalogue/part-photo";
 import { parseProduct } from "@/lib/catalogue/product-validation";
+import { sniffMimeType } from "@/lib/documents/documents";
 import { isOwner, requireUser } from "@/server/auth";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { createProduct, ProductInputError, setMinStock, updateProduct } from "@/server/product-writes";
+import { clearPartPhoto, setPartPhoto } from "@/server/product-photos";
 import { applyRateList, scanRateList } from "@/server/rate-list";
 import type { RateReview } from "@/lib/catalogue/rate-list";
 
@@ -85,4 +88,54 @@ export async function applyRateListAction(input: unknown) {
     console.error("[catalogue] rate list save failed:", err instanceof Error ? err.message : err);
     return { error: "Could not save. Please try again." };
   }
+}
+
+export interface PhotoState {
+  ok?: boolean;
+  error?: string;
+  /** How many related parts got the same photo. */
+  shared?: number;
+}
+
+/** Puts a photo on a part (owner only), and on the chosen related parts that have none. */
+export async function savePartPhoto(productId: number, formData: FormData): Promise<PhotoState> {
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can change a part's photo." };
+  if (!idSchema.safeParse(productId).success) return { error: "Product not found." };
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo." };
+  if (file.size > PART_PHOTO_MAX_BYTES) return { error: "This photo is too big. Please try another one." };
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const mimeType = sniffMimeType(bytes);
+  if (mimeType !== "image/jpeg" && mimeType !== "image/png" && mimeType !== "image/webp") {
+    return { error: "Please choose a JPG, PNG or WebP photo." };
+  }
+  const related = formData
+    .getAll("related")
+    .map(Number)
+    .filter((n) => idSchema.safeParse(n).success);
+  try {
+    const saved = await setPartPhoto(productId, bytes, mimeType, related);
+    if (!saved) return { error: "Product not found." };
+    refresh();
+    return { ok: true, shared: saved.shared };
+  } catch (err) {
+    console.error("[catalogue] photo save failed:", err instanceof Error ? err.message : err);
+    return { error: "Could not save the photo. Please try again." };
+  }
+}
+
+/** Takes the photo off a part (owner only). */
+export async function removePartPhoto(productId: number): Promise<PhotoState> {
+  const user = await requireUser();
+  if (!isOwner(user)) return { error: "Only the owner can change a part's photo." };
+  if (!idSchema.safeParse(productId).success) return { error: "Product not found." };
+  try {
+    if (!(await clearPartPhoto(productId))) return { error: "Product not found." };
+  } catch (err) {
+    console.error("[catalogue] photo remove failed:", err instanceof Error ? err.message : err);
+    return { error: "Could not remove the photo. Please try again." };
+  }
+  refresh();
+  return { ok: true };
 }
