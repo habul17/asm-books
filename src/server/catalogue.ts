@@ -2,7 +2,7 @@ import "server-only";
 
 import { connection } from "next/server";
 
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, not, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
@@ -89,7 +89,7 @@ export async function getProduct(id: number) {
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   const db = getDb();
 
-  const [productRows, history, lists, folders] = await db.batch([
+  const [productRows, history, lists, folders, referenceRows] = await db.batch([
     db
       .select({
         id: products.id,
@@ -147,6 +147,13 @@ export async function getProduct(id: number) {
     db
       .select({ id: priceListFolders.id, name: priceListFolders.name, parentId: priceListFolders.parentId })
       .from(priceListFolders),
+    // The supplier's price list (the imported Excel), kept apart from real bill prices.
+    db
+      .select({ price: purchasePrices.price })
+      .from(purchasePrices)
+      .where(and(eq(purchasePrices.productId, id), not(realPurchasePrice)))
+      .orderBy(desc(purchasePrices.date), desc(purchasePrices.id))
+      .limit(1),
   ]);
 
   const product = productRows[0];
@@ -181,8 +188,11 @@ export async function getProduct(id: number) {
     purchasePrice,
     previousPurchasePrice,
     newestPurchasePrice,
-    priceChange:
-      newestPurchasePrice != null && previousPurchasePrice != null ? newestPurchasePrice - previousPurchasePrice : null,
+    /** The supplier's price-list rate (from the imported Excel). */
+    referencePrice: referenceRows[0]?.price ?? null,
+    /** How the price that sells next compares with the supplier's price list. */
+    sellsNextChange:
+      purchasePrice != null && referenceRows[0]?.price != null ? purchasePrice - referenceRows[0].price : null,
     /** Stock on hand by purchase bill, oldest (sells next) first. */
     lots,
     history,

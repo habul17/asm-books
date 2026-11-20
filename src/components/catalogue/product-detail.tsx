@@ -24,14 +24,14 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function PriceChange({ change }: { change: number | null }) {
+function PriceChange({ change, against = "previous" }: { change: number | null; against?: string }) {
   if (change == null || Math.abs(change) < 0.005) return null;
   const up = change > 0;
   const Icon = up ? ArrowUpIcon : ArrowDownIcon;
   return (
     <span className={up ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}>
       <Icon className="inline size-3.5" aria-hidden />
-      <span className="sr-only">{up ? "Up" : "Down"}</span> {formatMoney(Math.abs(change))} vs previous
+      <span className="sr-only">{up ? "Up" : "Down"}</span> {formatMoney(Math.abs(change))} vs {against}
     </span>
   );
 }
@@ -93,11 +93,11 @@ export async function ProductDetailPanel({ id, query }: { id: number; query: str
           <Fact label="Purchase price (sells next)">
             <strong className="tabular-nums" title={p.purchasePrice != null ? `₹${p.purchasePrice}` : undefined}>
               {formatMoney(p.purchasePrice)}
-            </strong>
+            </strong>{" "}
+            <PriceChange change={p.sellsNextChange} against="price list" />
           </Fact>
           <Fact label="Reference price list">
-            <span className="tabular-nums">{formatMoney(p.newestPurchasePrice)}</span>{" "}
-            <PriceChange change={p.priceChange} />
+            <span className="tabular-nums">{formatMoney(p.referencePrice)}</span>
           </Fact>
         </dl>
 
