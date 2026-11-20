@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon, TriangleAlertIcon, XIcon } from "lucide-react";
+import { PlusIcon, StickyNoteIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
@@ -476,6 +476,12 @@ export function InvoiceEditor({
               </div>
             ) : (
               <CustomerPicker value={customer} onChange={chooseCustomer} />
+            )}
+            {!isWalkIn && customer?.notes?.trim() && (
+              <div className="flex gap-2 rounded-md border px-3 py-2 text-sm" aria-label="Customer notes">
+                <StickyNoteIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <p className="break-words whitespace-pre-wrap">{customer.notes.trim()}</p>
+              </div>
             )}
             {overLimit && (
               <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">

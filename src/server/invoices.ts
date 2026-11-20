@@ -229,6 +229,8 @@ const pickedCustomerColumns = {
   priceListId: sql<number | null>`coalesce(${customers.priceListId}, ${customerGroups.priceListId})`,
   creditLimit: customers.creditLimit,
   balance: customerBalance,
+  /** The shop's own notes on this customer, shown while billing them. */
+  notes: customers.notes,
 };
 
 /** Customers matching the words, for the invoice's customer picker. */
