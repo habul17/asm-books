@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CircleArrowDownIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowDownIcon, MailIcon, MessageCircleIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shownExtra } from "@/lib/custom-fields";
 import { formatDate, formatMoney } from "@/lib/format";
+import { whatsappLink } from "@/lib/reminders/late-payments";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
 import { PayBadge } from "@/components/invoices/pay-badge";
@@ -110,6 +111,16 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
             {c.mobile && (
               <a href={`tel:${c.mobile}`} className="flex items-center gap-1.5 hover:underline">
                 <PhoneIcon className="size-3.5 text-muted-foreground" /> {c.mobile}
+              </a>
+            )}
+            {whatsappLink(c.mobile) && (
+              <a
+                href={whatsappLink(c.mobile)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:underline"
+              >
+                <MessageCircleIcon className="size-3.5 text-muted-foreground" /> WhatsApp
               </a>
             )}
             {c.email && (

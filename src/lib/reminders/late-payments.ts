@@ -149,12 +149,13 @@ export function reminderMessage(customerName: string, amount: string, days: numb
 }
 
 /**
- * A WhatsApp chat link with the message filled in, or null when the number
- * cannot be a mobile number. Indian ten-digit numbers get the 91 country code.
+ * A WhatsApp chat link, with the message filled in when one is given, or null
+ * when the number cannot be a mobile number. Indian ten-digit numbers get the
+ * 91 country code.
  */
-export function whatsappLink(mobile: string | null, message: string): string | null {
+export function whatsappLink(mobile: string | null, message?: string): string | null {
   let digits = (mobile ?? "").replace(/\D/g, "").replace(/^0+/, "");
   if (digits.length === 10) digits = `91${digits}`;
   if (digits.length < 11 || digits.length > 15) return null;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  return message ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : `https://wa.me/${digits}`;
 }

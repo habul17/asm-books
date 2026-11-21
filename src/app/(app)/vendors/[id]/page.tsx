@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CircleArrowUpIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowUpIcon, MailIcon, MessageCircleIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,6 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VendorBalance } from "@/components/vendors/vendor-balance";
 import { formatMoney } from "@/lib/format";
+import { whatsappLink } from "@/lib/reminders/late-payments";
 import { getVendor } from "@/server/vendors";
 
 export const metadata: Metadata = { title: "Vendor" };
@@ -68,6 +69,16 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
             {v.mobile && (
               <a href={`tel:${v.mobile}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 <PhoneIcon /> {v.mobile}
+              </a>
+            )}
+            {whatsappLink(v.mobile) && (
+              <a
+                href={whatsappLink(v.mobile)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <MessageCircleIcon /> WhatsApp
               </a>
             )}
             {v.email && (

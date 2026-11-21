@@ -115,6 +115,10 @@ describe("whatsappLink", () => {
     expect(whatsappLink("09876543210", "x")).toBe("https://wa.me/919876543210?text=x");
   });
 
+  it("opens a plain chat when there is no message", () => {
+    expect(whatsappLink("98765 43210")).toBe("https://wa.me/919876543210");
+  });
+
   it("gives nothing for a missing or short number", () => {
     expect(whatsappLink(null, "x")).toBeNull();
     expect(whatsappLink("0422 123", "x")).toBeNull();
