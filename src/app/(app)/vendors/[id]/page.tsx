@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CircleArrowUpIcon, MailIcon, MessageCircleIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowUpIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,7 +12,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VendorBalance } from "@/components/vendors/vendor-balance";
 import { formatMoney } from "@/lib/format";
-import { whatsappLink } from "@/lib/reminders/late-payments";
+import { WhatsAppButton } from "@/components/whatsapp/whatsapp-button";
+import { getBusiness } from "@/server/settings";
+import { getWhatsappTemplates } from "@/server/whatsapp-templates";
 import { getVendor } from "@/server/vendors";
 
 export const metadata: Metadata = { title: "Vendor" };
@@ -28,7 +30,7 @@ function Fact({ label, children, wide }: { label: string; children: React.ReactN
 
 async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"] }) {
   const id = Number((await params).id);
-  const v = await getVendor(id);
+  const [v, business, templates] = await Promise.all([getVendor(id), getBusiness(), getWhatsappTemplates()]);
   if (!v) notFound();
   return (
     <>
@@ -71,16 +73,15 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
                 <PhoneIcon /> {v.mobile}
               </a>
             )}
-            {whatsappLink(v.mobile) && (
-              <a
-                href={whatsappLink(v.mobile)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                <MessageCircleIcon /> WhatsApp
-              </a>
-            )}
+            <WhatsAppButton
+              mobile={v.mobile}
+              kind="vendor"
+              name={v.name}
+              balance={null}
+              shop={business.name}
+              templates={templates}
+              look="button"
+            />
             {v.email && (
               <a href={`mailto:${v.email}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 <MailIcon /> Email

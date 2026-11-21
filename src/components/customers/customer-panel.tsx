@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CircleArrowDownIcon, MailIcon, MessageCircleIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, CircleArrowDownIcon, MailIcon, PencilIcon, PhoneIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shownExtra } from "@/lib/custom-fields";
 import { formatDate, formatMoney } from "@/lib/format";
-import { whatsappLink } from "@/lib/reminders/late-payments";
 import { getCustomer, getCustomerOptions } from "@/server/customers";
 import { searchInvoices } from "@/server/invoices";
 import { PayBadge } from "@/components/invoices/pay-badge";
@@ -19,6 +18,9 @@ import { Balance } from "./balance";
 import { CustomerForm } from "./customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
 import { viewerIsOwner } from "@/server/auth";
+import { getBusiness } from "@/server/settings";
+import { getWhatsappTemplates } from "@/server/whatsapp-templates";
+import { WhatsAppButton } from "@/components/whatsapp/whatsapp-button";
 import { billScanReady } from "@/server/bill-scan";
 
 function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
@@ -85,7 +87,13 @@ export async function EditCustomerPanel({ id, backHref, viewHref }: { id: number
 }
 
 export async function CustomerPanel({ id, backHref, editHref }: { id: number; backHref: string; editHref: string }) {
-  const [c, options, owner] = await Promise.all([getCustomer(id), getCustomerOptions(), viewerIsOwner()]);
+  const [c, options, owner, business, templates] = await Promise.all([
+    getCustomer(id),
+    getCustomerOptions(),
+    viewerIsOwner(),
+    getBusiness(),
+    getWhatsappTemplates(),
+  ]);
   if (!c) return <NotFound backHref={backHref} />;
   const extras = shownExtra(options.fields, c.extra);
 
@@ -113,16 +121,14 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
                 <PhoneIcon className="size-3.5 text-muted-foreground" /> {c.mobile}
               </a>
             )}
-            {whatsappLink(c.mobile) && (
-              <a
-                href={whatsappLink(c.mobile)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:underline"
-              >
-                <MessageCircleIcon className="size-3.5 text-muted-foreground" /> WhatsApp
-              </a>
-            )}
+            <WhatsAppButton
+              mobile={c.mobile}
+              kind="customer"
+              name={c.name}
+              balance={c.balance > 0.005 ? formatMoney(c.balance) : null}
+              shop={business.name}
+              templates={templates}
+            />
             {c.email && (
               <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 hover:underline">
                 <MailIcon className="size-3.5 text-muted-foreground" /> {c.email}
