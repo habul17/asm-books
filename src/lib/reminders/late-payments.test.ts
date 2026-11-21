@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   daysBetween,
   findLatePayers,
+  oldestUnpaidDate,
   reminderMessage,
   whatsappLink,
   type OpenInvoice,
@@ -122,6 +123,19 @@ describe("whatsappLink", () => {
   it("gives nothing for a missing or short number", () => {
     expect(whatsappLink(null, "x")).toBeNull();
     expect(whatsappLink("0422 123", "x")).toBeNull();
+  });
+});
+
+describe("oldestUnpaidDate", () => {
+  it("is the oldest bill the balance still reaches back to", () => {
+    // Owes 700: the 400 bill from 5 Nov and 300 of the 500 bill from 1 Nov.
+    const owing = [customer({ balance: 700 })];
+    const open = [
+      invoice({ date: "2026-11-05", grandTotal: 400, newer: 0 }),
+      invoice({ date: "2026-11-01", grandTotal: 500, newer: 400 }),
+    ];
+    expect(oldestUnpaidDate(owing, open)).toBe("2026-11-01");
+    expect(oldestUnpaidDate([], [])).toBeNull();
   });
 });
 

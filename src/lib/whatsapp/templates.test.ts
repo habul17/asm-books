@@ -23,8 +23,19 @@ describe("fillTemplate", () => {
     );
   });
 
+  it("says how long the balance has waited, when known", () => {
+    const body = builtInTemplates("customer", true).find((t) => t.id === "balance")!.body;
+    const fill = { name: "Ravi", balance: "₹500.00", shop: "ASM" };
+    expect(fillTemplate(body, { ...fill, pending: { days: 22, since: "30-10-2026" } })).toContain(
+      "A balance of ₹500.00 has been pending on your account for 22 days, since 30-10-2026.",
+    );
+    expect(fillTemplate(body, { ...fill, pending: { days: 1, since: "20-11-2026" } })).toContain("for 1 day, since");
+    expect(fillTemplate(body, { ...fill, pending: { days: 0, since: "21-11-2026" } })).toContain("on your account. Kindly");
+    expect(fillTemplate(body, fill)).toContain("on your account. Kindly");
+  });
+
   it("never leaves a raw {word} behind", () => {
-    const out = fillTemplate("{Name} {shop} {balance}", { name: " ", balance: null, shop: "" });
+    const out = fillTemplate("{Name} {shop} {balance} {pending}", { name: " ", balance: null, shop: "" });
     expect(out).not.toMatch(/[{}]/);
   });
 });

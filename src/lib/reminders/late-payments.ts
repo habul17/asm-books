@@ -110,6 +110,15 @@ export function unpaidBills(
   return out;
 }
 
+/** The date of the oldest bill a customer has not fully paid, or null when nothing is owed. */
+export function oldestUnpaidDate(customers: OwingCustomer[], invoices: OpenInvoice[]): string | null {
+  let oldest: string | null = null;
+  for (const { bills } of unpaidBills(customers, invoices)) {
+    for (const b of bills) if (oldest == null || b.date < oldest) oldest = b.date;
+  }
+  return oldest;
+}
+
 /** Customers with a late bill, the longest wait first. */
 export function findLatePayers(
   customers: OwingCustomer[],

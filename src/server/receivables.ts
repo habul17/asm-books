@@ -16,9 +16,10 @@ import { todayInIndia } from "./invoice-writes";
  * Every customer who owes a rupee or more, and the credit invoices their balance
  * reaches back to. Payments are not tied to invoices, so they count against the
  * oldest ones first and the newest invoices are the unpaid ones.
+ * Pass `customerId` to read just that customer.
  * No auth check: only for code that has already checked the user.
  */
-export async function loadUnpaid(): Promise<{ owing: OwingCustomer[]; open: OpenInvoice[] }> {
+export async function loadUnpaid(customerId?: number): Promise<{ owing: OwingCustomer[]; open: OpenInvoice[] }> {
   const db = getDb();
   // Every credit invoice with the total of the same customer's newer ones beside it.
   const ranked = db
@@ -50,7 +51,7 @@ export async function loadUnpaid(): Promise<{ owing: OwingCustomer[]; open: Open
         balance: customerBalance,
       })
       .from(customers)
-      .where(sql`${customerBalance} >= 1`),
+      .where(and(sql`${customerBalance} >= 1`, customerId != null ? eq(customers.id, customerId) : undefined)),
     db
       .select({
         id: ranked.id,
@@ -63,7 +64,7 @@ export async function loadUnpaid(): Promise<{ owing: OwingCustomer[]; open: Open
       })
       .from(ranked)
       .innerJoin(customers, eq(customers.id, ranked.customerId))
-      .where(sql`${ranked.newer} < ${customerBalance}`),
+      .where(and(sql`${ranked.newer} < ${customerBalance}`, customerId != null ? eq(customers.id, customerId) : undefined)),
   ]);
   return { owing, open: open.map((inv) => ({ ...inv, customerId: inv.customerId as number })) };
 }

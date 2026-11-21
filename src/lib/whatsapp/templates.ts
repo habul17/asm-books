@@ -15,6 +15,8 @@ export interface TemplateFill {
   /** "₹1,200.00", or null when nothing is due. */
   balance: string | null;
   shop: string;
+  /** How long the balance has waited: days since the oldest unpaid bill, and that bill's date. */
+  pending?: { days: number; since: string } | null;
 }
 
 export const MAX_TEMPLATES = 30;
@@ -30,7 +32,7 @@ const CUSTOMER_TEMPLATES: (MessageTemplate & { needsBalance?: boolean })[] = [
     id: "balance",
     title: "Balance payment",
     needsBalance: true,
-    body: "Dear {name}, this is a gentle reminder from {shop}. A balance of {balance} is pending on your account. Kindly arrange the payment at your earliest convenience. Thank you.",
+    body: "Dear {name}, this is a gentle reminder from {shop}. A balance of {balance} has been pending on your account{pending}. Kindly arrange the payment at your earliest convenience. Thank you.",
   },
   {
     id: "order-today",
@@ -70,7 +72,10 @@ export function builtInTemplates(kind: ContactKind, hasBalance: boolean): Messag
 
 /** Fills {name}, {shop} and {balance}. A missing value leaves a tidy blank, never "{balance}". */
 export function fillTemplate(body: string, fill: TemplateFill): string {
+  const p = fill.pending;
+  const pending = p && p.days >= 1 ? ` for ${p.days} ${p.days === 1 ? "day" : "days"}, since ${p.since}` : "";
   return body
+    .replace(/\{pending\}/gi, pending)
     .replace(/\{name\}/gi, fill.name.trim() || "Sir/Madam")
     .replace(/\{shop\}/gi, fill.shop.trim() || "our shop")
     .replace(/\{balance\}/gi, fill.balance ?? "the pending amount");

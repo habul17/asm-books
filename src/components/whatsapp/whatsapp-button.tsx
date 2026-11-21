@@ -36,6 +36,7 @@ export function WhatsAppButton({
   balance,
   shop,
   templates: initial,
+  pending: waited = null,
   look = "link",
 }: {
   mobile: string | null;
@@ -45,6 +46,8 @@ export function WhatsAppButton({
   balance: string | null;
   shop: string;
   templates: MessageTemplate[];
+  /** How long the balance has waited, for the balance message. */
+  pending?: { days: number; since: string } | null;
   look?: "link" | "button";
 }) {
   const [open, setOpen] = useState(false);
@@ -59,7 +62,7 @@ export function WhatsAppButton({
   const plainChat = whatsappLink(mobile);
   if (!plainChat) return null;
 
-  const fill = (t: string) => fillTemplate(t, { name, balance, shop });
+  const fill = (t: string) => fillTemplate(t, { name, balance, shop, pending: waited });
   const ready = builtInTemplates(kind, balance != null);
 
   const reset = (o: boolean) => {
@@ -150,6 +153,16 @@ export function WhatsAppButton({
 
           {view.at === "list" && (
             <>
+              <a
+                href={plainChat}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className={buttonVariants()}
+              >
+                <MessageCircleIcon /> Go to WhatsApp
+              </a>
+              <p className="-mt-1 text-center text-xs text-muted-foreground">Opens the chat empty, to type your own message</p>
               <section className="flex flex-col gap-1">
                 <h3 className="px-1 text-xs font-medium text-muted-foreground">Templates</h3>
                 <ul className="flex flex-col">{ready.map((t) => row(t, false))}</ul>
@@ -166,15 +179,6 @@ export function WhatsAppButton({
                 <Button variant="outline" onClick={() => setView({ at: "new" })}>
                   <PlusIcon /> New template
                 </Button>
-                <a
-                  href={plainChat}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setOpen(false)}
-                  className={buttonVariants({ variant: "ghost" })}
-                >
-                  Open chat without a message
-                </a>
               </div>
             </>
           )}

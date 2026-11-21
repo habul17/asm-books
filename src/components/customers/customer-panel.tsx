@@ -19,7 +19,7 @@ import { CustomerForm } from "./customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
 import { viewerIsOwner } from "@/server/auth";
 import { getBusiness } from "@/server/settings";
-import { getWhatsappTemplates } from "@/server/whatsapp-templates";
+import { customerPending, getWhatsappTemplates } from "@/server/whatsapp-templates";
 import { WhatsAppButton } from "@/components/whatsapp/whatsapp-button";
 import { billScanReady } from "@/server/bill-scan";
 
@@ -87,12 +87,13 @@ export async function EditCustomerPanel({ id, backHref, viewHref }: { id: number
 }
 
 export async function CustomerPanel({ id, backHref, editHref }: { id: number; backHref: string; editHref: string }) {
-  const [c, options, owner, business, templates] = await Promise.all([
+  const [c, options, owner, business, templates, pending] = await Promise.all([
     getCustomer(id),
     getCustomerOptions(),
     viewerIsOwner(),
     getBusiness(),
     getWhatsappTemplates(),
+    customerPending(id),
   ]);
   if (!c) return <NotFound backHref={backHref} />;
   const extras = shownExtra(options.fields, c.extra);
@@ -128,6 +129,7 @@ export async function CustomerPanel({ id, backHref, editHref }: { id: number; ba
               balance={c.balance > 0.005 ? formatMoney(c.balance) : null}
               shop={business.name}
               templates={templates}
+              pending={pending}
             />
             {c.email && (
               <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 hover:underline">
