@@ -31,6 +31,7 @@ const editorLine = (
   gstRate: l.gstRate,
   available,
   rateEdited: true,
+  saved: true,
   listRate,
 });
 

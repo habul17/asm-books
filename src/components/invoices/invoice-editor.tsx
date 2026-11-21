@@ -44,6 +44,11 @@ export interface EditorLine {
   available: number | null;
   /** Set once the user types a rate, so changing the price list does not overwrite it. */
   rateEdited: boolean;
+  /**
+   * A row saved earlier, opened for editing: its agreed rate is kept on opening, but a
+   * new price list or markup chosen while editing prices it again.
+   */
+  saved?: boolean;
   /** First in, first out: the selling price as the sale reaches newer purchase bills. */
   steps?: PriceStep[];
   /** The rate the price list or markup gives for this row, kept when the rate is changed by hand. */
@@ -278,8 +283,8 @@ export function InvoiceEditor({
 
   /** Prices the rows not typed by hand from a price list, or from purchase price + `markupPct` when it is given. */
   const repriceLines = async (current: EditorLine[], listId: number | null, markupPct: number | null) => {
-    // Rows typed by hand keep their rate but still get the new list rate; rows saved earlier are left alone.
-    const fresh = (l: EditorLine) => l.productId != null && (!l.rateEdited || l.steps != null);
+    // Rows typed by hand keep their rate but still get the new list rate. Saved rows take the new price.
+    const fresh = (l: EditorLine) => l.productId != null && (!l.rateEdited || l.steps != null || l.saved === true);
     const ids = current.filter(fresh).map((l) => l.productId as number);
     if (!ids.length) return;
     setRepricing(true);
@@ -290,8 +295,18 @@ export function InvoiceEditor({
           ls.map((l) => {
             const item = fresh(l) ? items.get(l.productId as number) : undefined;
             if (!item) return l;
-            const rate = l.rateEdited ? l.rate : item.price != null ? String(item.price) : "";
-            return { ...l, rate, steps: item.steps, buyRate: item.newestCost ?? null, highestBuy: item.highestCost ?? null };
+            // A saved row with no price in the new list keeps the rate it had.
+            const reprice = l.saved ? item.price != null : !l.rateEdited;
+            const rate = reprice ? (item.price != null ? String(item.price) : "") : l.rate;
+            return {
+              ...l,
+              rate,
+              rateEdited: reprice ? false : l.rateEdited,
+              saved: false,
+              steps: item.steps,
+              buyRate: item.newestCost ?? null,
+              highestBuy: item.highestCost ?? null,
+            };
           }),
         ),
       );
@@ -816,7 +831,7 @@ export function InvoiceEditor({
                       value={l.rate}
                       placeholder="Enter price"
                       invalid={num(l.rate) == null}
-                      onChange={(v) => updateLine(l.key, { rate: v, rateEdited: true })}
+                      onChange={(v) => updateLine(l.key, { rate: v, rateEdited: true, saved: false })}
                     />
                     <LineNumber
                       label="Disc %"
