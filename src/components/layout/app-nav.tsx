@@ -10,7 +10,7 @@ import { signOut } from "@/app/login/actions";
 import { isActive, isFormPage, moduleGroupsFor, TAB_MODULES } from "./modules";
 
 /** Pages reached from the "More" tab, so that tab lights up on them. */
-const MORE_PATHS = ["/more", "/reminders", "/notes", "/banking", "/reports", "/business", "/settings", "/price-lists", "/payments", "/recurring", "/credit-notes", "/sales", "/eway-bills", "/vendors", "/purchase-orders", "/bills", "/payments-made", "/purchase-returns", "/expenses", "/stock", "/inventory-adjustments", "/users", "/documents", "/backup", "/account"];
+const MORE_PATHS = ["/more", "/reminders", "/notes", "/banking", "/reports", "/business", "/settings", "/price-lists", "/payments", "/recurring", "/credit-notes", "/sales", "/eway-bills", "/vendors", "/purchase-orders", "/bills", "/payments-made", "/purchase-returns", "/expenses", "/stock", "/fast-slow", "/inventory-adjustments", "/users", "/documents", "/backup", "/account"];
 
 const sideLink =
   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground";
