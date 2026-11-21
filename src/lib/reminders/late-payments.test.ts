@@ -127,7 +127,12 @@ describe("whatsappLink", () => {
 
 describe("reminderMessage", () => {
   it("names the shop when it is known", () => {
-    expect(reminderMessage("Ravi", "₹500.00", 15, "ASM Autoparts")).toContain("pending with ASM Autoparts for more than 15 days");
-    expect(reminderMessage("Ravi", "₹500.00", 15, "")).toContain("is pending for more than 15 days");
+    expect(reminderMessage("Ravi", "₹500.00", 23, "ASM Autoparts")).toContain("pending with ASM Autoparts for 23 days.");
+    expect(reminderMessage("Ravi", "₹500.00", 23, "")).toContain("has been pending for 23 days.");
+  });
+
+  it("gives the exact days and the date of the oldest bill", () => {
+    expect(reminderMessage("Ravi", "₹500.00", 23, "ASM", "29-10-2026")).toContain("for 23 days, since 29-10-2026.");
+    expect(reminderMessage("Ravi", "₹500.00", 1, "ASM")).toContain("for 1 day.");
   });
 });

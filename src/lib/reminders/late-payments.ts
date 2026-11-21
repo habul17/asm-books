@@ -142,10 +142,15 @@ export function findLatePayers(
   return out.sort((a, b) => b.days - a.days || b.lateAmount - a.lateAmount || a.name.localeCompare(b.name));
 }
 
-/** The message offered when reminding a customer on WhatsApp. */
-export function reminderMessage(customerName: string, amount: string, days: number, business: string): string {
+/**
+ * The message offered when reminding a customer on WhatsApp: the exact number
+ * of days the oldest unpaid bill has waited, and its date when known.
+ */
+export function reminderMessage(customerName: string, amount: string, days: number, business: string, since?: string): string {
   const from = business ? ` with ${business}` : "";
-  return `Dear ${customerName}, a payment of ${amount} is pending${from} for more than ${days} days. Kindly arrange the payment at the earliest. Thank you.`;
+  const length = `${days} ${days === 1 ? "day" : "days"}`;
+  const date = since ? `, since ${since}` : "";
+  return `Dear ${customerName}, a payment of ${amount} has been pending${from} for ${length}${date}. Kindly arrange the payment at the earliest. Thank you.`;
 }
 
 /**

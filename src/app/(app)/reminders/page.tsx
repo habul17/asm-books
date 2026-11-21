@@ -72,7 +72,7 @@ async function Body() {
               No bill has been unpaid for {plural(days, "day")} or more.
             </p>
           ) : (
-            <LatePayerList payers={late} days={days} businessName={businessName} />
+            <LatePayerList payers={late} businessName={businessName} />
           )}
         </section>
       )}
