@@ -202,7 +202,7 @@ function Stock({ d }: { d: HomeDashboard }) {
                   label: "Stock value",
                   note: `${plural(s.parts, "part")} in stock, at purchase price`,
                   value: formatMoney(s.value),
-                  href: "/catalogue",
+                  href: "/stock",
                 },
               ]
             : []),

@@ -28,6 +28,7 @@ import {
   TruckIcon,
   UsersIcon,
   WalletIcon,
+  WarehouseIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,6 +67,7 @@ export const PURCHASE_ORDERS: AppModule = { label: "Purchase Orders", icon: Shop
 export const BILLS: AppModule = { label: "Bills", icon: ReceiptTextIcon, href: "/bills" };
 export const PAYMENTS_MADE: AppModule = { label: "Payments Made", icon: CircleArrowUpIcon, href: "/payments-made" };
 export const PURCHASE_RETURNS: AppModule = { label: "Purchase Returns", icon: TagIcon, href: "/purchase-returns" };
+export const STOCK: AppModule = { label: "Stock", icon: WarehouseIcon, href: "/stock" };
 export const INVENTORY_ADJUSTMENTS: AppModule = {
   label: "Inventory Adjustments",
   icon: PackageOpenIcon,
@@ -84,7 +86,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 export const MODULE_GROUPS: ModuleGroup[] = [
   { title: null, modules: [HOME, REMINDERS, NOTES, BANKING] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
-  { title: "Inventory", modules: [INVENTORY_ADJUSTMENTS] },
+  { title: "Inventory", modules: [STOCK, INVENTORY_ADJUSTMENTS] },
   {
     title: "Sales",
     modules: [
