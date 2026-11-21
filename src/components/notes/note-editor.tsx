@@ -146,6 +146,14 @@ export async function uploadIntoNote(noteId: number, file: File, key: CryptoKey 
 /** Notes waiting to be thrown away if they are left empty; cancelled if the same note opens again at once. */
 const pendingLeave = new Map<number, ReturnType<typeof setTimeout>>();
 
+/**
+ * The newest words of each note open in this tab, and the version they were last saved
+ * at. The app keeps screens alive in the background and may show a page it loaded
+ * earlier, so a note opened again can arrive with older words than were typed. The
+ * editor starts from whichever copy is newer. Kept for unlocked notes only.
+ */
+const latestNotes = new Map<number, { json: NoteNode; version: number }>();
+
 export function NoteEditor({
   noteId,
   initialBody,
@@ -177,7 +185,9 @@ export function NoteEditor({
   onLeave: (empty: boolean) => void;
   onError: (message: string) => void;
 }) {
-  const version = useRef(initialVersion);
+  const known = lockKey ? undefined : latestNotes.get(noteId);
+  const startFrom = known && known.version >= initialVersion ? known : null;
+  const version = useRef(startFrom?.version ?? initialVersion);
   const dirty = useRef(false);
   const blocked = useRef(false);
   const inFlight = useRef<Promise<boolean> | null>(null);
@@ -196,6 +206,8 @@ export function NoteEditor({
         : await saveNoteAction(noteId, version.current, JSON.stringify(json));
       if (res.ok && res.value) {
         version.current = res.value;
+        const entry = latestNotes.get(noteId);
+        if (entry) entry.version = res.value;
         if (!dirty.current) callbacks.current.onStatus("saved");
         return true;
       }
@@ -248,7 +260,7 @@ export function NoteEditor({
         placeholder: ({ editor: e, node }) => (node.type.name === "heading" && e.state.doc.firstChild === node ? "Title" : ""),
       }),
     ],
-    content: initialBody ?? { type: "doc", content: [{ type: "heading", attrs: { level: 1 } }] },
+    content: startFrom?.json ?? initialBody ?? { type: "doc", content: [{ type: "heading", attrs: { level: 1 } }] },
     editorProps: {
       attributes: { class: "note-body outline-none", "aria-label": "Note" },
       handlePaste: (_view, event) => dropFiles(event.clipboardData?.files),
@@ -259,7 +271,9 @@ export function NoteEditor({
     },
     onUpdate: ({ editor: e }) => {
       dirty.current = true;
-      const s = noteSummary(e.getJSON() as NoteNode);
+      const json = e.getJSON() as NoteNode;
+      if (!lockKey) latestNotes.set(noteId, { json, version: version.current });
+      const s = noteSummary(json);
       callbacks.current.onSummary({ title: s.title, preview: lockKey ? "" : s.preview, editedAt: new Date() });
       callbacks.current.onStatus("saving");
       const nowTicked = tickedCount(e);
@@ -304,7 +318,25 @@ export function NoteEditor({
   useEffect(() => {
     if (!editor) return;
     clearTimeout(pendingLeave.get(noteId));
-    onReady({ editor, flush, version: () => version.current, setVersion: (v) => (version.current = v) });
+    // The editor can be rebuilt while this screen stays alive (it was hidden, then shown
+    // again). Put back the newest words so it never shows, and then saves over, older ones.
+    const newest = lockKey ? undefined : latestNotes.get(noteId);
+    if (newest && newest.version >= version.current && !editor.isDestroyed) {
+      version.current = newest.version;
+      if (JSON.stringify(editor.getJSON()) !== JSON.stringify(newest.json)) {
+        editor.commands.setContent(newest.json, { emitUpdate: false });
+      }
+    }
+    onReady({
+      editor,
+      flush,
+      version: () => version.current,
+      // Locking or unlocking saves the note another way; forget the plain copy kept here.
+      setVersion: (v) => {
+        version.current = v;
+        latestNotes.delete(noteId);
+      },
+    });
     const hide = () => document.visibilityState === "hidden" && void flush();
     const unload = (e: BeforeUnloadEvent) => {
       if (dirty.current || inFlight.current) {
