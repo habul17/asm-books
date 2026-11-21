@@ -9,8 +9,9 @@ const row = (id: number, partNo: string, description: string, stockQty: number, 
   unit: "Nos",
   photo: null,
   stockQty,
-  cost: null,
+  lots: null,
   value,
+  missingCost: false,
 });
 
 const items = [

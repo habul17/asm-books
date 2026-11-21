@@ -5,10 +5,12 @@ export interface StockRow {
   unit: string;
   photo: string | null;
   stockQty: number;
-  /** Cost of one unit (the newest purchase price). Null for staff, or when never bought. */
-  cost: number | null;
-  /** Stock × cost. Parts below zero count as 0, as on the Home screen. Null for staff. */
+  /** Pieces on hand by purchase bill, oldest first, at that bill's price. Null for staff. */
+  lots: { left: number; cost: number | null }[] | null;
+  /** What the stock actually cost (each bill's pieces at its own price). Null for staff. */
   value: number | null;
+  /** Some pieces have no known price, so they count as 0. */
+  missingCost: boolean;
 }
 
 export type StockShow = "in" | "out" | "all";

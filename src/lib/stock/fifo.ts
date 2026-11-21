@@ -137,3 +137,17 @@ export function rateForQty(steps: PriceStep[], qty: number, skip = 0): number | 
   }
   return best;
 }
+
+/**
+ * What the stock on hand actually cost: each batch's pieces at that batch's own
+ * price. `missingCost` is true when some pieces have no known price (counted as 0).
+ */
+export function lotsValue(lots: Lot[]): { value: number; missingCost: boolean } {
+  let value = 0;
+  let missingCost = false;
+  for (const lot of lots) {
+    if (lot.cost == null) missingCost = true;
+    else value += lot.left * lot.cost;
+  }
+  return { value: Math.round(value * 100) / 100, missingCost };
+}

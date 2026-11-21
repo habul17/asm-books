@@ -11,6 +11,18 @@ import { formatMoney, formatQty } from "@/lib/format";
 import { filterStock, type StockRow, type StockShow, type StockSort } from "@/lib/stock/filter";
 
 const PAGE = 100;
+/** How many purchase bills a row spells out before "and N more". */
+const LOTS_SHOWN = 3;
+
+/** "40 × ₹120.00 + 30 × ₹137.29": the stock split by purchase bill, oldest first. */
+function lotsText(lots: { left: number; cost: number | null }[]) {
+  if (lots.length === 1) return `× ${lots[0].cost != null ? formatMoney(lots[0].cost) : "no price"}`;
+  const parts = lots
+    .slice(0, LOTS_SHOWN)
+    .map((l) => `${formatQty(l.left)} × ${l.cost != null ? formatMoney(l.cost) : "no price"}`);
+  const more = lots.length > LOTS_SHOWN ? ` + ${lots.length - LOTS_SHOWN} more bills` : "";
+  return parts.join(" + ") + more;
+}
 
 const SHOWS: { value: StockShow; label: string }[] = [
   { value: "in", label: "In stock" },
@@ -28,7 +40,7 @@ export function StockList({ items, owner }: { items: StockRow[]; owner: boolean 
 
   const rows = useMemo(() => filterStock(items, { query: q, show, sort }), [items, q, show, sort]);
   const totalValue = rows.reduce((s, r) => s + (r.value ?? 0), 0);
-  const noCost = owner ? rows.filter((r) => r.stockQty > 0 && r.cost == null).length : 0;
+  const noCost = owner ? rows.filter((r) => r.stockQty > 0 && r.missingCost).length : 0;
   const shown = rows.slice(0, limit);
 
   return (
@@ -38,8 +50,9 @@ export function StockList({ items, owner }: { items: StockRow[]; owner: boolean 
           <p className="text-sm text-muted-foreground">Total cost of {show === "all" ? "all parts" : "this stock"}</p>
           <p className="text-2xl font-semibold tabular-nums">{formatMoney(totalValue)}</p>
           <p className="text-xs text-muted-foreground">
-            {rows.length} part{rows.length === 1 ? "" : "s"} · at each part&rsquo;s newest purchase price
-            {noCost > 0 && ` · ${noCost} in stock with no purchase price yet (counted as ₹0)`}
+            {rows.length} part{rows.length === 1 ? "" : "s"} · actual cost: each purchase bill&rsquo;s pieces at that
+            bill&rsquo;s price
+            {noCost > 0 && ` · ${noCost} with some pieces at no known price (counted as ₹0)`}
           </p>
         </div>
       )}
@@ -114,7 +127,7 @@ export function StockList({ items, owner }: { items: StockRow[]; owner: boolean 
                   </span>
                   <span className={`block text-xs tabular-nums ${r.stockQty < 0 ? "text-destructive" : "text-muted-foreground"}`}>
                     {formatQty(r.stockQty)} {r.unit}
-                    {owner && (r.cost != null ? ` × ${formatMoney(r.cost)}` : " · no purchase price")}
+                    {owner && r.lots && r.lots.length > 0 && (r.lots.length === 1 ? ` ${lotsText(r.lots)}` : ` · ${lotsText(r.lots)}`)}
                   </span>
                 </span>
                 <span className="text-right tabular-nums">

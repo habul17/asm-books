@@ -46,7 +46,7 @@ export default function SlowStockPage() {
     <ReportPage>
       <ReportHeader title="Slow Stock">
         Parts on the shelf that have not sold in the last {SLOW_STOCK_DAYS} days, the most money first. Parts bought in
-        the last {SLOW_STOCK_DAYS} days are left out. Values are at each part&rsquo;s newest purchase price.
+        the last {SLOW_STOCK_DAYS} days are left out. Values are what the stock actually cost: each purchase bill&rsquo;s pieces at that bill&rsquo;s price.
       </ReportHeader>
       <Suspense fallback={<ReportSkeleton />}>
         <Body />

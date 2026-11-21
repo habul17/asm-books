@@ -27,7 +27,6 @@ import { arAging } from "./receivables";
 import {
   gstSummary,
   lowStockWhere,
-  newestPurchasePrice,
   profitAndLoss,
   salesByCustomer,
   salesByItem,
@@ -36,6 +35,7 @@ import {
 } from "./reports";
 import { loadBusiness } from "./settings";
 import { moneyToday } from "./statements";
+import { inStockIds, stockCosts } from "./stock";
 import { vendorBalance } from "./vendors";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -131,10 +131,7 @@ async function stockAndOrders(today: string) {
   const { defaultMinStock } = await loadBusiness();
   const [stock, low, slow, orders, pos] = await db.batch([
     db
-      .select({
-        value: sum(sql`greatest(${products.stockQty}, 0) * coalesce(${newestPurchasePrice}, 0)`),
-        parts: sql<number>`count(*) FILTER (WHERE ${products.stockQty} > 0)`.mapWith(Number),
-      })
+      .select({ parts: sql<number>`count(*) FILTER (WHERE ${products.stockQty} > 0)`.mapWith(Number) })
       .from(products)
       .where(eq(products.active, true)),
     db
@@ -145,7 +142,7 @@ async function stockAndOrders(today: string) {
       .from(products)
       .where(lowStockWhere(defaultMinStock)),
     db
-      .select({ count: count(), value: sum(sql`${products.stockQty} * coalesce(${newestPurchasePrice}, 0)`) })
+      .select({ id: products.id })
       .from(products)
       .where(slowStockWhere(today)),
     db
@@ -157,14 +154,17 @@ async function stockAndOrders(today: string) {
       .from(purchaseOrders)
       .where(eq(purchaseOrders.status, "open")),
   ]);
+  // What the stock actually cost: each purchase bill's pieces at that bill's price.
+  const costs = await stockCosts(await inStockIds());
+  const valueOf = (ids: number[]) => round2(ids.reduce((v, id) => v + (costs.get(id)?.value ?? 0), 0));
   return {
     stock: {
-      value: round2(stock[0]?.value ?? 0),
+      value: valueOf([...costs.keys()]),
       parts: stock[0]?.parts ?? 0,
       low: low[0]?.low ?? 0,
       out: low[0]?.out ?? 0,
-      slowCount: slow[0]?.count ?? 0,
-      slowValue: round2(slow[0]?.value ?? 0),
+      slowCount: slow.length,
+      slowValue: valueOf(slow.map((r) => r.id)),
     },
     orders: {
       sales: { count: orders[0]?.count ?? 0, value: round2(orders[0]?.value ?? 0) },

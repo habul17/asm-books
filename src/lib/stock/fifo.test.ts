@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lotsOnHand, newestCost, priceSteps, rateForQty, takeOldestFirst, totalCost, unitCost, type Batch } from "./fifo";
+import { lotsOnHand, lotsValue, newestCost, priceSteps, rateForQty, takeOldestFirst, totalCost, unitCost, type Batch } from "./fifo";
 
 // The owner's example: Monday 5 at ₹5, Tuesday 5 at ₹10.
 const mon: Batch = { billId: 1, billNo: "A1", date: "2026-11-10", qty: 5, cost: 5 };
@@ -71,5 +71,27 @@ describe("rateForQty: one row at the highest price of the batches used", () => {
   });
   it("one step when every batch has the same price (e.g. an MRP price list)", () => {
     expect(priceSteps(lotsOnHand([mon, tue], 8, null), 10, () => 99)).toEqual([{ from: 0, price: 99 }]);
+  });
+});
+
+describe("lotsValue: stock on hand at what each batch cost", () => {
+  it("adds each batch at its own price", () => {
+    const lots = [
+      { billId: 1, billNo: "A1", date: "2026-01-01", left: 40, cost: 120 },
+      { billId: 2, billNo: "B7", date: "2026-03-01", left: 30, cost: 137.29 },
+    ];
+    expect(lotsValue(lots)).toEqual({ value: 8918.7, missingCost: false });
+  });
+
+  it("flags pieces with no known price and counts them as 0", () => {
+    const lots = [
+      { billId: null, billNo: null, date: null, left: 5, cost: null },
+      { billId: 2, billNo: "B7", date: "2026-03-01", left: 2, cost: 10 },
+    ];
+    expect(lotsValue(lots)).toEqual({ value: 20, missingCost: true });
+  });
+
+  it("is 0 with nothing on hand", () => {
+    expect(lotsValue([])).toEqual({ value: 0, missingCost: false });
   });
 });

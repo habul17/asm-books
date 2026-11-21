@@ -16,7 +16,6 @@ import {
   moneyEntries,
   payments,
   products,
-  purchasePrices,
   purchaseReturns,
   stockAdjustmentLines,
   stockAdjustments,
@@ -28,9 +27,9 @@ import { parsePeriod, type Period } from "@/lib/reports/period";
 import { requireOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
-import { realPurchasePrice } from "./product-search";
 import { todayInIndia } from "./invoice-writes";
 import { loadBusiness } from "./settings";
+import { stockCosts } from "./stock";
 import { vendorBalance } from "./vendors";
 
 /** Sum of a numeric SQL expression as a JS number (0 when there are no rows). */
@@ -580,13 +579,6 @@ export async function lowStock(limit = LOW_STOCK_LIMIT) {
 export const SLOW_STOCK_DAYS = 90;
 export const SLOW_STOCK_LIMIT = 500;
 
-/** A part's newest purchase price, the rate stock is valued at. */
-export const newestPurchasePrice = sql<number | null>`(
-  SELECT ${col(purchasePrices.price)} FROM ${purchasePrices}
-  WHERE ${col(purchasePrices.productId)} = ${col(products.id)} AND ${realPurchasePrice}
-  ORDER BY ${col(purchasePrices.date)} DESC, ${col(purchasePrices.id)} DESC LIMIT 1
-)`;
-
 const lastSold = sql<string | null>`(
   SELECT max(${col(stockMovements.date)}) FROM ${stockMovements}
   WHERE ${col(stockMovements.productId)} = ${col(products.id)} AND ${col(stockMovements.kind)} = 'sale'
@@ -614,11 +606,10 @@ export function slowStockWhere(today: string) {
   );
 }
 
-/** Slow stock, the most money stuck first. */
+/** Slow stock, the most money stuck first, at what the stock actually cost. */
 export async function slowStock(limit = SLOW_STOCK_LIMIT) {
   await connection(); // Always read live data; never prerender at build time.
   await requireOwner();
-  const value = sql<number>`${products.stockQty} * coalesce(${newestPurchasePrice}, 0)`.mapWith(Number);
   const rows = await getDb()
     .select({
       id: products.id,
@@ -626,12 +617,13 @@ export async function slowStock(limit = SLOW_STOCK_LIMIT) {
       description: products.description,
       unit: products.unit,
       stockQty: products.stockQty,
-      value,
       lastSold,
     })
     .from(products)
-    .where(slowStockWhere(todayInIndia()))
-    .orderBy(desc(value), asc(products.partNo))
-    .limit(limit + 1);
-  return { items: rows.slice(0, limit), more: rows.length > limit };
+    .where(slowStockWhere(todayInIndia()));
+  const costs = await stockCosts(rows.map((r) => r.id));
+  const items = rows
+    .map((r) => ({ ...r, value: costs.get(r.id)?.value ?? 0 }))
+    .sort((a, b) => b.value - a.value || a.partNo.localeCompare(b.partNo, "en", { numeric: true }));
+  return { items: items.slice(0, limit), more: items.length > limit };
 }
