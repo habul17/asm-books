@@ -342,6 +342,7 @@ function toPickedItem(
       ? {
           newestCost: p.purchase,
           highestCost: highest(p.highestPurchase, p.purchase, stock?.shortCost, ...(stock?.lots.map((l) => l.cost) ?? [])),
+          nextCost: stock?.lots[0]?.cost ?? stock?.shortCost ?? p.purchase,
         }
       : {}),
   };
@@ -364,6 +365,8 @@ export interface PickedItem {
   newestCost?: number | null;
   /** Owner only: the highest price paid for this part on any purchase bill. */
   highestCost?: number | null;
+  /** Owner only: what the next piece sold costs (first in, first out). */
+  nextCost?: number | null;
 }
 
 /** Products matching the search, priced for the chosen price list. */

@@ -4,6 +4,7 @@ import { and, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
+import { col } from "@/db/sql";
 import { creditNoteLines, creditNotes, invoiceLines, invoices, products } from "@/db/schema";
 import type { MovementInput, MovementPeriod } from "@/lib/stock/movement";
 import { requireOwner } from "@/server/auth";
@@ -11,7 +12,7 @@ import { requireOwner } from "@/server/auth";
 import { todayInIndia } from "./invoice-writes";
 
 /** An ISO date moved by whole days. */
-function shift(iso: string, days: number): string {
+export function shift(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
@@ -91,4 +92,21 @@ export async function stockMovement(days: MovementPeriod) {
     };
   });
   return { from, today, rows };
+}
+
+/**
+ * How many of each part sold from `from` to `to` (final bills, less final
+ * returns), as a sub-query on `products`.
+ */
+export function soldBetween(from: string, to: string) {
+  return sql<number>`(
+    (SELECT coalesce(sum(${col(invoiceLines.qty)}), 0) FROM ${invoiceLines}
+      JOIN ${invoices} ON ${col(invoices.id)} = ${col(invoiceLines.invoiceId)}
+      WHERE ${col(invoiceLines.productId)} = ${col(products.id)} AND ${col(invoices.status)} = 'final'
+        AND ${col(invoices.date)} BETWEEN ${from} AND ${to})
+    - (SELECT coalesce(sum(${col(creditNoteLines.qty)}), 0) FROM ${creditNoteLines}
+      JOIN ${creditNotes} ON ${col(creditNotes.id)} = ${col(creditNoteLines.creditNoteId)}
+      WHERE ${col(creditNoteLines.productId)} = ${col(products.id)} AND ${col(creditNotes.status)} = 'final'
+        AND ${col(creditNotes.date)} BETWEEN ${from} AND ${to})
+  )`.mapWith(Number);
 }

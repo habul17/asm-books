@@ -4,13 +4,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ProductDetailPanel, ProductDetailSkeleton } from "@/components/catalogue/product-detail";
-import { ProductResults, ProductResultsSkeleton } from "@/components/catalogue/product-results";
+import { ItemsTabs, ProductResults, ProductResultsSkeleton } from "@/components/catalogue/product-results";
 import { SearchBox } from "@/components/catalogue/search-box";
-import { buttonVariants } from "@/components/ui/button";
+import { readShow } from "@/lib/stock/item-status";
 
 export const metadata: Metadata = { title: "Items" };
 
-type Params = { q?: string | string[]; id?: string | string[] };
+type Params = { q?: string | string[]; id?: string | string[]; show?: string | string[] };
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
@@ -18,9 +18,11 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
   const q = first(params.q);
   const id = Number(first(params.id)) || null;
+  const show = readShow(first(params.show));
   return (
-    <div className={id ? "hidden md:block" : undefined}>
-      <ProductResults query={q} selectedId={id} />
+    <div className={id ? "hidden md:flex md:flex-col md:gap-3" : "flex flex-col gap-3"}>
+      <ItemsTabs query={q} show={show} />
+      <ProductResults query={q} selectedId={id} show={show} />
     </div>
   );
 }
@@ -40,20 +42,31 @@ async function Detail({ searchParams }: { searchParams: Promise<Params> }) {
 
 export default function CataloguePage({ searchParams }: PageProps<"/catalogue">) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
-            <SearchBox />
-          </Suspense>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight">Items</h1>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/catalogue/rate-list"
+            aria-label="Read a rate list"
+            title="Read a rate list"
+            className="flex size-10 items-center justify-center rounded-full border transition-colors hover:bg-muted/60"
+          >
+            <ScanLineIcon className="size-[18px]" />
+          </Link>
+          <Link
+            href="/catalogue/new"
+            aria-label="Add part"
+            title="Add part"
+            className="flex size-10 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-85"
+          >
+            <PlusIcon className="size-[18px]" strokeWidth={2.4} />
+          </Link>
         </div>
-        <Link href="/catalogue/rate-list" className={buttonVariants({ variant: "outline", className: "h-10 shrink-0" })}>
-          <ScanLineIcon /> <span className="hidden sm:inline">Read rate list</span>
-        </Link>
-        <Link href="/catalogue/new" className={buttonVariants({ className: "h-10 shrink-0" })}>
-          <PlusIcon /> Add part
-        </Link>
       </div>
+      <Suspense fallback={<div className="h-10 rounded-xl bg-muted" />}>
+        <SearchBox />
+      </Suspense>
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <Suspense fallback={<ProductResultsSkeleton />}>
           <Results searchParams={searchParams} />

@@ -47,11 +47,11 @@ export function SearchBox() {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Search part no, name or category…"
+        placeholder="Part no, name or category"
         aria-label="Search products"
         autoComplete="off"
         autoFocus
-        className="h-10 pl-9 text-base"
+        className="h-10 rounded-xl border-0 bg-muted pl-9 text-base shadow-none focus-visible:ring-0 dark:bg-muted"
         aria-busy={pending}
       />
     </div>

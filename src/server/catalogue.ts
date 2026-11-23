@@ -19,8 +19,15 @@ import {
 import { folderPathResolver } from "@/lib/price-lists/folders";
 import { computePrice, highest, type ComputedPrice } from "@/lib/pricing";
 
+import { itemStatus, PACE_DAYS, type ItemStatus, type ItemsShow, BUY_SOON_DAYS } from "@/lib/stock/item-status";
+
 import { loadStockLots } from "./fifo";
-import { productSearch, purchasePriceAt, realPurchasePrice } from "./product-search";
+import { priceItems } from "./invoices";
+import { todayInIndia } from "./invoice-writes";
+import { shift, soldBetween } from "./movement";
+import { productSearch, realPurchasePrice } from "./product-search";
+import { slowStockWhere } from "./reports";
+import { loadBusiness } from "./settings";
 
 export const SEARCH_LIMIT = 50;
 
@@ -35,20 +42,39 @@ export interface ProductSearchResult {
     photo: string | null;
     category: string | null;
     categoryGroup: string | null;
+    unit: string;
     stockQty: number;
-    purchasePrice: number | null;
+    /** Selling price of one piece on the default price list. */
+    price: number | null;
+    /** Owner only: what the next piece sold costs. Null for staff. */
+    cost: number | null;
+    status: ItemStatus;
     active: boolean;
   }[];
 }
 
-/** Products matching the search box; see `productSearch` for the rules. The owner also sees switched-off parts. */
-export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promise<ProductSearchResult> {
+/**
+ * Products matching the search box; see `productSearch` for the rules. The owner also sees switched-off parts.
+ * `show` narrows to parts to buy soon, out of stock, or slow.
+ */
+export async function searchProducts(query: string, limit = SEARCH_LIMIT, show: ItemsShow = "all"): Promise<ProductSearchResult> {
   await connection(); // Always read live data; never prerender at build time.
   const user = await requireUser();
-  const { where, rank } = productSearch(query, [], { includeOff: isOwner(user) });
+  const owner = isOwner(user);
+  const today = todayInIndia();
+  const sold = soldBetween(shift(today, -(PACE_DAYS - 1)), today);
+  const filter =
+    show === "out"
+      ? sql`${products.stockQty} <= 0`
+      : show === "buy"
+        ? sql`${sold} > 0 AND ${products.stockQty} * ${PACE_DAYS} < ${BUY_SOON_DAYS} * ${sold}`
+        : show === "slow"
+          ? slowStockWhere(today)
+          : undefined;
+  const { where, rank } = productSearch(query, [filter], { includeOff: owner && show === "all" });
   const db = getDb();
 
-  const [countRows, items] = await db.batch([
+  const [countRows, rows, business] = await Promise.all([
     db
       .select({ total: sql<number>`count(*)`.mapWith(Number) })
       .from(products)
@@ -62,9 +88,11 @@ export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promi
         photo: products.photo,
         category: categories.name,
         categoryGroup: group.name,
+        unit: products.unit,
         stockQty: products.stockQty,
-        purchasePrice: purchasePriceAt(0),
         active: products.active,
+        sold,
+        slow: sql<boolean>`coalesce((${slowStockWhere(today)}), false)`,
       })
       .from(products)
       .leftJoin(categories, eq(categories.id, products.categoryId))
@@ -72,9 +100,22 @@ export async function searchProducts(query: string, limit = SEARCH_LIMIT): Promi
       .where(where)
       .orderBy(rank, asc(products.sort), asc(products.id))
       .limit(Math.min(Math.max(limit, 1), 200)),
+    loadBusiness(db),
   ]);
 
-  return { total: countRows[0]?.total ?? 0, items };
+  const priced = new Map((await priceItems(rows.map((r) => r.id), business.defaultPriceListId)).map((p) => [p.id, p]));
+  return {
+    total: countRows[0]?.total ?? 0,
+    items: rows.map(({ sold: soldQty, slow, ...r }) => {
+      const p = priced.get(r.id);
+      return {
+        ...r,
+        price: p?.price ?? null,
+        cost: owner ? (p?.nextCost ?? null) : null,
+        status: itemStatus({ stockQty: r.stockQty, sold: soldQty, slow: Boolean(slow) }),
+      };
+    }),
+  };
 }
 
 export interface SellingPrice extends ComputedPrice {
