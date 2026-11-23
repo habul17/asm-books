@@ -57,7 +57,8 @@ export function ItemsTabs({ query, show }: { query: string; show: ItemsShow }) {
   );
 }
 
-const COLUMNS = "grid grid-cols-[2.75rem_minmax(0,1fr)_3.5rem_5.25rem] gap-2.5";
+/** Every row shares the list's columns, so stock and price line up down the page. */
+const ROW = "col-span-4 grid grid-cols-subgrid";
 
 export async function ProductResults({
   query,
@@ -71,11 +72,11 @@ export async function ProductResults({
   const { total, items } = await searchProducts(query, undefined, show);
 
   return (
-    <section aria-label="Search results" className="flex flex-col">
+    <section aria-label="Search results" className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto_auto] gap-x-3">
       <div
         className={cn(
-          COLUMNS,
-          "border-b px-1 pb-1.5 text-xs font-medium text-muted-foreground",
+          ROW,
+          "border-b pb-1.5 text-xs font-medium text-muted-foreground",
         )}
       >
         <span />
@@ -84,25 +85,25 @@ export async function ProductResults({
         <span className="text-right">Price</span>
       </div>
       {items.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
+        <p className="col-span-4 py-10 text-center text-sm text-muted-foreground">
           {EMPTY[show]}
           {query ? ` “${query}”` : ""}.
         </p>
       ) : (
-        <ul className="flex flex-col">
+        <ul className={ROW}>
           {items.map((p) => {
             const selected = p.id === selectedId;
             const tag = STATUS_TEXT[p.status];
             return (
-              <li key={p.id}>
+              <li key={p.id} className={ROW}>
                 <Link
                   href={href(query, p.id, show)}
                   scroll={false}
                   data-product-result
                   aria-current={selected ? "true" : undefined}
                   className={cn(
-                    COLUMNS,
-                    "items-center border-b px-1 py-2.5 transition-colors hover:bg-muted/40 focus-visible:bg-muted focus-visible:outline-none",
+                    ROW,
+                    "items-center border-b py-2.5 transition-colors hover:bg-muted/40 focus-visible:bg-muted focus-visible:outline-none",
                     selected && "bg-muted",
                   )}
                 >
@@ -110,7 +111,7 @@ export async function ProductResults({
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span
                       className={cn(
-                        "text-sm font-medium break-words",
+                        "truncate text-sm font-medium",
                         !p.active && "text-muted-foreground line-through",
                       )}
                     >
@@ -121,7 +122,7 @@ export async function ProductResults({
                       {[p.partNo, p.category].filter(Boolean).join(" · ")}
                     </span>
                   </span>
-                  <span className="flex flex-col items-end tabular-nums">
+                  <span className="flex flex-col items-end whitespace-nowrap tabular-nums">
                     <span className={cn("text-sm", tag ? "font-semibold" : "font-medium", STATUS_COLOR[p.status])}>
                       {formatQty(p.stockQty)}
                     </span>
@@ -129,7 +130,7 @@ export async function ProductResults({
                       {tag ?? p.unit}
                     </span>
                   </span>
-                  <span className="flex flex-col items-end tabular-nums">
+                  <span className="flex flex-col items-end whitespace-nowrap tabular-nums">
                     <span className="text-sm font-medium">{formatMoney(p.price)}</span>
                     {p.cost != null && <span className="text-xs text-muted-foreground">cost {formatMoney(p.cost)}</span>}
                   </span>
@@ -140,7 +141,7 @@ export async function ProductResults({
         </ul>
       )}
       {total > items.length && (
-        <p className="pt-3 text-center text-xs text-muted-foreground" aria-live="polite">
+        <p className="col-span-4 pt-3 text-center text-xs text-muted-foreground" aria-live="polite">
           Showing {items.length} of {total.toLocaleString("en-IN")}. Type to narrow down.
         </p>
       )}
