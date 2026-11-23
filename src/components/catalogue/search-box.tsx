@@ -51,7 +51,7 @@ export function SearchBox() {
         aria-label="Search products"
         autoComplete="off"
         autoFocus
-        className="h-10 rounded-xl border-0 bg-muted pl-9 text-base shadow-none focus-visible:ring-0 dark:bg-muted"
+        className="h-10 rounded-xl border-0 bg-muted pl-9 shadow-none focus-visible:ring-0 dark:bg-muted"
         aria-busy={pending}
       />
     </div>

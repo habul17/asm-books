@@ -44,23 +44,23 @@ export default function CataloguePage({ searchParams }: PageProps<"/catalogue">)
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-[32px] leading-tight font-bold tracking-tight">Items</h1>
+        <h1 className="text-xl font-semibold">Items</h1>
         <div className="flex items-center gap-2">
           <Link
             href="/catalogue/rate-list"
             aria-label="Read a rate list"
             title="Read a rate list"
-            className="flex size-10 items-center justify-center rounded-full border transition-colors hover:bg-muted/60"
+            className="flex size-9 items-center justify-center rounded-full border transition-colors hover:bg-muted/60"
           >
-            <ScanLineIcon className="size-[18px]" />
+            <ScanLineIcon className="size-4" />
           </Link>
           <Link
             href="/catalogue/new"
             aria-label="Add part"
             title="Add part"
-            className="flex size-10 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-85"
+            className="flex size-9 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-85"
           >
-            <PlusIcon className="size-[18px]" strokeWidth={2.4} />
+            <PlusIcon className="size-4" />
           </Link>
         </div>
       </div>

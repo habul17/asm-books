@@ -37,7 +37,7 @@ const EMPTY: Record<ItemsShow, string> = {
 /** All · Buy soon · Out · Slow, one bar. Keeps the search, drops the open part. */
 export function ItemsTabs({ query, show }: { query: string; show: ItemsShow }) {
   return (
-    <nav aria-label="Show" className="grid grid-cols-4 gap-0.5 rounded-xl border p-0.5 text-sm">
+    <nav aria-label="Show" className="grid grid-cols-4 gap-0.5 rounded-[10px] border p-0.5 text-sm">
       {ITEMS_SHOWS.map((s) => (
         <Link
           key={s.value}
@@ -46,8 +46,8 @@ export function ItemsTabs({ query, show }: { query: string; show: ItemsShow }) {
           replace
           aria-current={s.value === show ? "page" : undefined}
           className={cn(
-            "flex h-9 items-center justify-center rounded-[10px] transition-colors",
-            s.value === show ? "bg-foreground font-semibold text-background" : "text-foreground hover:bg-muted/60",
+            "flex h-8 items-center justify-center rounded-lg transition-colors",
+            s.value === show ? "bg-foreground font-medium text-background" : "text-foreground hover:bg-muted/60",
           )}
         >
           {s.label}
@@ -75,7 +75,7 @@ export async function ProductResults({
       <div
         className={cn(
           COLUMNS,
-          "border-b px-1 pb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase",
+          "border-b px-1 pb-1.5 text-xs font-medium text-muted-foreground",
         )}
       >
         <span />
@@ -106,11 +106,11 @@ export async function ProductResults({
                     selected && "bg-muted",
                   )}
                 >
-                  <PartPhoto photo={p.photo} className="size-11 rounded-[10px]" />
+                  <PartPhoto photo={p.photo} className="size-11 rounded-lg" />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span
                       className={cn(
-                        "text-[15px] leading-snug font-semibold break-words",
+                        "text-sm font-medium break-words",
                         !p.active && "text-muted-foreground line-through",
                       )}
                     >
@@ -122,16 +122,16 @@ export async function ProductResults({
                     </span>
                   </span>
                   <span className="flex flex-col items-end tabular-nums">
-                    <span className={cn("text-[15px]", tag ? "font-bold" : "font-medium", STATUS_COLOR[p.status])}>
+                    <span className={cn("text-sm", tag ? "font-semibold" : "font-medium", STATUS_COLOR[p.status])}>
                       {formatQty(p.stockQty)}
                     </span>
-                    <span className={cn("text-[11px]", tag ? cn("font-semibold", STATUS_COLOR[p.status]) : "text-muted-foreground")}>
+                    <span className={cn("text-xs", tag ? cn("font-medium", STATUS_COLOR[p.status]) : "text-muted-foreground")}>
                       {tag ?? p.unit}
                     </span>
                   </span>
                   <span className="flex flex-col items-end tabular-nums">
-                    <span className="text-[15px] font-semibold">{formatMoney(p.price)}</span>
-                    {p.cost != null && <span className="text-[11px] text-muted-foreground">cost {formatMoney(p.cost)}</span>}
+                    <span className="text-sm font-medium">{formatMoney(p.price)}</span>
+                    {p.cost != null && <span className="text-xs text-muted-foreground">cost {formatMoney(p.cost)}</span>}
                   </span>
                 </Link>
               </li>
@@ -154,7 +154,7 @@ export function ProductResultsSkeleton() {
       <Skeleton className="mb-2 h-4 w-full" />
       {Array.from({ length: 8 }, (_, i) => (
         <div key={i} className="flex items-center gap-3 border-b py-2.5">
-          <Skeleton className="size-11 rounded-[10px]" />
+          <Skeleton className="size-11 rounded-lg" />
           <div className="flex flex-1 flex-col gap-1.5">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/3" />
