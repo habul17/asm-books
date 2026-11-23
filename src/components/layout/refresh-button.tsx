@@ -12,7 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
  * to get the latest data and the newest version of the app. Anything typed into
  * a form that is not saved yet is lost, as with any reload.
  */
-export function RefreshButton() {
+export function RefreshButton({ className }: { className?: string }) {
   const [pending, setPending] = useState(false);
   return (
     <button
@@ -26,7 +26,7 @@ export function RefreshButton() {
         setTimeout(() => setPending(false), 4000);
         window.location.reload();
       }}
-      className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0")}
+      className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0", className)}
     >
       <RefreshCwIcon className={cn(pending && "animate-spin")} />
     </button>

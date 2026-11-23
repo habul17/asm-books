@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { ProductDetailPanel, ProductDetailSkeleton } from "@/components/catalogue/product-detail";
 import { ItemsTabs, ProductResults, ProductResultsSkeleton } from "@/components/catalogue/product-results";
 import { SearchBox } from "@/components/catalogue/search-box";
+import { RefreshButton } from "@/components/layout/refresh-button";
 import { readShow } from "@/lib/stock/item-status";
 
 export const metadata: Metadata = { title: "Items" };
@@ -46,6 +47,8 @@ export default function CataloguePage({ searchParams }: PageProps<"/catalogue">)
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Items</h1>
         <div className="flex items-center gap-2">
+          {/* The phone has no top bar here, so its refresh button sits with the others. */}
+          <RefreshButton className="size-9 rounded-full border border-border md:hidden [&_svg]:size-4" />
           <Link
             href="/catalogue/rate-list"
             aria-label="Read a rate list"
