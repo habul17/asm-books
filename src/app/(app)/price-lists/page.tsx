@@ -114,7 +114,7 @@ function ScreenSkeleton() {
 export default function PriceListsPage({ searchParams }: PageProps<"/price-lists">) {
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Price lists</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">Price lists</h1>
       <Suspense fallback={<ScreenSkeleton />}>
         <PriceListsScreen searchParams={searchParams} />
       </Suspense>

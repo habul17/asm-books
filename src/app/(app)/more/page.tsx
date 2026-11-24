@@ -19,7 +19,7 @@ async function Modules() {
 export default function MorePage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">More</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">More</h1>
       <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
         <Modules />
       </Suspense>

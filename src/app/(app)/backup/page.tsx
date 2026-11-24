@@ -82,7 +82,7 @@ async function Body() {
 export default function BackupPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <h1 className="text-xl font-semibold">Backups</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">Backups</h1>
       <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
         <Body />
       </Suspense>

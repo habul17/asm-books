@@ -49,7 +49,7 @@ async function Password() {
 export default function AccountPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <h1 className="text-xl font-semibold">My account</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">My account</h1>
       <Suspense fallback={<Skeleton className="h-20 rounded-xl" />}>
         <Me />
       </Suspense>

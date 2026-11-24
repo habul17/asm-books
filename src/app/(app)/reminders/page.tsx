@@ -8,6 +8,7 @@ import { LatePayerList, LowStockRows } from "@/components/reminders/reminder-lis
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { formatDate, formatMoney } from "@/lib/format";
 import { getReminders } from "@/server/reminders";
 import { lowStock } from "@/server/reports";
@@ -119,9 +120,9 @@ function BodySkeleton() {
 export default function RemindersPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 max-md:sr-only">
         <h1 className="text-xl font-semibold">
-          Reminders <InfoTip label="About reminders">What needs your attention today.</InfoTip>
+          Reminders <SectionTip href="/reminders" />
         </h1>
       </div>
       <Suspense fallback={<BodySkeleton />}>

@@ -41,7 +41,7 @@ async function Upload() {
 export default function DocumentsPage({ searchParams }: PageProps<"/documents">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">Documents</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">Documents</h1>
       <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
         <Upload />
       </Suspense>

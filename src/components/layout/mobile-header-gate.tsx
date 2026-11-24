@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-/** Screens with their own big title, where the phone's top bar (logo, refresh, bell) is left out. */
+/** Screens with their own big title, where the phone's top bar (name, refresh, bell) is left out. */
 const NO_TOP_BAR = ["/catalogue"];
 
 /** Shows the phone's top bar everywhere except the screens above. */

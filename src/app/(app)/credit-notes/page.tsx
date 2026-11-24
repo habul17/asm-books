@@ -31,7 +31,7 @@ export default function CreditNotesPage({ searchParams }: PageProps<"/credit-not
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Credit notes</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Credit notes</h1>
         <Link href="/credit-notes/new" className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> New return
         </Link>

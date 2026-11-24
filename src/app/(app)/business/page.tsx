@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { ModuleList } from "@/components/layout/module-list";
 import { OwnerGate } from "@/components/layout/owner-gate";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { getBusiness } from "@/server/settings";
 
 export const metadata: Metadata = { title: "Business details" };
@@ -43,10 +43,10 @@ async function Parts() {
 export default function BusinessPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 max-md:sr-only">
         <h1 className="text-xl font-semibold">
           Business details{" "}
-          <InfoTip label="About business details">Your shop&apos;s details, printed on every bill. Only the owner can change them.</InfoTip>
+          <SectionTip href="/business" />
         </h1>
       </div>
       <OwnerGate what="see business details" fallback={<Skeleton className="h-48 rounded-2xl" />}>

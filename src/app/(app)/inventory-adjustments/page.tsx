@@ -30,7 +30,7 @@ export default function AdjustmentsPage({ searchParams }: PageProps<"/inventory-
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Inventory adjustments</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Inventory adjustments</h1>
         <div className="flex gap-2">
           <Link href="/inventory-adjustments/stock-check" className={buttonVariants({ size: "sm", variant: "outline" })}>
             <ClipboardCheckIcon /> Stock check

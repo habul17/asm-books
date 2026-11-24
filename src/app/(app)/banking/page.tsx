@@ -10,6 +10,7 @@ import { OwnerGate } from "@/components/layout/owner-gate";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { MoneyEntryStatusFilter } from "@/server/money-entries";
 import { getBusiness } from "@/server/settings";
@@ -74,13 +75,9 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-xl font-semibold max-md:sr-only">
           Banking{" "}
-          <InfoTip label="About banking">
-            Sales, payments, bills and expenses are counted on their own. Enter here only other money: your own money,
-            loans, GST paid, equipment, other income, and cash put in or taken out of the bank.{" "}
-            <Link href="/reports/cash-flow">See the Cash Flow Statement</Link>.
-          </InfoTip>
+          <SectionTip href="/banking" />
         </h1>
         <div className="flex gap-2">
           <Link href="/banking/statement" className={buttonVariants({ size: "sm", variant: "outline" })}>

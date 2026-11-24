@@ -7,7 +7,7 @@ import { RecurringActions } from "@/components/recurring/recurring-actions";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { formatDate, formatMoney } from "@/lib/format";
 import { FREQUENCY_LABELS, isDue } from "@/lib/recurring/schedule";
 import { listRecurring } from "@/server/recurring";
@@ -82,12 +82,9 @@ async function List() {
 export default function RecurringPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className="text-xl font-semibold max-md:sr-only">
         Recurring Invoices{" "}
-        <InfoTip label="About recurring invoices">
-          Bills you make again and again, like every month. When one is due, it shows here and in Reminders. Press{" "}
-          <strong>Create invoice</strong>, check it and save. Nothing is billed on its own.
-        </InfoTip>
+        <SectionTip href="/recurring" />
       </h1>
       <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
         <List />

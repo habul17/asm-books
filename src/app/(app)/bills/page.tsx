@@ -31,7 +31,7 @@ export default function BillsPage({ searchParams }: PageProps<"/bills">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Bills</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Bills</h1>
         <Link href="/bills/new" className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> New bill
         </Link>

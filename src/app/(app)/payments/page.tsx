@@ -31,7 +31,7 @@ export default function PaymentsPage({ searchParams }: PageProps<"/payments">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Payments received</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Payments received</h1>
         <Link href="/payments/new" className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> Receive payment
         </Link>

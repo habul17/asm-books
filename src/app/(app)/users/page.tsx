@@ -8,7 +8,7 @@ import { formatDateTime, OwnerOnly } from "@/components/users/user-bits";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { ROLE_LABELS } from "@/lib/auth/user-validation";
 import { listUsers } from "@/server/users";
 
@@ -57,8 +57,8 @@ async function Users() {
 export default function UsersPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">
-        Users <InfoTip label="About users">The people who can sign in, and what each one is allowed to do.</InfoTip>
+      <h1 className="text-xl font-semibold max-md:sr-only">
+        Users <SectionTip href="/users" />
       </h1>
       <Suspense fallback={<Skeleton className="h-48 rounded-xl" />}>
         <Users />

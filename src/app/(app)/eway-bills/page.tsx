@@ -4,10 +4,9 @@ import { Suspense } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import { formatDate, formatMoney } from "@/lib/format";
 import { salesDocHref } from "@/lib/sales-docs/kinds";
-import { EWAY_BILL_LIMIT } from "@/lib/transport";
 import { todayInIndia } from "@/server/invoice-writes";
 import { listEwayBills, type EwayRow } from "@/server/sales-docs";
 
@@ -77,12 +76,9 @@ async function Lists() {
 export default function EwayBillsPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className="text-xl font-semibold max-md:sr-only">
         e-Way Bills{" "}
-        <InfoTip label="About e-way bills">
-          Bills of {formatMoney(EWAY_BILL_LIMIT)} or more usually need an e-way bill. Make it on the government e-way bill
-          website. Then open the bill here and type its number under “Transport and e-way bill”.
-        </InfoTip>
+        <SectionTip href="/eway-bills" />
       </h1>
       <Suspense fallback={<Skeleton className="h-64" />}>
         <Lists />

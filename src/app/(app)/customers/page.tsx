@@ -76,7 +76,7 @@ export default function CustomersPage({ searchParams }: PageProps<"/customers">)
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Customers</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Customers</h1>
         <div className="flex flex-wrap gap-2">
           <Link href="/customers/groups" className={buttonVariants({ variant: "outline", size: "sm" })}>
             <UsersIcon /> Groups

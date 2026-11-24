@@ -145,6 +145,20 @@ export function isActive(pathname: string | null, href: string | null): boolean 
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** The phone's "More" screen is not a module, but it still needs a name in the top bar. */
+const MORE_SCREEN = { label: "More", href: "/more" };
+
+/** The section a screen belongs to, named in the phone's top bar. The longest matching address wins. */
+export function sectionFor(pathname: string | null): { label: string; href: string } | null {
+  let best: { label: string; href: string } | null = null;
+  for (const m of [...MODULE_GROUPS.flatMap((g) => g.modules), MORE_SCREEN]) {
+    if (m.href && isActive(pathname, m.href) && (!best || m.href.length > best.href.length)) {
+      best = { label: m.label, href: m.href };
+    }
+  }
+  return best;
+}
+
 /** Full-screen forms hide the bottom tabs so their own save bar stays reachable. */
 /** Full-screen pages that hide the phone tab bar: forms, and an open note. */
 export const isFormPage = (pathname: string | null) =>

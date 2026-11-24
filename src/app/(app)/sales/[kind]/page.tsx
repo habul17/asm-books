@@ -28,7 +28,7 @@ async function Content({ params, searchParams }: Props) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{plural}</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">{plural}</h1>
         <Link href={`${path}/new`} className={buttonVariants({ size: "sm" })}>
           <PlusIcon /> New {noun}
         </Link>

@@ -18,7 +18,7 @@ export default function FastSlowPage({ searchParams }: PageProps<"/fast-slow">) 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Fast &amp; Slow</h1>
+        <h1 className="text-xl font-semibold max-md:sr-only">Fast &amp; Slow</h1>
         <p className="text-sm text-muted-foreground">Which parts sell fast and which sit on the shelf, to decide what to buy.</p>
       </div>
       <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>

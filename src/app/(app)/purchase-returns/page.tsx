@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { ListToolbar } from "@/components/forms/list-toolbar";
 import { PurchaseReturnList, PurchaseReturnListSkeleton } from "@/components/purchase-returns/purchase-return-list";
 import { buttonVariants } from "@/components/ui/button";
-import { InfoTip } from "@/components/ui/info-tip";
+import { SectionTip } from "@/components/layout/section-tips";
 import type { PurchaseReturnStatusFilter } from "@/server/purchase-returns";
 
 export const metadata: Metadata = { title: "Purchase returns" };
@@ -32,10 +32,10 @@ export default function PurchaseReturnsPage({ searchParams }: PageProps<"/purcha
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="max-md:sr-only">
           <h1 className="text-xl font-semibold">
             Purchase returns{" "}
-            <InfoTip label="About purchase returns">Damaged or wrong parts you send back to a vendor.</InfoTip>
+            <SectionTip href="/purchase-returns" />
           </h1>
         </div>
         <Link href="/purchase-returns/new" className={buttonVariants({ size: "sm" })}>

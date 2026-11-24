@@ -15,7 +15,7 @@ async function Body() {
 export default function StockPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">Stock</h1>
+      <h1 className="text-xl font-semibold max-md:sr-only">Stock</h1>
       <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
         <Body />
       </Suspense>
