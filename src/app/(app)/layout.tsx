@@ -31,7 +31,7 @@ const Brand = () => (
 
 /** The phone's top bar: the screen's name, refresh and the reminders bell. */
 const MobileHeader = ({ title }: { title?: ReactNode }) => (
-  <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden print:hidden">
+  <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden print:hidden">
     <div className="flex h-14 items-center gap-3 px-4">
       <div className="min-w-0 flex-1">{title}</div>
       <div className="flex shrink-0 items-center gap-1">
