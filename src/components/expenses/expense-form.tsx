@@ -94,7 +94,6 @@ function ExpenseFields({ id, initial, categories, vendors, backHref, scanDocumen
             autoComplete="off"
             defaultValue={initial.category}
             placeholder="Rent, Salary, Freight…"
-            className="h-10"
           />
           <datalist id="e-categories">
             {categories.map((c) => (
@@ -111,14 +110,14 @@ function ExpenseFields({ id, initial, categories, vendors, backHref, scanDocumen
             autoComplete="off"
             defaultValue={initial.amount == null ? "" : String(initial.amount)}
             placeholder="0.00"
-            className="h-10 text-lg font-medium tabular-nums"
+            className="text-lg font-medium tabular-nums"
           />
         </Field>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Date" htmlFor="e-date">
-          <Input id="e-date" name="date" type="date" required defaultValue={initial.date} className="h-10" />
+          <Input id="e-date" name="date" type="date" required defaultValue={initial.date} />
         </Field>
         <Field label="Paid to" htmlFor="e-vendor">
           <NativeSelect

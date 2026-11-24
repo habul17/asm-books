@@ -55,7 +55,7 @@ export function PricesToolbar({
           type="checkbox"
           checked={manualOnly}
           onChange={(e) => go(value, e.target.checked)}
-          className="size-4 accent-primary"
+          className="size-5 accent-primary md:size-4"
         />
         Only manual prices ({manualCount})
       </label>

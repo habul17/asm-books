@@ -26,7 +26,7 @@ export function QuickMarkup({ purchasePrice }: { purchasePrice: number | null })
         placeholder="%"
         value={pct}
         onChange={(e) => setPct(e.target.value)}
-        className="h-8 w-20"
+        className="h-10 w-20 md:h-8"
       />
       <span className="text-muted-foreground">% =</span>
       <strong className="tabular-nums">{formatMoney(price)}</strong>

@@ -24,7 +24,7 @@ export function MinStockForm({ productId, minStock, unit }: { productId: number;
         defaultValue={minStock ?? ""}
         placeholder="—"
         maxLength={12}
-        className="h-8 w-20"
+        className="h-10 w-20 md:h-8"
       />
       <span className="text-muted-foreground">{unit}</span>
       <Button type="submit" size="sm" variant="outline" disabled={pending}>

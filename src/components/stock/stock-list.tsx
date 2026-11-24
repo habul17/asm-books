@@ -93,7 +93,7 @@ export function StockList({ items, owner }: { items: StockRow[]; owner: boolean 
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as StockSort)}
-            className="h-8 rounded-md border bg-background px-2 text-sm text-foreground"
+            className="h-10 rounded-md border bg-background px-2 text-base text-foreground md:h-8 md:text-sm"
           >
             {owner && <option value="value">Highest cost</option>}
             <option value="qty">Most stock</option>

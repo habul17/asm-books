@@ -340,7 +340,7 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold max-md:sr-only">Home</h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-md:w-full max-md:*:grow">
           <Link href={customersHref({ id: "new" })} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <UserPlusIcon /> New customer
           </Link>

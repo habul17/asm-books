@@ -187,7 +187,7 @@ export function StockCheck({ parts }: { parts: StockListItem[] }) {
                 value={counts[p.id] ?? ""}
                 onChange={(e) => setCount(p.id, e.target.value)}
                 aria-invalid={n != null && Number.isNaN(n)}
-                className="h-8 text-right tabular-nums"
+                className="h-10 text-right tabular-nums md:h-8"
               />
               <span className="hidden text-right text-xs tabular-nums sm:block">
                 {diff == null ? "" : diff === 0 ? "matches" : `${diff > 0 ? "+" : "−"}${formatQty(Math.abs(diff))}`}

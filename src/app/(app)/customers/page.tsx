@@ -77,7 +77,7 @@ export default function CustomersPage({ searchParams }: PageProps<"/customers">)
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold max-md:sr-only">Customers</h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-md:w-full max-md:*:grow">
           <Link href="/customers/groups" className={buttonVariants({ variant: "outline", size: "sm" })}>
             <UsersIcon /> Groups
           </Link>
@@ -89,7 +89,7 @@ export default function CustomersPage({ searchParams }: PageProps<"/customers">)
           </Link>
         </div>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <Toolbar />
       </Suspense>
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">

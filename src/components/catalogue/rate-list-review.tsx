@@ -132,7 +132,7 @@ export function RateListReview({ scanReady, today }: { scanReady: boolean; today
                         aria-label={`Save row ${r.n} ${r.partNo ?? ""}`}
                         checked={picked.has(r.n)}
                         onChange={(e) => toggle(r.n, e.target.checked)}
-                        className="size-4 accent-primary"
+                        className="size-5 accent-primary md:size-4"
                       />
                     )}
                     <div className="min-w-0 flex-1">
@@ -151,7 +151,7 @@ export function RateListReview({ scanReady, today }: { scanReady: boolean; today
                         inputMode="decimal"
                         value={prices.get(r.n) ?? ""}
                         onChange={(e) => setPrices((m) => new Map(m).set(r.n, e.target.value))}
-                        className="h-8 w-28 text-right tabular-nums"
+                        className="h-10 w-28 text-right tabular-nums md:h-8"
                       />
                     ) : (
                       <span className="tabular-nums">{r.price != null ? formatMoney(r.price) : ""}</span>

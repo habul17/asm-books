@@ -4,6 +4,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Text sizes on screen. Small print is 13px and body text 15px, so lists stay easy to read
+ * on a phone and a laptop. Printed papers keep the original sizes (see below).
+ */
+/*
+ * Heights of buttons and form fields: finger-sized (44px) on a phone, smaller on a laptop.
+ * Kept as variables so a screen that sets its own height still wins on every screen size.
+ */
+:root {
+  --control-h: 2.75rem;
+  --control-h-sm: 2.25rem;
+  --control-h-xs: 2rem;
+  --control-h-lg: 3rem;
+}
+@media (width >= 48rem) {
+  :root {
+    --control-h: 2.25rem;
+    --control-h-sm: 2rem;
+    --control-h-xs: 1.75rem;
+    --control-h-lg: 2.5rem;
+  }
+}
+
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: calc(1.3125 / 0.9375);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -140,6 +170,30 @@
   font-family: "Courier New", Courier, "Liberation Mono", monospace;
 }
 /*
+ * On a narrow screen an invoice is laid out at full A4 width and shrunk to fit (FitPaper sets the
+ * zoom), so it looks exactly like the printout. Until the zoom is known, nothing spills sideways.
+ */
+@media screen {
+  .fit-paper {
+    overflow: hidden;
+  }
+  .fit-paper > .invoice-document {
+    width: 210mm;
+    max-width: none;
+    min-height: 285mm;
+    padding: 2rem;
+    zoom: var(--paper-zoom, 1);
+  }
+}
+/* Bills, receipts and vouchers keep the sizes they were matched to on paper, on screen and printed. */
+.invoice-document,
+.paper {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm: 0.875rem;
+  --text-sm--line-height: calc(1.25 / 0.875);
+}
+/*
  * Printing: A4 pages; the app's own chrome is hidden with print:hidden.
  * The page margin is zero so the browser has no room for its own header and
  * footer (page title, web address, date). The 10mm edge comes from the body's
@@ -162,6 +216,12 @@
   /* Printed pages keep their normal size whatever text size is chosen on screen. */
   html {
     font-size: 100% !important;
+  }
+  :root {
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
+    --text-sm: 0.875rem;
+    --text-sm--line-height: calc(1.25 / 0.875);
   }
 }
 /*

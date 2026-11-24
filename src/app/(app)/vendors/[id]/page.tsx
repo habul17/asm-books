@@ -34,7 +34,7 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
   if (!v) notFound();
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           {v.name}
           {!v.active && <Badge variant="outline">inactive</Badge>}
@@ -139,7 +139,7 @@ async function Vendor({ params }: { params: PageProps<"/vendors/[id]">["params"]
 export default function VendorPage({ params }: PageProps<"/vendors/[id]">) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      <Link href="/vendors" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/vendors" className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0">
         <ArrowLeftIcon className="size-4" /> All vendors
       </Link>
       <Suspense fallback={<Skeleton className="h-[480px]" />}>

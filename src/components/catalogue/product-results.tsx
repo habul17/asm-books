@@ -46,7 +46,7 @@ export function ItemsTabs({ query, show }: { query: string; show: ItemsShow }) {
           replace
           aria-current={s.value === show ? "page" : undefined}
           className={cn(
-            "flex h-8 items-center justify-center rounded-lg transition-colors",
+            "flex h-9 items-center justify-center rounded-lg transition-colors md:h-8",
             s.value === show ? "bg-foreground font-medium text-background" : "text-foreground hover:bg-muted/60",
           )}
         >

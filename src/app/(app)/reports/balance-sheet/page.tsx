@@ -32,9 +32,9 @@ function DatePicker({ asOf, today }: { asOf: string; today: string }) {
       <form action={PATH} method="get" className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           As on
-          <Input type="date" name="date" required max={today} defaultValue={asOf} className="h-9 w-40" />
+          <Input type="date" name="date" required max={today} defaultValue={asOf} className="w-40" />
         </label>
-        <Button type="submit" variant="secondary" size="sm" className="h-9">
+        <Button type="submit" variant="secondary">
           Show
         </Button>
       </form>

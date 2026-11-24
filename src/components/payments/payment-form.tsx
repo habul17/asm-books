@@ -124,12 +124,12 @@ function PaymentFields({ id, initial, backHref, scanDocumentId }: FormProps & { 
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="h-10 text-lg font-medium tabular-nums"
+            className="text-lg font-medium tabular-nums"
             aria-describedby="p-amount-after"
           />
         </Field>
         <Field label="Date" htmlFor="p-date">
-          <Input id="p-date" name="date" type="date" required defaultValue={initial.date} className="h-10" />
+          <Input id="p-date" name="date" type="date" required defaultValue={initial.date} />
         </Field>
       </div>
 

@@ -25,7 +25,7 @@ async function Document({ params }: { params: PageProps<"/documents/[id]">["para
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-md:*:grow">
         <h1 className="mr-auto min-w-0 truncate text-xl font-semibold">{doc.title}</h1>
         <a href={file} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
           <ExternalLinkIcon /> Open
@@ -128,7 +128,7 @@ async function Document({ params }: { params: PageProps<"/documents/[id]">["para
 export default function DocumentPage({ params }: PageProps<"/documents/[id]">) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <Link href="/documents" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/documents" className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0">
         <ArrowLeftIcon className="size-4" /> All documents
       </Link>
       <Suspense fallback={<Skeleton className="h-[480px]" />}>

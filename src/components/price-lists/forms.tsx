@@ -177,7 +177,7 @@ export function PriceListForm({
         </>
       )}
       <label className="flex items-start gap-2 text-sm sm:col-span-2">
-        <input type="checkbox" name="enabled" defaultChecked={list.enabled} className="mt-0.5 size-4 accent-primary" />
+        <input type="checkbox" name="enabled" defaultChecked={list.enabled} className="mt-0.5 size-5 accent-primary md:size-4" />
         <span>
           Switched on <InfoTip label="About Switched on">When on, this list shows in the catalogue and on invoices.</InfoTip>
         </span>

@@ -189,7 +189,8 @@ export function ScanBox<T>({
             e.target.value = ""; // Let the same file be chosen again.
           }}
         />
-        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+        {/* On a phone the help goes under the buttons, at full width, instead of a thin column beside them. */}
+        <p className="min-w-0 basis-full text-sm text-muted-foreground md:basis-0 md:flex-1">
           {listening ? (
             <span className="text-foreground" role="status">
               <span className="mr-1.5 inline-block size-2 animate-pulse rounded-full bg-destructive align-middle" aria-hidden />

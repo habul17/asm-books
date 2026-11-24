@@ -180,7 +180,7 @@ export function ProductForm({
 
       {p && (
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="active" defaultChecked={p.active} className="mt-0.5 size-4 accent-primary" />
+          <input type="checkbox" name="active" defaultChecked={p.active} className="mt-0.5 size-5 accent-primary md:size-4" />
           <span>
             Switched on{" "}
             <InfoTip label="About Switched on">

@@ -36,7 +36,7 @@ export default function PaymentsPage({ searchParams }: PageProps<"/payments">) {
           <PlusIcon /> Receive payment
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/payments"
           label="Search payments"

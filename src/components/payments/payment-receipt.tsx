@@ -8,7 +8,7 @@ import type { PaymentDetail } from "@/server/payments";
 export function PaymentReceipt({ payment: p, business: b }: { payment: PaymentDetail; business: BusinessSettings }) {
   const address = [p.customerAddress, p.customerCity].filter(Boolean).join(", ");
   return (
-    <article className="relative mx-auto w-full max-w-[210mm] bg-white p-6 text-[13px] leading-snug text-black shadow-sm ring-1 ring-black/10 sm:p-10 print:max-w-none print:p-0 print:shadow-none print:ring-0">
+    <article className="paper relative mx-auto w-full max-w-[210mm] bg-white p-6 text-[13px] leading-snug text-black shadow-sm ring-1 ring-black/10 sm:p-10 print:max-w-none print:p-0 print:shadow-none print:ring-0">
       {p.status === "cancelled" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
           <span className="-rotate-30 rounded-lg border-4 border-red-600/40 px-6 py-2 text-6xl font-bold tracking-widest text-red-600/40">

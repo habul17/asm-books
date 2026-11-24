@@ -52,12 +52,11 @@ export function RecurringForm({ invoiceId, invoiceDate, today }: { invoiceId: nu
               setDateEdited(true);
               setNextDate(e.target.value);
             }}
-            className="h-10"
           />
         </Field>
       </div>
       <Field label="Stop after (optional)" htmlFor="r-end" hint="Leave empty to repeat until you stop it.">
-        <Input id="r-end" name="endDate" type="date" min={nextDate} className="h-10 sm:w-1/2" />
+        <Input id="r-end" name="endDate" type="date" min={nextDate} className="sm:w-1/2" />
       </Field>
       <Field label="Notes (optional)" htmlFor="r-notes">
         <Textarea id="r-notes" name="notes" maxLength={500} rows={2} placeholder="e.g. Monthly service contract" />

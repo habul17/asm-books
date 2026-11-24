@@ -160,7 +160,7 @@ export function MovementList({ rows: input, days }: { rows: MovementInput[]; day
                   <span className="font-medium">
                     {formatQty(Math.max(0, r.sold))} <span className="text-xs text-muted-foreground">{r.unit}</span>
                   </span>
-                  <span className="text-[11px] text-muted-foreground">sold</span>
+                  <span className="text-xs text-muted-foreground">sold</span>
                   <Change row={r} />
                 </span>
               </Link>

@@ -93,7 +93,7 @@ export function ShopForm({ b }: { b: BusinessSettings }) {
 function Tick({ name, checked, title, note }: { name: string; checked: boolean; title: string; note: string }) {
   return (
     <label className="flex items-start gap-3 text-sm">
-      <input type="checkbox" name={name} defaultChecked={checked} className="mt-0.5 size-4 accent-primary" />
+      <input type="checkbox" name={name} defaultChecked={checked} className="mt-0.5 size-5 accent-primary md:size-4" />
       <span>
         <span className="font-medium">{title}</span> <InfoTip label={`About ${title}`}>{note}</InfoTip>
       </span>

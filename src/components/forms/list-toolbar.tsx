@@ -56,7 +56,7 @@ export function ListToolbar({
           aria-label={label}
           autoComplete="off"
           aria-busy={pending}
-          className="h-10 pl-9 text-base"
+          className="pl-9"
         />
       </div>
       {statusLabels && (

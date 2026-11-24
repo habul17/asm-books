@@ -35,7 +35,7 @@ export default function ExpensesPage({ searchParams }: PageProps<"/expenses">) {
           <PlusIcon /> New expense
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/expenses"
           label="Search expenses"

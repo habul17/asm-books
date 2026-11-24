@@ -26,7 +26,7 @@ export default function VendorsPage({ searchParams }: PageProps<"/vendors">) {
           <PlusIcon /> New vendor
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar path="/vendors" label="Search vendors" placeholder="Search name, mobile, GSTIN or city…" />
       </Suspense>
       <Suspense fallback={<VendorListSkeleton />}>

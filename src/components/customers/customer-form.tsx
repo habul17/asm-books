@@ -202,7 +202,7 @@ function CustomerFields({ customer, options, cancelHref, prefill = null }: Custo
 
       {c && (
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="active" defaultChecked={c.active} className="mt-0.5 size-4 accent-primary" />
+          <input type="checkbox" name="active" defaultChecked={c.active} className="mt-0.5 size-5 accent-primary md:size-4" />
           <span>
             Active customer
             <span className="block text-muted-foreground">

@@ -40,7 +40,7 @@ export function DocumentDetailsForm({
       </Field>
       {canHide && (
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="ownerOnly" defaultChecked={doc.ownerOnly} className="mt-0.5 size-4 accent-primary" />
+          <input type="checkbox" name="ownerOnly" defaultChecked={doc.ownerOnly} className="mt-0.5 size-5 accent-primary md:size-4" />
           <span>
             <span className="font-medium">Only the owner can see this</span>
             <span className="block text-muted-foreground">Staff will not find it or be able to open it.</span>

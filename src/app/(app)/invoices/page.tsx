@@ -32,7 +32,7 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold max-md:sr-only">Invoices</h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-md:w-full max-md:*:grow">
           <Link href="/invoices/fields" className={buttonVariants({ variant: "outline", size: "sm" })}>
             <SettingsIcon /> Custom fields
           </Link>
@@ -41,7 +41,7 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
           </Link>
         </div>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/invoices"
           label="Search invoices"

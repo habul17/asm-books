@@ -22,7 +22,7 @@ function BackLink() {
     <Link
       href={priceListsHref()}
       scroll={false}
-      className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:hidden"
+      className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0 md:hidden"
     >
       <ArrowLeftIcon className="size-4" /> All price lists
     </Link>

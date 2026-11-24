@@ -600,7 +600,7 @@ export function InvoiceEditor({
                 <label className="flex items-start gap-2 text-sm">
                   <input
                     type="checkbox"
-                    className="mt-0.5 size-4 accent-primary"
+                    className="mt-0.5 size-5 accent-primary md:size-4"
                     checked={nonGst}
                     onChange={(e) => {
                       touch();

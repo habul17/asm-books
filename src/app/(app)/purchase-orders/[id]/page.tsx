@@ -29,7 +29,7 @@ async function Order({ params }: { params: PageProps<"/purchase-orders/[id]">["p
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <div className="flex flex-wrap items-center gap-2 print:hidden max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{order.number}</span>
           <PurchaseOrderStatusBadge status={order.status} />
@@ -105,7 +105,7 @@ export default function PurchaseOrderPage({ params }: PageProps<"/purchase-order
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none print:gap-0">
       <Link
         href="/purchase-orders"
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
+        className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0 print:hidden"
       >
         <ArrowLeftIcon className="size-4" /> All purchase orders
       </Link>

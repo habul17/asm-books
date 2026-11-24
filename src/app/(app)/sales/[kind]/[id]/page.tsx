@@ -43,12 +43,12 @@ async function Doc({ params }: { params: Props["params"] }) {
     <>
       <Link
         href={salesDocsHref(kind)}
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
+        className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0 print:hidden"
       >
         <ArrowLeftIcon className="size-4" /> All {info.plural.toLowerCase()}
       </Link>
 
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <div className="flex flex-wrap items-center gap-2 print:hidden max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{doc.number}</span>
           <SalesDocStatusBadge status={doc.status} />

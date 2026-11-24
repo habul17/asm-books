@@ -32,7 +32,7 @@ async function Adjustment({ params }: { params: PageProps<"/inventory-adjustment
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{adj.number}</span>
           {!final && <Badge variant="destructive">cancelled</Badge>}
@@ -121,7 +121,7 @@ export default function AdjustmentPage({ params }: PageProps<"/inventory-adjustm
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <Link
         href="/inventory-adjustments"
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0"
       >
         <ArrowLeftIcon className="size-4" /> All adjustments
       </Link>

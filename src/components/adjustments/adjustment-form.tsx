@@ -149,7 +149,6 @@ export function AdjustmentForm({ initial, scanReady = false }: { initial: Adjust
             autoComplete="off"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-10"
           />
           <datalist id="a-reasons">
             {ADJUSTMENT_REASONS.map((r) => (
@@ -158,7 +157,7 @@ export function AdjustmentForm({ initial, scanReady = false }: { initial: Adjust
           </datalist>
         </Field>
         <Field label="Date" htmlFor="a-date">
-          <Input id="a-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="h-10" />
+          <Input id="a-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
       </div>
 

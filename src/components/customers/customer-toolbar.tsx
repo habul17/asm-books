@@ -59,7 +59,7 @@ export function CustomerToolbar({ groups }: { groups: { id: number; name: string
           aria-label="Search customers"
           autoComplete="off"
           aria-busy={pending}
-          className="h-10 pl-9 text-base"
+          className="pl-9"
         />
       </div>
       {groups.length > 0 && (
@@ -82,7 +82,7 @@ export function CustomerToolbar({ groups }: { groups: { id: number; name: string
           type="checkbox"
           checked={inactive}
           onChange={(e) => go({ inactive: e.target.checked })}
-          className="size-4 accent-primary"
+          className="size-5 accent-primary md:size-4"
         />
         Show inactive
       </label>

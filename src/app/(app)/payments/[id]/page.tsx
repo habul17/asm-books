@@ -30,7 +30,7 @@ async function Payment({ params }: { params: PageProps<"/payments/[id]">["params
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <div className="flex flex-wrap items-center gap-2 print:hidden max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           <span className="font-mono">{payment.number}</span>
           {!final && <Badge variant="destructive">cancelled</Badge>}
@@ -75,7 +75,7 @@ export default function PaymentPage({ params }: PageProps<"/payments/[id]">) {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 print:max-w-none">
       <Link
         href="/payments"
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
+        className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0 print:hidden"
       >
         <ArrowLeftIcon className="size-4" /> All payments
       </Link>

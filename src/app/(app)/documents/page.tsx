@@ -45,7 +45,7 @@ export default function DocumentsPage({ searchParams }: PageProps<"/documents">)
       <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
         <Upload />
       </Suspense>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/documents"
           label="Search documents"

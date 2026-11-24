@@ -120,7 +120,7 @@ export function DocumentUpload({
               checked={ownerOnly}
               disabled={busy}
               onChange={(e) => setOwnerOnly(e.target.checked)}
-              className="size-4 accent-primary"
+              className="size-5 accent-primary md:size-4"
             />
             Only the owner can see
           </label>

@@ -42,7 +42,7 @@ export default function PurchaseReturnsPage({ searchParams }: PageProps<"/purcha
           <PlusIcon /> New return
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/purchase-returns"
           label="Search purchase returns"

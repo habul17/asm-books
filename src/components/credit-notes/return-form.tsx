@@ -133,7 +133,7 @@ export function ReturnForm({ invoice, today, scanReady }: { invoice: Returnable;
                         setQty((q) => ({ ...q, [l.id]: e.target.value }));
                       }}
                       aria-invalid={bad || undefined}
-                      className="h-9 w-20 text-right tabular-nums"
+                      className="h-10 w-20 text-right tabular-nums md:h-9"
                     />
                     <span className="w-14 text-xs text-muted-foreground">of {formatQty(l.left)}</span>
                   </div>
@@ -153,7 +153,6 @@ export function ReturnForm({ invoice, today, scanReady }: { invoice: Returnable;
             min={invoice.date}
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-10"
           />
         </Field>
         <Field label="Reason" htmlFor="cn-reason">
@@ -164,7 +163,6 @@ export function ReturnForm({ invoice, today, scanReady }: { invoice: Returnable;
             maxLength={200}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-10"
           />
           <datalist id="cn-reasons">
             {RETURN_REASONS.map((r) => (

@@ -60,7 +60,7 @@ export function LatePayerList({
                   : ""}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 max-md:*:grow">
               {p.mobile && (
                 <a
                   href={`tel:${p.mobile}`}

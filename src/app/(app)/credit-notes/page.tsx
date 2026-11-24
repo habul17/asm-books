@@ -36,7 +36,7 @@ export default function CreditNotesPage({ searchParams }: PageProps<"/credit-not
           <PlusIcon /> New return
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/credit-notes"
           label="Search credit notes"

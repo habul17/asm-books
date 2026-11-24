@@ -92,7 +92,7 @@ export default function BankingPage({ searchParams }: PageProps<"/banking">) {
         <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
           <Balances />
         </Suspense>
-        <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+        <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
           <ListToolbar
             path="/banking"
             label="Search entries"

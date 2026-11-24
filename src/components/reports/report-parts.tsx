@@ -66,13 +66,13 @@ export function PeriodPicker({ path, period }: { path: string; period: Period })
       <form action={path} method="get" className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           From
-          <Input type="date" name="from" required defaultValue={period.from} className="h-9 w-40" />
+          <Input type="date" name="from" required defaultValue={period.from} className="w-40" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           To
-          <Input type="date" name="to" required defaultValue={period.to} className="h-9 w-40" />
+          <Input type="date" name="to" required defaultValue={period.to} className="w-40" />
         </label>
-        <Button type="submit" variant="secondary" size="sm" className="h-9">
+        <Button type="submit" variant="secondary">
           Show
         </Button>
       </form>

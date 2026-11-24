@@ -51,11 +51,11 @@ export function FieldRow({ entity, field }: { entity: CustomFieldEntity; field: 
       </Field>
       <div className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Type</span>
-        <span className="flex h-8 items-center text-muted-foreground">{TYPE_LABELS[field.type]}</span>
+        <span className="flex h-(--control-h) items-center text-muted-foreground">{TYPE_LABELS[field.type]}</span>
       </div>
       <SaveRow state={state} pending={pending} dirty={dirty}>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="active" defaultChecked={field.active} className="size-4 accent-primary" />
+          <input type="checkbox" name="active" defaultChecked={field.active} className="size-5 accent-primary md:size-4" />
           Shown
         </label>
       </SaveRow>

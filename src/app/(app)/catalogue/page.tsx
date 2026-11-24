@@ -44,7 +44,8 @@ async function Detail({ searchParams }: { searchParams: Promise<Params> }) {
 export default function CataloguePage({ searchParams }: PageProps<"/catalogue">) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
+      {/* On the phone this row stands in for the top bar, so the title sits where every other screen has it. */}
+      <div className="flex items-center justify-between gap-2 max-md:-mt-4 max-md:h-14">
         <h1 className="text-xl font-semibold">Items</h1>
         <div className="flex items-center gap-2">
           {/* The phone has no top bar here, so its refresh button sits with the others. */}
@@ -67,7 +68,7 @@ export default function CataloguePage({ searchParams }: PageProps<"/catalogue">)
           </Link>
         </div>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-xl bg-muted" />}>
+      <Suspense fallback={<div className="h-11 rounded-xl bg-muted md:h-10" />}>
         <SearchBox />
       </Suspense>
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">

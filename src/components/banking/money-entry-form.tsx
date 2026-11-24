@@ -56,11 +56,11 @@ export function MoneyEntryForm({ today, initialKind, fill }: { today: string; in
             autoComplete="off"
             placeholder="0.00"
             defaultValue={fill?.amount ?? ""}
-            className="h-10 text-lg font-medium tabular-nums"
+            className="text-lg font-medium tabular-nums"
           />
         </Field>
         <Field label="Date" htmlFor="m-date">
-          <Input id="m-date" name="date" type="date" required max={today} defaultValue={fill?.date ?? today} className="h-10" />
+          <Input id="m-date" name="date" type="date" required max={today} defaultValue={fill?.date ?? today} />
         </Field>
       </div>
 

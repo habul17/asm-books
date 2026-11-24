@@ -18,7 +18,7 @@ async function Form({ searchParams }: { searchParams: PageProps<"/recurring/new"
   const invoice = await getRepeatSource(id);
   if (!invoice) notFound();
   const back = (
-    <Link href={`/invoices/${invoice.id}`} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <Link href={`/invoices/${invoice.id}`} className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0">
       <ArrowLeftIcon className="size-4" /> Invoice {invoice.number}
     </Link>
   );

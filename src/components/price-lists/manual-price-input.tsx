@@ -56,7 +56,7 @@ export function ManualPriceInput({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         aria-busy={pending}
-        className={cn("h-8 w-24 text-right tabular-nums", pending && "opacity-60")}
+        className={cn("h-10 w-24 text-right tabular-nums md:h-8", pending && "opacity-60")}
       />
       {error && (
         <span id={errorId} role="alert" className="text-xs text-destructive">

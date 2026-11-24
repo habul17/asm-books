@@ -428,7 +428,7 @@ export function BillEditor({
           type="checkbox"
           checked={updatePrices}
           onChange={(e) => setUpdatePrices(e.target.checked)}
-          className="mt-0.5 size-4 accent-primary"
+          className="mt-0.5 size-5 accent-primary md:size-4"
         />
         <span>
           <span className="font-medium">Update purchase prices</span>{" "}
@@ -444,7 +444,7 @@ export function BillEditor({
           type="checkbox"
           checked={roundTotal}
           onChange={(e) => setRoundTotal(e.target.checked)}
-          className="mt-0.5 size-4 accent-primary"
+          className="mt-0.5 size-5 accent-primary md:size-4"
         />
         <span>
           <span className="font-medium">Round total to whole rupees</span>{" "}

@@ -40,7 +40,7 @@ export default function AdjustmentsPage({ searchParams }: PageProps<"/inventory-
           </Link>
         </div>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/inventory-adjustments"
           label="Search adjustments"

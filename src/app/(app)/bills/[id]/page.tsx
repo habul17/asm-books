@@ -37,7 +37,7 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-md:*:grow">
         <h1 className="mr-auto flex flex-wrap items-center gap-2 text-xl font-semibold">
           Bill <span className="font-mono">{b.billNo}</span>
           {!final && <Badge variant="destructive">cancelled</Badge>}
@@ -149,7 +149,7 @@ async function Bill({ params }: { params: PageProps<"/bills/[id]">["params"] }) 
 export default function BillPage({ params }: PageProps<"/bills/[id]">) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <Link href="/bills" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/bills" className="-my-2.5 flex w-fit items-center gap-1 py-2.5 text-sm text-muted-foreground hover:text-foreground md:my-0 md:py-0">
         <ArrowLeftIcon className="size-4" /> All bills
       </Link>
       <Suspense fallback={<Skeleton className="h-[480px]" />}>

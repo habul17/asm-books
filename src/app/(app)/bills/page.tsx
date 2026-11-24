@@ -36,7 +36,7 @@ export default function BillsPage({ searchParams }: PageProps<"/bills">) {
           <PlusIcon /> New bill
         </Link>
       </div>
-      <Suspense fallback={<div className="h-10 rounded-lg bg-muted" />}>
+      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
         <ListToolbar
           path="/bills"
           label="Search bills"

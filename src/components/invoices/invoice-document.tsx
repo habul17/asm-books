@@ -6,6 +6,7 @@ import type { BusinessSettings } from "@/lib/settings/business";
 import { UPI_ID_PATTERN } from "@/lib/upi";
 import type { InvoiceDetail } from "@/server/invoices";
 
+import { FitPaper } from "./fit-paper";
 import { PrintTitle } from "./print-title";
 import { UpiQr } from "./upi-qr";
 
@@ -154,256 +155,258 @@ export function InvoiceDocument({
       : [5, 12, 18, 12, 12, 10, 5, 9, 5, 12];
 
   return (
-    <article className="invoice-document relative mx-auto flex w-full max-w-[210mm] flex-col bg-white p-4 text-[12px] leading-snug font-bold text-black shadow-sm ring-1 ring-black/10 sm:min-h-[285mm] sm:p-8 print:min-h-[262mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
-      {inv.status === "cancelled" && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
-          <span className="-rotate-30 rounded-lg border-4 border-red-600/40 px-6 py-2 text-6xl font-bold tracking-widest text-red-600/40">
-            CANCELLED
-          </span>
-        </div>
-      )}
-
-      <PrintTitle name={inv.number} />
-      <p className="pr-4 text-right text-[11px] italic">(ORIGINAL)</p>
-
-      <div className="flex flex-1 flex-col border border-black box-decoration-clone">
-        <header className="px-1 pb-1 text-center">
-          <div className="flex justify-between gap-4 text-left">
-            <p className="text-[13px]">{b.gstin && `GSTIN: ${b.gstin}`}</p>
-            <p className="text-[11px]">{b.phone && `CELL:${b.phone}`}</p>
+    <FitPaper>
+      <article className="invoice-document relative mx-auto flex w-full max-w-[210mm] flex-col bg-white p-4 text-[12px] leading-snug font-bold text-black shadow-sm ring-1 ring-black/10 sm:min-h-[285mm] sm:p-8 print:min-h-[262mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
+        {inv.status === "cancelled" && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+            <span className="-rotate-30 rounded-lg border-4 border-red-600/40 px-6 py-2 text-6xl font-bold tracking-widest text-red-600/40">
+              CANCELLED
+            </span>
           </div>
-          <h2 className="text-[26px] leading-tight uppercase">{b.name || "Your business name"}</h2>
-          <div className="text-[11px] uppercase">
-            {textLines(b.address).map((l, i) => (
-              <p key={i}>{l}</p>
-            ))}
-            {(b.city || b.pincode) && <p>{[b.city, b.pincode].filter(Boolean).join(" - ")}</p>}
-            {GST_STATES[b.stateCode] && <p>{GST_STATES[b.stateCode]}</p>}
-          </div>
-          <p className="mt-3 text-[13px] uppercase">{title ?? b.invoiceTitle}</p>
-        </header>
+        )}
 
-        <section className="grid grid-cols-[minmax(0,54fr)_minmax(0,46fr)] border-t border-black">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-1 px-1 pt-0.5 pb-2">
-            <p>To.</p>
-            <div className="break-words">
-              <p className="uppercase">{inv.customerName}</p>
-              {textLines(inv.billingAddress).map((l, i) => (
-                <p key={i} className="uppercase">
-                  {l}
-                </p>
-              ))}
-              {inv.customerMobile && <p>Ph: {inv.customerMobile}</p>}
-              {inv.customerGstin && <p>GSTIN : {inv.customerGstin}</p>}
-              {stateName && <p>State Name : {stateName}</p>}
-              {inv.placeOfSupply && <p>State Code : {inv.placeOfSupply}</p>}
+        <PrintTitle name={inv.number} />
+        <p className="pr-4 text-right text-[11px] italic">(ORIGINAL)</p>
+
+        <div className="flex flex-1 flex-col border border-black box-decoration-clone">
+          <header className="px-1 pb-1 text-center">
+            <div className="flex justify-between gap-4 text-left">
+              <p className="text-[13px]">{b.gstin && `GSTIN: ${b.gstin}`}</p>
+              <p className="text-[11px]">{b.phone && `CELL:${b.phone}`}</p>
             </div>
-          </div>
-          <dl className="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-1.5 border-l border-black px-2 pt-0.5 pb-2">
-            {paymentTerms && <Detail label="Payment Terms" value={paymentTerms} />}
-            <Detail label={numberLabel} value={inv.number} big />
-            <Detail label="Date" value={printDate(inv.date)} />
-            {rows.map((r, i) => (
-              <Detail key={i} label={r.label} value={r.value} />
-            ))}
-          </dl>
-        </section>
-
-        {/* In print the table grows from its own height (not from zero), or Chrome overlaps page 2's rows. */}
-        <div className="flex flex-1 flex-col overflow-x-auto border-t border-black print:flex-[1_0_auto] print:overflow-visible">
-          <table className="w-full min-w-[640px] flex-1 table-fixed border-collapse print:min-w-0 print:flex-[1_0_auto]">
-            <colgroup>
-              {widths.map((w, i) => (
-                <col key={i} style={{ width: `${w}%` }} />
+            <h2 className="text-[26px] leading-tight uppercase">{b.name || "Your business name"}</h2>
+            <div className="text-[11px] uppercase">
+              {textLines(b.address).map((l, i) => (
+                <p key={i}>{l}</p>
               ))}
-            </colgroup>
-            <thead>
-              <tr className="border-b border-black">
-                <th className={headCell}>S.No</th>
-                <th className={headCell}>Part No</th>
-                <th className={headCell}>Description</th>
-                <th className={headCell}>
-                  HSN
-                  <br />
-                  Code
-                </th>
-                <th className={headCell}>Qty</th>
-                <th className={headCell}>Rate</th>
-                {hasDiscount && (
+              {(b.city || b.pincode) && <p>{[b.city, b.pincode].filter(Boolean).join(" - ")}</p>}
+              {GST_STATES[b.stateCode] && <p>{GST_STATES[b.stateCode]}</p>}
+            </div>
+            <p className="mt-3 text-[13px] uppercase">{title ?? b.invoiceTitle}</p>
+          </header>
+
+          <section className="grid grid-cols-[minmax(0,54fr)_minmax(0,46fr)] border-t border-black">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-1 px-1 pt-0.5 pb-2">
+              <p>To.</p>
+              <div className="break-words">
+                <p className="uppercase">{inv.customerName}</p>
+                {textLines(inv.billingAddress).map((l, i) => (
+                  <p key={i} className="uppercase">
+                    {l}
+                  </p>
+                ))}
+                {inv.customerMobile && <p>Ph: {inv.customerMobile}</p>}
+                {inv.customerGstin && <p>GSTIN : {inv.customerGstin}</p>}
+                {stateName && <p>State Name : {stateName}</p>}
+                {inv.placeOfSupply && <p>State Code : {inv.placeOfSupply}</p>}
+              </div>
+            </div>
+            <dl className="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-1.5 border-l border-black px-2 pt-0.5 pb-2">
+              {paymentTerms && <Detail label="Payment Terms" value={paymentTerms} />}
+              <Detail label={numberLabel} value={inv.number} big />
+              <Detail label="Date" value={printDate(inv.date)} />
+              {rows.map((r, i) => (
+                <Detail key={i} label={r.label} value={r.value} />
+              ))}
+            </dl>
+          </section>
+
+          {/* In print the table grows from its own height (not from zero), or Chrome overlaps page 2's rows. */}
+          <div className="flex flex-1 flex-col overflow-x-auto border-t border-black print:flex-[1_0_auto] print:overflow-visible">
+            <table className="w-full min-w-[640px] flex-1 table-fixed border-collapse print:min-w-0 print:flex-[1_0_auto]">
+              <colgroup>
+                {widths.map((w, i) => (
+                  <col key={i} style={{ width: `${w}%` }} />
+                ))}
+              </colgroup>
+              <thead>
+                <tr className="border-b border-black">
+                  <th className={headCell}>S.No</th>
+                  <th className={headCell}>Part No</th>
+                  <th className={headCell}>Description</th>
                   <th className={headCell}>
-                    Disc
-                    <br />%
+                    HSN
+                    <br />
+                    Code
                   </th>
-                )}
-                {!nonGst && (
-                  <>
+                  <th className={headCell}>Qty</th>
+                  <th className={headCell}>Rate</th>
+                  {hasDiscount && (
                     <th className={headCell}>
-                      Tax
+                      Disc
                       <br />%
                     </th>
-                    <th className={headCell}>
-                      Tax
-                      <br />
-                      Amt ₹
-                    </th>
-                    <th className={headCell}>
-                      CESS
-                      <br />%
-                    </th>
-                  </>
-                )}
-                <th className={headCell}>
-                  Total
-                  <br />
-                  Amount ₹
-                </th>
-              </tr>
-            </thead>
-            <tbody className="[&>tr:first-child>td]:pt-3">
-              {inv.lines.map((l) => (
-                <tr key={l.id} className="break-inside-avoid">
-                  <td className={right}>{l.lineNo}</td>
-                  <td className={`${cell} pt-0.5 text-[10px] break-all`}>{l.partNo ?? ""}</td>
-                  <td className={`${cell} break-words`}>{l.description}</td>
-                  <td className={`${cell} break-all`}>{l.hsn ?? ""}</td>
-                  <td className={right}>
-                    {formatQty(l.qty)} {l.unit}
-                  </td>
-                  <td className={right}>{amount(l.rate)}</td>
-                  {hasDiscount && <td className={right}>{l.discountPct || ""}</td>}
+                  )}
                   {!nonGst && (
                     <>
-                      <td className={`${cell} text-center tabular-nums`}>{l.gstRate}</td>
-                      <td className={right}>{amount(lineTax(l))}</td>
+                      <th className={headCell}>
+                        Tax
+                        <br />%
+                      </th>
+                      <th className={headCell}>
+                        Tax
+                        <br />
+                        Amt ₹
+                      </th>
+                      <th className={headCell}>
+                        CESS
+                        <br />%
+                      </th>
+                    </>
+                  )}
+                  <th className={headCell}>
+                    Total
+                    <br />
+                    Amount ₹
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="[&>tr:first-child>td]:pt-3">
+                {inv.lines.map((l) => (
+                  <tr key={l.id} className="break-inside-avoid">
+                    <td className={right}>{l.lineNo}</td>
+                    <td className={`${cell} pt-0.5 text-[10px] break-all`}>{l.partNo ?? ""}</td>
+                    <td className={`${cell} break-words`}>{l.description}</td>
+                    <td className={`${cell} break-all`}>{l.hsn ?? ""}</td>
+                    <td className={right}>
+                      {formatQty(l.qty)} {l.unit}
+                    </td>
+                    <td className={right}>{amount(l.rate)}</td>
+                    {hasDiscount && <td className={right}>{l.discountPct || ""}</td>}
+                    {!nonGst && (
+                      <>
+                        <td className={`${cell} text-center tabular-nums`}>{l.gstRate}</td>
+                        <td className={right}>{amount(lineTax(l))}</td>
+                        <td className={cell} />
+                      </>
+                    )}
+                    <td className={right}>{amount(l.total)}</td>
+                  </tr>
+                ))}
+                {/* Takes up the rest of the sheet, so the column lines run down to the total. */}
+                <tr aria-hidden className="h-full">
+                  {widths.map((_, i) => (
+                    <td key={i} className={cell} />
+                  ))}
+                </tr>
+                <tr className="break-inside-avoid border-y border-black">
+                  <td className={cell} />
+                  <td className={`${cell} pl-3`}>Total</td>
+                  <td className={cell} />
+                  <td className={cell} />
+                  <td className={right}>{qtyTotal.toFixed(3)}</td>
+                  <td className={cell} />
+                  {hasDiscount && <td className={cell} />}
+                  {!nonGst && (
+                    <>
+                      <td className={cell} />
+                      <td className={right}>{amount(taxTotal)}</td>
                       <td className={cell} />
                     </>
                   )}
-                  <td className={right}>{amount(l.total)}</td>
+                  <td className={right}>{amount(linesTotal)}</td>
                 </tr>
-              ))}
-              {/* Takes up the rest of the sheet, so the column lines run down to the total. */}
-              <tr aria-hidden className="h-full">
-                {widths.map((_, i) => (
-                  <td key={i} className={cell} />
-                ))}
-              </tr>
-              <tr className="break-inside-avoid border-y border-black">
-                <td className={cell} />
-                <td className={`${cell} pl-3`}>Total</td>
-                <td className={cell} />
-                <td className={cell} />
-                <td className={right}>{qtyTotal.toFixed(3)}</td>
-                <td className={cell} />
-                {hasDiscount && <td className={cell} />}
-                {!nonGst && (
-                  <>
-                    <td className={cell} />
-                    <td className={right}>{amount(taxTotal)}</td>
-                    <td className={cell} />
-                  </>
-                )}
-                <td className={right}>{amount(linesTotal)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              </tbody>
+            </table>
+          </div>
 
-        <div className="break-inside-avoid">
-          <div className="px-1 pt-1">
-            {!nonGst && (
-            <table className="border-collapse text-right text-[11px] tabular-nums">
-              <thead>
-                <tr className="border-b border-black">
-                  <th className="pr-3 text-left whitespace-nowrap">Taxable Value</th>
-                  {inter ? (
-                    <>
-                      <th className="w-16 px-1">IGST%</th>
-                      <th className="w-20 px-1">AMT</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="w-16 px-1">CGST%</th>
-                      <th className="w-20 px-1">AMT</th>
-                      <th className="w-16 px-1">SGST%</th>
-                      <th className="w-20 px-1">AMT</th>
-                    </>
-                  )}
-                  <th className="w-16 px-1">CESS%</th>
-                  <th className="w-16 px-1">AMT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.map((s) => (
-                  <tr key={s.gstRate}>
-                    <td className="pr-3">{amount(s.taxable)}</td>
+          <div className="break-inside-avoid">
+            <div className="px-1 pt-1">
+              {!nonGst && (
+              <table className="border-collapse text-right text-[11px] tabular-nums">
+                <thead>
+                  <tr className="border-b border-black">
+                    <th className="pr-3 text-left whitespace-nowrap">Taxable Value</th>
                     {inter ? (
                       <>
-                        <td className="px-1">{amount(s.gstRate)}</td>
-                        <td className="px-1">{amount(s.igst)}</td>
+                        <th className="w-16 px-1">IGST%</th>
+                        <th className="w-20 px-1">AMT</th>
                       </>
                     ) : (
                       <>
-                        <td className="px-1">{amount(s.gstRate / 2)}</td>
-                        <td className="px-1">{amount(s.cgst)}</td>
-                        <td className="px-1">{amount(s.gstRate / 2)}</td>
-                        <td className="px-1">{amount(s.sgst)}</td>
+                        <th className="w-16 px-1">CGST%</th>
+                        <th className="w-20 px-1">AMT</th>
+                        <th className="w-16 px-1">SGST%</th>
+                        <th className="w-20 px-1">AMT</th>
                       </>
                     )}
-                    <td className="px-1">0.00</td>
-                    <td className="px-1">0.00</td>
+                    <th className="w-16 px-1">CESS%</th>
+                    <th className="w-16 px-1">AMT</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            )}
-            <p className="flex justify-end">
-              <span>Rounded Off :</span>
-              <span className="w-28 text-right tabular-nums">{amount(inv.roundOff)}</span>
-            </p>
-          </div>
-
-          <div className="flex items-end justify-between gap-4 border-t border-black px-1">
-            <p>E. &amp; O.E.</p>
-            <p className="flex text-[16px]">
-              <span>Net Amount :</span>
-              <span className="min-w-28 text-right tabular-nums">{amount(inv.grandTotal)}</span>
-            </p>
-          </div>
-
-          <p className="border-t border-black px-1 py-0.5">{amountInWords(inv.grandTotal)}</p>
-
-          {(bankLines.length > 0 || terms || inv.notes || showQr) && (
-            <div className="flex items-start justify-between gap-3 border-t border-black px-1 py-1 font-normal">
-              <div className="min-w-0">
-              {bankLines.length > 0 && (
-                <>
-                  <p>COMPANY&apos;S BANK DETAILS</p>
-                  {bankLines.map((l) => (
-                    <p key={l} className="whitespace-pre-wrap">
-                      {l}
-                    </p>
+                </thead>
+                <tbody>
+                  {summary.map((s) => (
+                    <tr key={s.gstRate}>
+                      <td className="pr-3">{amount(s.taxable)}</td>
+                      {inter ? (
+                        <>
+                          <td className="px-1">{amount(s.gstRate)}</td>
+                          <td className="px-1">{amount(s.igst)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-1">{amount(s.gstRate / 2)}</td>
+                          <td className="px-1">{amount(s.cgst)}</td>
+                          <td className="px-1">{amount(s.gstRate / 2)}</td>
+                          <td className="px-1">{amount(s.sgst)}</td>
+                        </>
+                      )}
+                      <td className="px-1">0.00</td>
+                      <td className="px-1">0.00</td>
+                    </tr>
                   ))}
-                </>
+                </tbody>
+              </table>
               )}
-              {terms && <p className="whitespace-pre-line">{terms}</p>}
-              {inv.notes && <p className="whitespace-pre-line">Note: {inv.notes}</p>}
-              </div>
-              {showQr && <UpiQr upiId={b.upiId} name={b.name} note={`Bill ${inv.number}`} />}
-            </div>
-          )}
-
-          <footer className="flex justify-between gap-4 border-t border-black px-1 pt-0.5 pb-1">
-            <p>{createdAt && `Time : ${clock.format(createdAt).toUpperCase()}`}</p>
-            <div className="flex flex-col items-end gap-12 pr-6 text-right">
-              <p>
-                For <span className="uppercase">{b.name || "your business"}</span>
+              <p className="flex justify-end">
+                <span>Rounded Off :</span>
+                <span className="w-28 text-right tabular-nums">{amount(inv.roundOff)}</span>
               </p>
-              <p>Authorised Signatory</p>
             </div>
-          </footer>
+
+            <div className="flex items-end justify-between gap-4 border-t border-black px-1">
+              <p>E. &amp; O.E.</p>
+              <p className="flex text-[16px]">
+                <span>Net Amount :</span>
+                <span className="min-w-28 text-right tabular-nums">{amount(inv.grandTotal)}</span>
+              </p>
+            </div>
+
+            <p className="border-t border-black px-1 py-0.5">{amountInWords(inv.grandTotal)}</p>
+
+            {(bankLines.length > 0 || terms || inv.notes || showQr) && (
+              <div className="flex items-start justify-between gap-3 border-t border-black px-1 py-1 font-normal">
+                <div className="min-w-0">
+                {bankLines.length > 0 && (
+                  <>
+                    <p>COMPANY&apos;S BANK DETAILS</p>
+                    {bankLines.map((l) => (
+                      <p key={l} className="whitespace-pre-wrap">
+                        {l}
+                      </p>
+                    ))}
+                  </>
+                )}
+                {terms && <p className="whitespace-pre-line">{terms}</p>}
+                {inv.notes && <p className="whitespace-pre-line">Note: {inv.notes}</p>}
+                </div>
+                {showQr && <UpiQr upiId={b.upiId} name={b.name} note={`Bill ${inv.number}`} />}
+              </div>
+            )}
+
+            <footer className="flex justify-between gap-4 border-t border-black px-1 pt-0.5 pb-1">
+              <p>{createdAt && `Time : ${clock.format(createdAt).toUpperCase()}`}</p>
+              <div className="flex flex-col items-end gap-12 pr-6 text-right">
+                <p>
+                  For <span className="uppercase">{b.name || "your business"}</span>
+                </p>
+                <p>Authorised Signatory</p>
+              </div>
+            </footer>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </FitPaper>
   );
 }
 
