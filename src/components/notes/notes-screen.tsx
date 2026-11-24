@@ -521,10 +521,12 @@ function NotePane({
   const backHref = `${folderHref(folderKey)}${query ? `?q=${encodeURIComponent(query)}` : ""}`;
 
   const onLeave = useCallback(
-    (empty: boolean) => {
+    (empty: boolean, changed: boolean) => {
       if (empty && !deleted) void discardEmptyNoteAction(note.id);
+      // Read the list again so a new or changed note shows there at once.
+      else if (changed) router.refresh();
     },
-    [note.id, deleted],
+    [note.id, deleted, router],
   );
   const summary = useCallback(
     (s: NoteSummary) => {

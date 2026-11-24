@@ -154,6 +154,74 @@ const pendingLeave = new Map<number, ReturnType<typeof setTimeout>>();
  */
 const latestNotes = new Map<number, { json: NoteNode; version: number }>();
 
+/**
+ * Words typed but not yet saved, kept on this device until the server has them. A phone
+ * can reload the page, or a save can fail, before the words reach the server; the note
+ * then opens from this copy and saves it. Unlocked notes only, removed once saved.
+ */
+const DRAFT_PREFIX = "notes.draft.";
+const DRAFT_DAYS = 7;
+const RETRY_MS = 5000;
+/** Matches LOST_SAVES_MAX on the server. */
+const LOST_SAVES = 3;
+interface Draft {
+  json: NoteNode;
+  /** The server version these words were typed on. */
+  version: number;
+  /** Saves whose answer never came back; the server may hold one of them. */
+  lost?: string[];
+  at: number;
+}
+function readDraft(noteId: number): Draft | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_PREFIX + noteId) ?? "null") as Draft | null;
+    if (!d || typeof d.version !== "number" || typeof d.at !== "number" || d.json?.type !== "doc") return null;
+    if (Date.now() - d.at > DRAFT_DAYS * 86_400_000) {
+      localStorage.removeItem(DRAFT_PREFIX + noteId);
+      return null;
+    }
+    return d;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(noteId: number, json: NoteNode, version: number, lost: string[]) {
+  try {
+    localStorage.setItem(DRAFT_PREFIX + noteId, JSON.stringify({ json, version, lost, at: Date.now() } satisfies Draft));
+  } catch {
+    /* private window or storage full: the server save still runs */
+  }
+}
+function clearDraft(noteId: number) {
+  try {
+    localStorage.removeItem(DRAFT_PREFIX + noteId);
+  } catch {
+    /* nothing kept */
+  }
+}
+
+/** Whether a note holds any words, photo, file or voice note (an empty line does not count). */
+function hasContent(node: NoteNode): boolean {
+  if (node.type === "text") return !!node.text?.trim();
+  if (node.type === "noteImage" || node.type === "noteFile" || node.type === "noteAudio") return true;
+  return node.content?.some(hasContent) ?? false;
+}
+
+/** The newest copy of a note this device holds that the server has not moved past. */
+function newestCopy(noteId: number, serverVersion: number) {
+  const known = latestNotes.get(noteId);
+  if (known && known.version >= serverVersion) return { json: known.json, version: known.version, lost: [], unsaved: false };
+  const draft = readDraft(noteId);
+  const lost = Array.isArray(draft?.lost) ? draft.lost.filter((l) => typeof l === "string").slice(0, LOST_SAVES) : [];
+  // One version on can be this phone's own save whose answer was lost; the server checks.
+  if (draft && (draft.version >= serverVersion || (draft.version + 1 === serverVersion && lost.length > 0))) {
+    return { json: draft.json, version: draft.version, lost, unsaved: true };
+  }
+  // The server has a newer save (from another device): the old draft is out of date.
+  if (draft) clearDraft(noteId);
+  return null;
+}
+
 export function NoteEditor({
   noteId,
   initialBody,
@@ -181,18 +249,24 @@ export function NoteEditor({
   onSummary: (s: NoteSummary) => void;
   onStatus: (s: SaveStatus, error?: string) => void;
   onReady: (h: EditorHandle | null) => void;
-  /** Called after the last save when the note closes, with whether it was empty. */
-  onLeave: (empty: boolean) => void;
+  /** Called after the last save when the note closes: whether to throw it away, and whether it was typed in. */
+  onLeave: (empty: boolean, changed: boolean) => void;
   onError: (message: string) => void;
 }) {
-  const known = lockKey ? undefined : latestNotes.get(noteId);
-  const startFrom = known && known.version >= initialVersion ? known : null;
+  // Read once: the editor is built from it, and later renders must not pick another copy.
+  const [startFrom] = useState(() => (lockKey || typeof window === "undefined" ? null : newestCopy(noteId, initialVersion)));
   const version = useRef(startFrom?.version ?? initialVersion);
   const dirty = useRef(false);
+  /** Held words or a file at some point since it opened: such a note is never thrown away as empty. */
+  const touched = useRef(false);
+  const restored = useRef(false);
+  /** Saves sent on this version whose answer never came back. */
+  const lost = useRef<string[]>([]);
   const blocked = useRef(false);
   const inFlight = useRef<Promise<boolean> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const ticked = useRef(-1);
+  const again = useRef<() => Promise<boolean>>(async () => true);
   const callbacks = useRef({ onSummary, onStatus, onLeave });
   useEffect(() => {
     callbacks.current = { onSummary, onStatus, onLeave };
@@ -201,18 +275,45 @@ export function NoteEditor({
   const send = useCallback(
     async (json: NoteNode): Promise<boolean> => {
       callbacks.current.onStatus("saving");
-      const res = lockKey
-        ? await saveLockedNoteAction(noteId, version.current, noteSummary(json).title, await encryptText(lockKey, JSON.stringify(json)))
-        : await saveNoteAction(noteId, version.current, JSON.stringify(json));
+      let payload = "";
+      let res: Awaited<ReturnType<typeof saveNoteAction>>;
+      try {
+        payload = lockKey ? await encryptText(lockKey, JSON.stringify(json)) : JSON.stringify(json);
+        res = lockKey
+          ? await saveLockedNoteAction(noteId, version.current, noteSummary(json).title, payload, lost.current)
+          : await saveNoteAction(noteId, version.current, payload, lost.current);
+      } catch {
+        // The connection dropped (a phone does this when the app is switched away). The
+        // server may still have stored it, so remember it for the next try.
+        if (payload) lost.current = [payload, ...lost.current.filter((l) => l !== payload)].slice(0, LOST_SAVES);
+        const entry = latestNotes.get(noteId);
+        if (!lockKey && entry) writeDraft(noteId, entry.json, version.current, lost.current);
+        res = { error: "Not saved yet. Check the internet; it will try again." };
+      }
       if (res.ok && res.value) {
+        lost.current = [];
         version.current = res.value;
         const entry = latestNotes.get(noteId);
         if (entry) entry.version = res.value;
+        if (!lockKey) {
+          // Keep the device copy only while there are words the server still lacks.
+          if (dirty.current && entry) writeDraft(noteId, entry.json, res.value, []);
+          else clearDraft(noteId);
+        }
         if (!dirty.current) callbacks.current.onStatus("saved");
         return true;
       }
       dirty.current = true;
-      if (res.conflict) blocked.current = true;
+      if (res.conflict) {
+        blocked.current = true;
+        // The other device's copy wins, as before; this phone's old copy is dropped.
+        if (!lockKey) clearDraft(noteId);
+      }
+      // A dropped connection: try again shortly, so the words get there without more typing.
+      else {
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => void again.current(), RETRY_MS);
+      }
       callbacks.current.onStatus(res.conflict ? "conflict" : "error", res.error);
       return false;
     },
@@ -220,7 +321,6 @@ export function NoteEditor({
   );
 
   const editorRef = useRef<Editor | null>(null);
-  const again = useRef<() => Promise<boolean>>(async () => true);
 
   const flush = useCallback(async (): Promise<boolean> => {
     clearTimeout(timer.current);
@@ -230,8 +330,9 @@ export function NoteEditor({
     dirty.current = false;
     const p = send(editor.getJSON() as NoteNode);
     inFlight.current = p;
-    const ok = await p;
-    inFlight.current = null;
+    const ok = await p.finally(() => {
+      inFlight.current = null;
+    });
     if (dirty.current && ok) timer.current = setTimeout(() => void again.current(), 600);
     return ok;
   }, [send]);
@@ -269,10 +370,15 @@ export function NoteEditor({
     onCreate: ({ editor: e }) => {
       ticked.current = tickedCount(e);
     },
+    onBlur: () => void flush(),
     onUpdate: ({ editor: e }) => {
       dirty.current = true;
       const json = e.getJSON() as NoteNode;
-      if (!lockKey) latestNotes.set(noteId, { json, version: version.current });
+      if (!touched.current && hasContent(json)) touched.current = true;
+      if (!lockKey) {
+        latestNotes.set(noteId, { json, version: version.current });
+        writeDraft(noteId, json, version.current, lost.current);
+      }
       const s = noteSummary(json);
       callbacks.current.onSummary({ title: s.title, preview: lockKey ? "" : s.preview, editedAt: new Date() });
       callbacks.current.onStatus("saving");
@@ -327,6 +433,16 @@ export function NoteEditor({
         editor.commands.setContent(newest.json, { emitUpdate: false });
       }
     }
+    // Opened from words this device kept but the server never got: save them now.
+    if (startFrom?.unsaved && !restored.current) {
+      restored.current = true;
+      latestNotes.set(noteId, { json: startFrom.json, version: version.current });
+      lost.current = startFrom.lost;
+      dirty.current = true;
+      if (hasContent(startFrom.json)) touched.current = true;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => void flush(), 300);
+    }
     onReady({
       editor,
       flush,
@@ -335,9 +451,12 @@ export function NoteEditor({
       setVersion: (v) => {
         version.current = v;
         latestNotes.delete(noteId);
+        clearDraft(noteId);
       },
     });
     const hide = () => document.visibilityState === "hidden" && void flush();
+    // iPhone Safari may skip "beforeunload"; "pagehide" is the event it does send.
+    const pagehide = () => void flush();
     const unload = (e: BeforeUnloadEvent) => {
       if (dirty.current || inFlight.current) {
         void flush();
@@ -345,9 +464,11 @@ export function NoteEditor({
       }
     };
     document.addEventListener("visibilitychange", hide);
+    window.addEventListener("pagehide", pagehide);
     window.addEventListener("beforeunload", unload);
     return () => {
       document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("pagehide", pagehide);
       window.removeEventListener("beforeunload", unload);
       onReady(null);
       const json = editor.isDestroyed ? null : (editor.getJSON() as NoteNode);
@@ -362,11 +483,13 @@ export function NoteEditor({
             await send(json);
           }
           const s = noteSummary(json);
-          callbacks.current.onLeave(!lockKey && !s.title && !s.searchText);
+          // Only a note that never held anything is thrown away, never one typed in.
+          const empty = !lockKey && json !== null && !touched.current && !s.title && !s.searchText;
+          callbacks.current.onLeave(empty, touched.current);
         }, 0),
       );
     };
-  }, [editor, noteId, flush, send, onReady, lockKey]);
+  }, [editor, noteId, flush, send, onReady, lockKey, startFrom]);
 
   if (!editor) {
     return (

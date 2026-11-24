@@ -14,6 +14,7 @@ import {
   discardEmptyNote,
   emptyRecentlyDeleted,
   lockNote,
+  LOST_SAVES_MAX,
   moveNote,
   NoteConflictError,
   NoteError,
@@ -60,15 +61,18 @@ export async function newNoteAction(folderId: number | null) {
   return run("new", (u) => createNote(u, folderId), { reload: false });
 }
 
+/** Earlier saves from this phone whose answer never arrived; see saveNoteBody. */
+const lostSchema = z.array(z.string()).max(LOST_SAVES_MAX);
+
 /** `body` is the note as JSON text. */
-export async function saveNoteAction(id: number, version: number, body: string) {
-  if (!idSchema.safeParse(id).success || !versionSchema.safeParse(version).success) return bad();
-  return run("save", (u) => saveNoteBody(u, id, version, body), { reload: false });
+export async function saveNoteAction(id: number, version: number, body: string, lost: string[] = []) {
+  if (!idSchema.safeParse(id).success || !versionSchema.safeParse(version).success || !lostSchema.safeParse(lost).success) return bad();
+  return run("save", (u) => saveNoteBody(u, id, version, body, lost), { reload: false });
 }
 
-export async function saveLockedNoteAction(id: number, version: number, title: string, cipher: string) {
-  if (!idSchema.safeParse(id).success || !versionSchema.safeParse(version).success) return bad();
-  return run("save locked", (u) => saveLockedNote(u, id, version, title, cipher), { reload: false });
+export async function saveLockedNoteAction(id: number, version: number, title: string, cipher: string, lost: string[] = []) {
+  if (!idSchema.safeParse(id).success || !versionSchema.safeParse(version).success || !lostSchema.safeParse(lost).success) return bad();
+  return run("save locked", (u) => saveLockedNote(u, id, version, title, cipher, lost), { reload: false });
 }
 
 export async function lockNoteAction(id: number, version: number, title: string, cipher: string, fileIds: string[]) {

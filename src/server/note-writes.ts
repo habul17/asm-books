@@ -76,21 +76,63 @@ function checkCipher(cipher: unknown) {
 
 const cleanTitle = (title: unknown) => (typeof title === "string" ? title.replace(/\s+/g, " ").trim().slice(0, 200) : "");
 
+/** At most this many earlier saves whose answer never arrived are checked. */
+export const LOST_SAVES_MAX = 3;
+
+/**
+ * A save whose answer never reached the phone (the connection dropped) may still have
+ * been stored. If the note now holds exactly one of those lost saves, one version on,
+ * the new save goes ahead instead of being taken for another device's change.
+ */
+function lostSaveMatches(version: number, matches: ReturnType<typeof sql>[]) {
+  if (matches.length === 0) return undefined;
+  return and(eq(notes.version, version + 1), or(...matches));
+}
+
+function lostBodies(lost: unknown) {
+  if (!Array.isArray(lost)) return [];
+  return lost.slice(0, LOST_SAVES_MAX).flatMap((json) => {
+    try {
+      return [sql`${notes.body} = ${JSON.stringify(checkBody(json))}::jsonb`];
+    } catch {
+      return [];
+    }
+  });
+}
+
+function lostCiphers(lost: unknown) {
+  if (!Array.isArray(lost)) return [];
+  return lost.slice(0, LOST_SAVES_MAX).flatMap((cipher) => {
+    try {
+      return [sql`${notes.cipher} = ${checkCipher(cipher)}`];
+    } catch {
+      return [];
+    }
+  });
+}
+
 /** Saves new words. Returns the new version, or throws NoteConflictError if another device saved first. */
-export async function saveNoteBody(userId: number, id: number, version: number, body: unknown): Promise<number> {
+export async function saveNoteBody(userId: number, id: number, version: number, body: unknown, lost: unknown = []): Promise<number> {
   const safe = checkBody(body);
   const summary = noteSummary(safe);
   const [row] = await getDb()
     .update(notes)
     .set({ body: safe, ...summary, version: sql`${notes.version} + 1`, editedAt: sql`now()` })
-    .where(and(own(userId, id), eq(notes.version, version), eq(notes.locked, false), isNull(notes.deletedAt)))
+    .where(
+      and(
+        own(userId, id),
+        or(eq(notes.version, version), lostSaveMatches(version, lostBodies(lost))),
+        eq(notes.locked, false),
+        isNull(notes.deletedAt),
+      ),
+    )
     .returning({ version: notes.version });
   if (!row) throw await whyNotSaved(userId, id);
   return row.version;
 }
 
 /** Saves a locked note: only its title is readable; the rest arrives already encrypted. */
-export async function saveLockedNote(userId: number, id: number, version: number, title: unknown, cipher: unknown) {
+export async function saveLockedNote(userId: number, id: number, version: number, title: unknown, cipher: unknown, lost: unknown = []) {
   const [row] = await getDb()
     .update(notes)
     .set({
@@ -99,7 +141,14 @@ export async function saveLockedNote(userId: number, id: number, version: number
       version: sql`${notes.version} + 1`,
       editedAt: sql`now()`,
     })
-    .where(and(own(userId, id), eq(notes.version, version), eq(notes.locked, true), isNull(notes.deletedAt)))
+    .where(
+      and(
+        own(userId, id),
+        or(eq(notes.version, version), lostSaveMatches(version, lostCiphers(lost))),
+        eq(notes.locked, true),
+        isNull(notes.deletedAt),
+      ),
+    )
     .returning({ version: notes.version });
   if (!row) throw await whyNotSaved(userId, id);
   return row.version;
