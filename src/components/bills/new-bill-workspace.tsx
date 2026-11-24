@@ -106,6 +106,7 @@ export function NewBillWorkspace({
         printedTotal={scanned?.printedTotal ?? null}
         scannedSupplier={scanned?.supplier ?? null}
         scanDocumentId={scanned?.keptId}
+        priceCheckOnOpen={scanned != null && !isOrder}
       />
     </div>
   );

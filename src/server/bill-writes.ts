@@ -4,6 +4,7 @@ import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { withTransaction, type Tx } from "@/db";
 import { billLines, bills, invoiceLineBatches, invoices, products, purchaseOrders, purchasePrices, vendors } from "@/db/schema";
+import { netRate } from "@/lib/bills/price-check";
 import type { BillInput } from "@/lib/bills/validation";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
 import { loadBusiness } from "@/server/settings";
@@ -21,7 +22,6 @@ interface ExistingBill {
 }
 
 /** Rate after discount: what one unit really cost, kept to 6 decimals. */
-const netRate = (rate: number, discountPct: number) => Math.round(rate * (1 - discountPct / 100) * 1e6) / 1e6;
 
 /** The vendor being bought from. A switched-off vendor is allowed only when the document already had them. */
 export async function loadPurchaseVendor(tx: Tx, vendorId: number, keepId?: number | null) {

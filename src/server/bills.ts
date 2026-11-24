@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 
 import { getDb } from "@/db";
 import { billLines, bills, categories, products, purchaseOrders, users, vendors } from "@/db/schema";
+import { type LastBillPrice, netRate } from "@/lib/bills/price-check";
 import { requireUser } from "@/server/auth";
 import { billScanReady } from "@/server/bill-scan";
 import { loadBusiness } from "@/server/settings";
@@ -149,6 +150,45 @@ export async function pickBillItemsById(ids: number[]) {
     .from(products)
     .where(inArray(products.id, ids));
   return rows.map((r) => ({ ...r, gstRate: r.gstRate ?? business.defaultGstRate }));
+}
+
+/** Most parts one price check looks up; a bill is far shorter than this. */
+export const PRICE_CHECK_MAX = 500;
+
+/**
+ * Each part's rate on the newest saved bill that had it, leaving out `exceptBillId`
+ * (the bill being edited). Null for a part that was never on a saved bill.
+ */
+export async function lastBillPrices(productIds: number[], exceptBillId: number | null) {
+  await requireUser();
+  const ids = [...new Set(productIds)].slice(0, PRICE_CHECK_MAX);
+  const out: Record<number, LastBillPrice | null> = Object.fromEntries(ids.map((id) => [id, null]));
+  if (!ids.length) return out;
+  const rows = await getDb()
+    .selectDistinctOn([billLines.productId], {
+      productId: billLines.productId,
+      rate: billLines.rate,
+      discountPct: billLines.discountPct,
+      date: bills.date,
+      billNo: bills.billNo,
+      vendor: vendors.name,
+    })
+    .from(billLines)
+    .innerJoin(bills, eq(bills.id, billLines.billId))
+    .innerJoin(vendors, eq(vendors.id, bills.vendorId))
+    .where(
+      and(
+        inArray(billLines.productId, ids),
+        eq(bills.status, "final"),
+        exceptBillId != null ? ne(bills.id, exceptBillId) : undefined,
+      ),
+    )
+    .orderBy(billLines.productId, desc(bills.date), desc(bills.id), desc(billLines.lineNo));
+  for (const r of rows) {
+    if (r.productId == null) continue;
+    out[r.productId] = { net: netRate(r.rate, r.discountPct), date: r.date, billNo: r.billNo, vendor: r.vendor };
+  }
+  return out;
 }
 
 /** What the bill editor needs besides the bill itself. */

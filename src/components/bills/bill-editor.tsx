@@ -2,9 +2,9 @@
 
 import { CheckIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
-import { findBillItems, saveBill } from "@/app/(app)/bills/actions";
+import { findBillItems, lastBillPricesAction, saveBill } from "@/app/(app)/bills/actions";
 import { savePurchaseOrder } from "@/app/(app)/purchase-orders/actions";
 import { Field } from "@/components/forms/save-form";
 import { ItemPicker } from "@/components/invoices/item-picker";
@@ -14,8 +14,10 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPicker } from "@/components/vendors/vendor-picker";
 
+import { type PricedLine, PriceCheckBar, PriceCheckDialog, PriceHint } from "./price-check";
 import { AddScannedPart, AddScannedVendor } from "./scan-adds";
 import { InfoTip } from "@/components/ui/info-tip";
+import { comparePrice, type LastBillPrice, netRate, summarizePrices } from "@/lib/bills/price-check";
 import type { ScanFlag } from "@/lib/bills/scan";
 import { formatMoney, formatQty } from "@/lib/format";
 import { calcInvoice, taxTypeFor } from "@/lib/invoices/math";
@@ -81,9 +83,12 @@ export function BillEditor({
   scannedSupplier = null,
   scanDocumentId,
   kind = "bill",
+  priceCheckOnOpen = false,
 }: {
   /** The scanned paper kept for Documents, attached to the bill when it is saved. */
   scanDocumentId?: number;
+  /** Just scanned: show how the rates compare with the last bills as soon as that is known. */
+  priceCheckOnOpen?: boolean;
   kind?: "bill" | "order";
   initial: BillDraft;
   sellerState: string | null;
@@ -105,6 +110,51 @@ export function BillEditor({
   const [saving, startSaving] = useTransition();
   const pickerRef = useRef<HTMLInputElement>(null);
   const isOrder = kind === "order";
+
+  // Each part's rate on the last saved bill, looked up as parts are added.
+  const [lastBills, setLastBills] = useState<Record<number, LastBillPrice | null>>({});
+  const [checkOpen, setCheckOpen] = useState(false);
+  const asked = useRef(new Set<number>());
+  // After a scan, the price check opens by itself once the scanned parts are looked up.
+  const autoCheck = useRef(priceCheckOnOpen);
+  const exceptBillId = isOrder ? null : initial.id;
+  const idsKey = [...new Set(lines.map((l) => l.productId).filter((id): id is number => id != null))]
+    .sort((a, b) => a - b)
+    .join(",");
+  useEffect(() => {
+    const missing = idsKey ? idsKey.split(",").map(Number).filter((id) => !asked.current.has(id)) : [];
+    if (missing.length === 0) {
+      // A scan that matched no parts: do not pop up later as parts are picked one by one.
+      autoCheck.current = false;
+      return;
+    }
+    for (const id of missing) asked.current.add(id);
+    lastBillPricesAction(missing, exceptBillId).then(
+      (found) => {
+        setLastBills((known) => ({ ...known, ...found }));
+        if (autoCheck.current) {
+          autoCheck.current = false;
+          if (missing.some((id) => found[id] != null)) setCheckOpen(true);
+        }
+      },
+      () => {
+        for (const id of missing) asked.current.delete(id);
+      },
+    );
+  }, [idsKey, exceptBillId]);
+
+  const priced: PricedLine[] = lines.map((l) => {
+    const rate = num(l.rate);
+    const net = rate == null ? null : netRate(rate, num(l.discountPct) ?? 0);
+    return {
+      key: l.key,
+      description: l.description,
+      partNo: l.partNo,
+      net,
+      change: l.productId == null ? null : comparePrice(net, lastBills[l.productId]),
+    };
+  });
+  const priceSummary = summarizePrices(priced.map((p) => p.change));
 
   const taxType = taxTypeFor(sellerState, vendor?.stateCode || sellerState);
   const { lines: amounts, totals } = calcInvoice(
@@ -252,6 +302,7 @@ export function BillEditor({
               : "The rate starts at the part's last purchase price. Change it to match the bill."}
           </InfoTip>
         </h2>
+        <PriceCheckBar summary={priceSummary} onOpen={() => setCheckOpen(true)} />
         {lines.length > 0 && (
           <ul className="flex flex-col divide-y rounded-xl border">
             {lines.map((l, i) => (
@@ -353,17 +404,21 @@ export function BillEditor({
                     </NativeSelect>
                   </label>
                 </div>
-                <p className="text-right text-sm tabular-nums">
-                  <span className="text-muted-foreground">
-                    {formatQty(num(l.qty) ?? 0)} × {l.rate || "0"} = {formatMoney(amounts[i]?.taxable ?? 0)} + GST →{" "}
-                  </span>
-                  <span className="font-medium">{formatMoney(amounts[i]?.total ?? 0)}</span>
-                </p>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <PriceHint change={priced[i]?.change ?? null} />
+                  <p className="ml-auto text-right text-sm tabular-nums">
+                    <span className="text-muted-foreground">
+                      {formatQty(num(l.qty) ?? 0)} × {l.rate || "0"} = {formatMoney(amounts[i]?.taxable ?? 0)} + GST →{" "}
+                    </span>
+                    <span className="font-medium">{formatMoney(amounts[i]?.total ?? 0)}</span>
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
         )}
         <ItemPicker search={findBillItems} onPick={addItem} inputRef={pickerRef} />
+        <PriceCheckDialog open={checkOpen} onOpenChange={setCheckOpen} lines={priced} vendorName={vendor?.name ?? null} />
       </section>
 
       {!isOrder && (

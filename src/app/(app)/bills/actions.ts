@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 
 import { eq, sql } from "drizzle-orm";
@@ -16,7 +16,7 @@ import { claimScan, scanIdOf } from "@/server/document-writes";
 import { scanBill, type BillScanResult } from "@/server/bill-scan";
 import { scanUpload, type ScanAnswer } from "@/server/bill-scan/upload";
 import { BillInputError, cancelBill, createBill, updateBill, deleteBill } from "@/server/bill-writes";
-import { pickBillItems } from "@/server/bills";
+import { lastBillPrices, pickBillItems, PRICE_CHECK_MAX } from "@/server/bills";
 import { createProduct, ProductInputError } from "@/server/product-writes";
 import { pickVendorById, pickVendors, type PickedVendor } from "@/server/vendors";
 
@@ -171,4 +171,22 @@ export async function deleteBillAction(id: number): Promise<ActionState & { href
     return failure("delete", err);
   }
   return { href: "/bills" };
+}
+
+const priceCheckSchema = z.object({
+  productIds: z.array(idSchema).max(PRICE_CHECK_MAX),
+  exceptBillId: idSchema.nullable(),
+});
+
+/** Each part's rate on the last saved bill, to show what changed on this one. */
+export async function lastBillPricesAction(productIds: number[], exceptBillId: number | null) {
+  const parsed = priceCheckSchema.safeParse({ productIds, exceptBillId });
+  if (!parsed.success) return {};
+  try {
+    return await lastBillPrices(parsed.data.productIds, parsed.data.exceptBillId);
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[bills] price check failed:", err instanceof Error ? err.message : err);
+    return {};
+  }
 }
