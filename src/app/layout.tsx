@@ -1,12 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { THEME_SCRIPT } from "@/components/layout/theme";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+// The app's text uses Apple's system font where there is one (see globals.css);
+// Inter stands in on other devices, so it is only fetched when needed.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  preload: false,
+});
+
+// Receipts and vouchers keep the font they were matched to on paper.
+const geistSans = Geist({
+  variable: "--font-geist",
+  subsets: ["latin"],
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
@@ -27,8 +37,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0b" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f3f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#050507" },
   ],
 };
 
@@ -36,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-IN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       // The theme script sets the "dark" class before React loads.
       suppressHydrationWarning
     >

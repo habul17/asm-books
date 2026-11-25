@@ -12,8 +12,10 @@ import { isActive, isFormPage, moduleGroupsFor, TAB_MODULES } from "./modules";
 /** Pages reached from the "More" tab, so that tab lights up on them. */
 const MORE_PATHS = ["/more", "/reminders", "/notes", "/banking", "/profit-share", "/reports", "/business", "/settings", "/price-lists", "/payments", "/recurring", "/credit-notes", "/sales", "/eway-bills", "/vendors", "/purchase-orders", "/bills", "/payments-made", "/purchase-returns", "/expenses", "/stock", "/fast-slow", "/inventory-adjustments", "/users", "/documents", "/backup", "/account"];
 
-const sideLink =
-  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground";
+const sideLink = "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors";
+const sideLinkIdle = "hover:bg-white/55 dark:hover:bg-white/[0.07]";
+/** The current page: a raised white pill with blue text, like the selected row in a Mac sidebar. */
+const sideLinkActive = "bg-white text-tint shadow-[0_1px_3px_rgb(15_23_42/0.08)] dark:bg-white/10 dark:shadow-none";
 
 /**
  * Desktop sidebar: the built modules, grouped. `pathname` marks the current
@@ -39,9 +41,9 @@ export function SidebarLinks({ pathname, isOwner }: { pathname: string | null; i
                   key={m.label}
                   href={m.href!}
                   aria-current={active ? "page" : undefined}
-                  className={cn(sideLink, active && "bg-muted text-foreground")}
+                  className={cn(sideLink, active ? sideLinkActive : sideLinkIdle)}
                 >
-                  <m.icon className="size-4 shrink-0" aria-hidden />
+                  <m.icon className={cn("size-4 shrink-0", active ? "text-tint" : "text-muted-foreground")} aria-hidden />
                   {m.label}
                 </Link>
               );
@@ -51,8 +53,8 @@ export function SidebarLinks({ pathname, isOwner }: { pathname: string | null; i
       })}
       {/* On the computer, Sign out sits at the end of the menu (the phone has it under More). */}
       <form action={signOut}>
-        <button type="submit" className={cn(sideLink, "w-full")}>
-          <LogOutIcon className="size-4 shrink-0" aria-hidden />
+        <button type="submit" className={cn(sideLink, sideLinkIdle, "w-full")}>
+          <LogOutIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           Sign out
         </button>
       </form>
@@ -74,7 +76,7 @@ export function BottomTabsView({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Tabs"
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid grid-cols-5 rounded-full border bg-background/90 p-1 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/75 md:hidden print:hidden"
+      className="glass-bar fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid grid-cols-5 rounded-full border border-(--glass-border) p-1 shadow-[0_10px_30px_rgb(15_23_42/0.12)] md:hidden dark:shadow-[0_10px_30px_rgb(0_0_0/0.5)] print:hidden"
     >
       {TABS.map((t) => {
         const active = t.href === "/more" ? moreActive : isActive(pathname, t.href);
@@ -85,7 +87,7 @@ export function BottomTabsView({ pathname }: { pathname: string | null }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium text-muted-foreground transition-colors",
-              active && "bg-muted text-foreground",
+              active && "font-semibold text-tint",
             )}
           >
             <t.icon className="size-5" aria-hidden />

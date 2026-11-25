@@ -29,7 +29,7 @@ function Months({ months }: { months: ProfitShareData["months"] }) {
   return (
     <section className="flex flex-col gap-2">
       <h2 className="px-1 text-sm font-semibold text-muted-foreground">Month by month</h2>
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      <div className="glass overflow-x-auto rounded-3xl">
         <table className="w-full text-xs sm:text-sm">
           <caption className="sr-only">Money received, profit, and each partner&apos;s final profit, by month</caption>
           <thead>
@@ -89,17 +89,20 @@ function Expenses({ data, today }: { data: ProfitShareData; today: string }) {
         </Link>
       </div>
       {data.expenses.length === 0 ? (
-        <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-3xl border border-dashed border-foreground/15 p-6 text-center text-sm text-muted-foreground">
           No expenses yet. Add one to take it off {PARTNER_NAMES.ashi}&apos;s or {PARTNER_NAMES.dad}&apos;s half, like{" "}
           {formatMoney(1500)} from each every month.
         </p>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
+        <ul className="glass divide-y divide-foreground/[0.07] overflow-hidden rounded-3xl">
           {data.expenses.map((e) => {
             const times = data.counted[e.id] ?? 0;
             return (
               <li key={e.id}>
-                <Link href={`${PATH}/${e.id}/edit`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+                <Link
+                  href={`${PATH}/${e.id}/edit`}
+                  className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-foreground/[0.04] sm:px-6"
+                >
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="font-medium break-words">{e.name}</span>
                     <span className="text-sm tabular-nums">

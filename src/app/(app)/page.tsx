@@ -1,7 +1,9 @@
 import { BellIcon, ChevronRightIcon, CircleArrowDownIcon, PlusIcon, UserPlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
+import { cn } from "cn";
 
 import { AgingCard, CardHead, Change, MonthChart, Rows, Section, Tile } from "@/components/home/dashboard";
 import { PartPhoto } from "@/components/catalogue/part-photo";
@@ -16,6 +18,17 @@ import { getReminders } from "@/server/reminders";
 export const metadata: Metadata = { title: "Home" };
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** Space between the sections, and between two sections that sit side by side on a laptop. */
+const PAIR = "grid grid-cols-1 gap-x-6 gap-y-8 sm:gap-y-10 lg:grid-cols-2";
+
+const DAY = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" });
+
+/** Today's date above the title, e.g. "Thursday, 26 November". */
+async function DateLine() {
+  await connection();
+  return <>{DAY.format(new Date())}</>;
+}
 
 /** What needs attention today; nothing is shown when all is well. */
 async function Reminders() {
@@ -33,7 +46,7 @@ async function Reminders() {
   return (
     <Link
       href="/reminders"
-      className="flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 hover:bg-amber-500/15"
+      className="flex items-center gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 backdrop-blur-xl transition-colors hover:bg-amber-500/15 sm:px-6"
     >
       <BellIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm font-medium">
@@ -51,9 +64,16 @@ type Figures = NonNullable<HomeDashboard["figures"]>;
 function Today({ f }: { f: Figures }) {
   return (
     <Section title="Today">
-      <div className="grid grid-cols-2 gap-3">
-        <Tile label="Sales" value={formatMoney(f.today.sales)} note={plural(f.today.invoices, "invoice")} href="/invoices" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <Tile
+          size="lg"
+          label="Sales"
+          value={formatMoney(f.today.sales)}
+          note={plural(f.today.invoices, "invoice")}
+          href="/invoices"
+        />
+        <Tile
+          size="lg"
           label="Received"
           value={formatMoney(f.today.received)}
           note={`${formatMoney(f.today.cashSales)} cash sales + ${plural(f.today.payments, "payment")}`}
@@ -66,21 +86,22 @@ function Today({ f }: { f: Figures }) {
 
 function ThisMonth({ f }: { f: Figures }) {
   const { now, before, comparedTo } = f.month;
+  // Which way is good news: more sales and profit, fewer expenses. Purchases are neither.
   const tiles = [
-    { label: "Sales", key: "sales", href: "/reports/sales" },
-    { label: "Purchases", key: "purchases", href: "/bills" },
-    { label: "Expenses", key: "expenses", href: "/reports/expenses-by-category" },
-    { label: "Profit", key: "profit", href: "/reports/profit-and-loss" },
+    { label: "Sales", key: "sales", href: "/reports/sales", good: "up" },
+    { label: "Purchases", key: "purchases", href: "/bills", good: undefined },
+    { label: "Expenses", key: "expenses", href: "/reports/expenses-by-category", good: "down" },
+    { label: "Profit", key: "profit", href: "/reports/profit-and-loss", good: "up" },
   ] as const;
   return (
     <Section title="This month" note={`Compared with ${formatDate(comparedTo.from)} to ${formatDate(comparedTo.to)}`}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((t) => (
           <Tile
             key={t.key}
             label={t.label}
             value={formatMoney(now[t.key])}
-            note={<Change now={now[t.key]} before={before[t.key]} />}
+            badge={<Change now={now[t.key]} before={before[t.key]} good={t.good} />}
             href={t.href}
             negative={now[t.key] < 0}
           />
@@ -106,7 +127,7 @@ function Earned({ f }: { f: Figures }) {
 function OwedAndOwing({ f }: { f: Figures }) {
   const p = f.payable;
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className={PAIR}>
       <Section title="Money to collect">
         <AgingCard
           total={f.receivable.total}
@@ -141,7 +162,7 @@ function OwedAndOwing({ f }: { f: Figures }) {
 function MoneyAndGst({ f }: { f: Figures }) {
   const g = f.gst;
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className={PAIR}>
       <Section title="Cash and bank">
         <Rows
           rows={[
@@ -177,39 +198,45 @@ function Stock({ d }: { d: HomeDashboard }) {
   const s = d.stock;
   return (
     <Section title="Stock">
-      <Rows
-        rows={[
-          ...(s.value != null
-            ? [
-                {
-                  label: "Stock value",
-                  note: `${plural(s.parts, "part")} in stock, at actual cost`,
-                  value: formatMoney(s.value),
-                  href: "/stock",
-                },
-              ]
-            : []),
-          { label: "Low on stock", note: "A few left", value: String(s.low - s.out), href: "/reports/low-stock" },
-          { label: "Out of stock", value: String(s.out), href: "/reports/low-stock", negative: s.out > 0 },
-          ...(s.slowValue != null
-            ? [
-                {
-                  label: "Not sold in 90 days",
-                  note: plural(s.slowCount, "part"),
-                  value: formatMoney(s.slowValue),
-                  href: "/reports/slow-stock",
-                },
-              ]
-            : []),
-        ]}
-      />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {s.value != null && (
+          <Tile
+            label="Stock value"
+            value={formatMoney(s.value)}
+            note={`${plural(s.parts, "part")} in stock, at actual cost`}
+            href="/stock"
+          />
+        )}
+        <Tile label="Low on stock" value={String(s.low - s.out)} note="A few left" href="/reports/low-stock" />
+        <Tile label="Out of stock" value={String(s.out)} href="/reports/low-stock" negative={s.out > 0} />
+        {s.slowValue != null && (
+          <Tile
+            label="Not sold in 90 days"
+            value={formatMoney(s.slowValue)}
+            note={plural(s.slowCount, "part")}
+            href="/reports/slow-stock"
+          />
+        )}
+      </div>
     </Section>
+  );
+}
+
+/** A customer's first letter in a blue circle, standing in for a photo. */
+function Initial({ name }: { name: string }) {
+  return (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint/12 text-sm font-semibold text-tint"
+      aria-hidden
+    >
+      {name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
   );
 }
 
 function TopLists({ f }: { f: Figures }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className={PAIR}>
       <Section title="Top parts this month" note="By quantity sold">
         {f.topParts.length === 0 ? (
           <Empty>No parts sold yet this month.</Empty>
@@ -231,6 +258,7 @@ function TopLists({ f }: { f: Figures }) {
         ) : (
           <Rows
             rows={f.topCustomers.map((c) => ({
+              icon: <Initial name={c.name} />,
               label: c.name,
               note: plural(c.count, "invoice"),
               value: formatMoney(c.value),
@@ -248,28 +276,38 @@ function OpenOrders({ d }: { d: HomeDashboard }) {
   const figure = (o: { value: number | null }) => (o.value == null ? undefined : formatMoney(o.value));
   return (
     <Section title="Open orders">
-      <Rows
-        rows={[
-          {
-            label: "Customer orders",
-            note: `${plural(sales.count, "order")} not billed yet`,
-            value: figure(sales),
-            href: "/sales/orders?status=open",
-          },
-          {
-            label: "Purchase orders",
-            note: `${plural(purchase.count, "order")} not received yet`,
-            value: figure(purchase),
-            href: "/purchase-orders?status=open",
-          },
-        ]}
-      />
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <Rows
+          rows={[
+            {
+              label: "Customer orders",
+              note: `${plural(sales.count, "order")} not billed yet`,
+              value: figure(sales),
+              href: "/sales/orders?status=open",
+            },
+          ]}
+        />
+        <Rows
+          rows={[
+            {
+              label: "Purchase orders",
+              note: `${plural(purchase.count, "order")} not received yet`,
+              value: figure(purchase),
+              href: "/purchase-orders?status=open",
+            },
+          ]}
+        />
+      </div>
     </Section>
   );
 }
 
 function Empty({ children }: { children: string }) {
-  return <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">{children}</p>;
+  return (
+    <p className="rounded-3xl border border-dashed border-foreground/15 p-6 text-center text-sm text-muted-foreground">
+      {children}
+    </p>
+  );
 }
 
 async function Dashboard() {
@@ -303,34 +341,47 @@ async function Dashboard() {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {[0, 1].map((i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+          <Skeleton key={i} className="h-28 rounded-3xl" />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+          <Skeleton key={i} className="h-28 rounded-3xl" />
         ))}
       </div>
-      <Skeleton className="h-64 rounded-2xl" />
+      <Skeleton className="h-64 rounded-3xl" />
     </>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold max-md:sr-only">Home</h1>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 sm:gap-10">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-4">
+        <div className="flex flex-col gap-0.5 px-1">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <Suspense fallback={<span className="invisible">Today</span>}>
+              <DateLine />
+            </Suspense>
+          </p>
+          <h1 className="text-[2.125rem] leading-tight font-bold tracking-tight max-md:sr-only">Home</h1>
+        </div>
         <div className="flex flex-wrap gap-2 max-md:w-full max-md:*:grow">
-          <Link href={customersHref({ id: "new" })} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link
+            href={customersHref({ id: "new" })}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-full")}
+          >
             <UserPlusIcon /> New customer
           </Link>
-          <Link href="/payments/new" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link href="/payments/new" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-full")}>
             <CircleArrowDownIcon /> Receive payment
           </Link>
-          <Link href="/invoices/new" className={buttonVariants({ size: "sm" })}>
+          <Link
+            href="/invoices/new"
+            className={cn(buttonVariants({ size: "sm" }), "rounded-full shadow-[0_6px_20px_rgb(0_113_227/0.28)]")}
+          >
             <PlusIcon /> New invoice
           </Link>
         </div>

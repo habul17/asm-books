@@ -31,7 +31,7 @@ const Brand = () => (
 
 /** The phone's top bar: the screen's name, refresh and the reminders bell. */
 const MobileHeader = ({ title }: { title?: ReactNode }) => (
-  <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden print:hidden">
+  <header className="glass-bar sticky top-0 z-30 border-b border-foreground/5 md:hidden print:hidden">
     <div className="flex h-14 items-center gap-3 px-4">
       <div className="min-w-0 flex-1">{title}</div>
       <div className="flex shrink-0 items-center gap-1">
@@ -51,20 +51,25 @@ async function SidebarForViewer() {
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="min-h-svh md:grid md:grid-cols-[15rem_minmax(0,1fr)] print:block print:min-h-0">
-      <aside className="sticky top-0 hidden h-svh flex-col gap-6 overflow-x-hidden overflow-y-auto border-r px-3 py-4 md:flex print:hidden">
-        <div className="flex items-center justify-between gap-2 pr-1 pl-3">
-          <Brand />
-          <div className="flex items-center gap-1">
-            <RefreshButton />
-            <Suspense fallback={<ReminderBellView count={0} />}>
-              <ReminderBell />
-            </Suspense>
+    <div className="min-h-svh md:grid md:grid-cols-[16rem_minmax(0,1fr)] print:block print:min-h-0">
+      {/* Soft colours behind the glass, fixed like a phone's wallpaper. */}
+      <div aria-hidden className="app-backdrop pointer-events-none fixed inset-0 -z-10 print:hidden" />
+
+      <aside className="sticky top-0 hidden h-svh p-3 pr-0 md:flex print:hidden">
+        <div className="glass flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto rounded-3xl px-3 py-4">
+          <div className="flex items-center justify-between gap-2 pr-1 pl-3">
+            <Brand />
+            <div className="flex items-center gap-1">
+              <RefreshButton />
+              <Suspense fallback={<ReminderBellView count={0} />}>
+                <ReminderBell />
+              </Suspense>
+            </div>
           </div>
+          <Suspense fallback={<SidebarLinks pathname={null} isOwner={false} />}>
+            <SidebarForViewer />
+          </Suspense>
         </div>
-        <Suspense fallback={<SidebarLinks pathname={null} isOwner={false} />}>
-          <SidebarForViewer />
-        </Suspense>
       </aside>
 
       <div className="flex min-w-0 flex-col">
