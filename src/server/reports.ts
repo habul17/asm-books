@@ -23,7 +23,7 @@ import {
   vendorPayments,
   vendors,
 } from "@/db/schema";
-import { parsePeriod, type Period } from "@/lib/reports/period";
+import { parsePeriod, type Period, type PERIOD_PRESETS } from "@/lib/reports/period";
 import { requireOwner, requireUser } from "@/server/auth";
 
 import { customerBalance } from "./customers";
@@ -44,9 +44,12 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const OPENING_STOCK = "Opening stock";
 
 /** The report period from the page's search params, as seen today in India. */
-export async function readPeriod(params: { period?: string; from?: string; to?: string }): Promise<Period> {
+export async function readPeriod(
+  params: { period?: string; from?: string; to?: string },
+  presets?: typeof PERIOD_PRESETS,
+): Promise<Period> {
   await connection(); // "Today" must be read at request time.
-  return parsePeriod(params, todayInIndia());
+  return parsePeriod(params, todayInIndia(), presets);
 }
 
 const invoiceInPeriod = (p: Period) => and(eq(invoices.status, "final"), between(invoices.date, p.from, p.to));

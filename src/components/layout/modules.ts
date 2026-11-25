@@ -13,6 +13,7 @@ import {
   FileSpreadsheetIcon,
   FileTextIcon,
   FolderIcon,
+  HandCoinsIcon,
   HouseIcon,
   LandmarkIcon,
   ListChecksIcon,
@@ -52,6 +53,7 @@ export const HOME: AppModule = { label: "Home", icon: HouseIcon, href: "/" };
 export const REMINDERS: AppModule = { label: "Reminders", icon: BellIcon, href: "/reminders" };
 export const NOTES: AppModule = { label: "Notes", icon: NotebookPenIcon, href: "/notes" };
 export const BANKING: AppModule = { label: "Banking", icon: LandmarkIcon, href: "/banking", ownerOnly: true };
+export const PROFIT_SHARE: AppModule = { label: "Profit Share", icon: HandCoinsIcon, href: "/profit-share", ownerOnly: true };
 export const CUSTOMERS: AppModule = { label: "Customers", icon: UsersIcon, href: "/customers" };
 export const INVOICES: AppModule = { label: "Invoices", icon: FileTextIcon, href: "/invoices" };
 export const ITEMS: AppModule = { label: "Items", icon: PackageIcon, href: "/catalogue" };
@@ -86,7 +88,7 @@ export const SETTINGS: AppModule = { label: "Settings", icon: SettingsIcon, href
 
 /** Every module of the app, grouped like the "More" screen. Unbuilt ones show as "Soon". */
 export const MODULE_GROUPS: ModuleGroup[] = [
-  { title: null, modules: [HOME, REMINDERS, NOTES, BANKING] },
+  { title: null, modules: [HOME, REMINDERS, NOTES, BANKING, PROFIT_SHARE] },
   { title: "Items", modules: [ITEMS, PRICE_LISTS] },
   { title: "Inventory", modules: [STOCK, FAST_SLOW, INVENTORY_ADJUSTMENTS] },
   {
@@ -168,6 +170,7 @@ export const isFormPage = (pathname: string | null) =>
 export const REPORT_GROUPS: { label: string; href: string | null }[][] = [
   [
     { label: "Profit and Loss", href: "/reports/profit-and-loss" },
+    { label: "Profit Share (from money received)", href: "/profit-share" },
     { label: "Balance Sheet", href: "/reports/balance-sheet" },
     { label: "Cash Flow Statement", href: "/reports/cash-flow" },
   ],

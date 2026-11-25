@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { AgingCard, CardHead, Change, MonthChart, Rows, Section, Tile } from "@/components/home/dashboard";
 import { PartPhoto } from "@/components/catalogue/part-photo";
+import { CardLink, ShareCard } from "@/components/profit-share/share-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
@@ -90,31 +91,13 @@ function ThisMonth({ f }: { f: Figures }) {
 }
 
 function Earned({ f }: { f: Figures }) {
-  const e = f.earned;
   return (
     <Section title="Profit from money received" note="This month">
-      <Rows
-        rows={[
-          {
-            label: "Money received",
-            note: `${formatMoney(e.cashSales)} cash sales + ${formatMoney(e.payments)} payments`,
-            value: formatMoney(e.received),
-            href: "/payments",
-          },
-          {
-            label: "Profit in it",
-            note:
-              e.untraced > 0
-                ? `${formatMoney(e.untraced)} was for old dues, advances or parts without a cost, not counted`
-                : "Before GST",
-            value: formatMoney(e.profit),
-            href: "/payments",
-            strong: true,
-            negative: e.profit < 0,
-          },
-          { label: "Ashi", note: "50% of the profit", value: formatMoney(e.ashi), href: "/payments", negative: e.ashi < 0 },
-          { label: "Dad", note: "50% of the profit", value: formatMoney(e.dad), href: "/payments", negative: e.dad < 0 },
-        ]}
+      <ShareCard
+        figures={f.earned}
+        share={f.earned}
+        href="/profit-share"
+        footer={<CardLink href="/profit-share#expenses">Set expenses for Ashi and Dad</CardLink>}
       />
     </Section>
   );

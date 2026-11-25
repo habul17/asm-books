@@ -48,11 +48,19 @@ export function ReportHeader({ title, children }: { title: string; children?: Re
 }
 
 /** Quick period buttons plus a from/to form. Works without JavaScript (a plain GET form). */
-export function PeriodPicker({ path, period }: { path: string; period: Period }) {
+export function PeriodPicker({
+  path,
+  period,
+  presets = PERIOD_PRESETS,
+}: {
+  path: string;
+  period: Period;
+  presets?: typeof PERIOD_PRESETS;
+}) {
   return (
     <div className="flex flex-col gap-3 print:hidden">
       <nav aria-label="Period" className="flex flex-wrap gap-2">
-        {PERIOD_PRESETS.map((p) => (
+        {presets.map((p) => (
           <Link
             key={p.value}
             href={p.value === "this-month" ? path : `${path}?period=${p.value}`}

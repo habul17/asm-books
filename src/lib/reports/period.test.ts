@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isIsoDate, parsePeriod, periodQuery, presetRange } from "./period";
+import { isIsoDate, parsePeriod, periodMonths, PERIOD_PRESETS_WITH_6_MONTHS, periodQuery, presetRange } from "./period";
 
 describe("isIsoDate", () => {
   it("accepts real dates only", () => {
@@ -18,6 +18,12 @@ describe("presetRange", () => {
     expect(presetRange("last-month", "2026-11-08")).toEqual({ from: "2026-10-01", to: "2026-10-31" });
     expect(presetRange("last-month", "2026-01-15")).toEqual({ from: "2025-12-01", to: "2025-12-31" });
     expect(presetRange("last-month", "2028-03-10")).toEqual({ from: "2028-02-01", to: "2028-02-29" });
+  });
+
+  it("covers this month and the five before it", () => {
+    expect(presetRange("last-6-months", "2026-11-25")).toEqual({ from: "2026-06-01", to: "2026-11-25" });
+    expect(presetRange("last-6-months", "2026-03-10")).toEqual({ from: "2025-10-01", to: "2026-03-10" });
+    expect(presetRange("last-6-months", "2026-06-01")).toEqual({ from: "2026-01-01", to: "2026-06-01" });
   });
 
   it("follows the April to March financial year", () => {
@@ -53,9 +59,35 @@ describe("parsePeriod", () => {
     });
   });
 
+  it("offers the last 6 months only where the screen asks for it", () => {
+    expect(parsePeriod({ period: "last-6-months" }, today).preset).toBe("this-month");
+    expect(parsePeriod({ period: "last-6-months" }, today, PERIOD_PRESETS_WITH_6_MONTHS)).toMatchObject({
+      from: "2026-06-01",
+      to: today,
+      preset: "last-6-months",
+      label: "Last 6 months",
+    });
+  });
+
   it("round-trips through the query string", () => {
     expect(periodQuery(parsePeriod({}, today))).toBe("");
     expect(periodQuery(parsePeriod({ period: "last-fy" }, today))).toBe("period=last-fy");
     expect(periodQuery(parsePeriod({ from: "2026-10-01", to: "2026-10-05" }, today))).toBe("from=2026-10-01&to=2026-10-05");
+  });
+});
+
+describe("periodMonths", () => {
+  it("cuts the first and last month to the period", () => {
+    expect(periodMonths("2026-10-15", "2026-12-10")).toEqual([
+      { month: "2026-10", from: "2026-10-15", to: "2026-10-31" },
+      { month: "2026-11", from: "2026-11-01", to: "2026-11-30" },
+      { month: "2026-12", from: "2026-12-01", to: "2026-12-10" },
+    ]);
+  });
+
+  it("handles one day, and a year end", () => {
+    expect(periodMonths("2026-11-25", "2026-11-25")).toEqual([{ month: "2026-11", from: "2026-11-25", to: "2026-11-25" }]);
+    expect(periodMonths("2026-12-20", "2027-01-05").map((m) => m.month)).toEqual(["2026-12", "2027-01"]);
+    expect(periodMonths("2028-02-01", "2028-02-29")).toEqual([{ month: "2028-02", from: "2028-02-01", to: "2028-02-29" }]);
   });
 });

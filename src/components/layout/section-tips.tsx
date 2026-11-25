@@ -21,6 +21,15 @@ const TIPS: Record<string, { label: string; body: ReactNode }> = {
       </>
     ),
   },
+  "/profit-share": {
+    label: "About profit share",
+    body: (
+      <>
+        The profit in the money that came in (cash sales and payments), before GST. Ashi and Dad get half each. Expenses
+        you add here come off each one&apos;s half, every month or once. Only the owner sees this.
+      </>
+    ),
+  },
   "/recurring": {
     label: "About recurring invoices",
     body: (

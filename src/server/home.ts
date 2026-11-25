@@ -6,10 +6,7 @@ import { connection } from "next/server";
 import { getDb } from "@/db";
 import {
   bills,
-  creditNoteLines,
-  creditNotes,
   expenses,
-  invoiceLines,
   invoices,
   payments,
   products,
@@ -17,12 +14,14 @@ import {
   salesDocs,
   vendors,
 } from "@/db/schema";
+import { shareProfit } from "@/lib/profit-share/share";
 import { AGING_BUCKETS } from "@/lib/reports/aging";
 import type { Period } from "@/lib/reports/period";
 import { isOwner, requireUser } from "@/server/auth";
 
 import { todayInIndia } from "./invoice-writes";
-import { loadPaymentProfits } from "./payment-profit";
+import { profitReceived } from "./profit-received";
+import { loadShareExpenses } from "./profit-share";
 import { arAging } from "./receivables";
 import {
   gstSummary,
@@ -220,82 +219,6 @@ async function salesFigures(today: string, months: string[]) {
   };
 }
 
-/**
- * Profit from the money that actually came in during a period: cash sales, less cash
- * refunded for returns, plus the profit each payment received carried (payments settle
- * the oldest credit bills first). Money for old dues, advances or bills without a
- * purchase cost carries no known profit and is reported as `untraced`.
- */
-async function profitReceived(p: Period) {
-  const db = getDb();
-  const inPeriod = (date: typeof invoices.date | typeof creditNotes.date | typeof payments.date) =>
-    between(date, p.from, p.to);
-  const [cashSales, cashRefunds, paid] = await db.batch([
-    db
-      .select({
-        total: invoices.grandTotal,
-        // Null when any row has no purchase cost: profit is then not known.
-        profit: sql<number | null>`case when bool_and(${invoiceLines.cost} is not null)
-          then ${invoices.taxableTotal} - sum(${invoiceLines.cost} * ${invoiceLines.qty}) end`.mapWith((v) =>
-          v == null ? null : Number(v),
-        ),
-      })
-      .from(invoices)
-      .innerJoin(invoiceLines, eq(invoiceLines.invoiceId, invoices.id))
-      .where(and(eq(invoices.status, "final"), eq(invoices.paymentType, "cash"), inPeriod(invoices.date)))
-      .groupBy(invoices.id),
-    db
-      .select({
-        total: creditNotes.grandTotal,
-        // Profit given back: the sale value refunded, less the cost of parts put back on the shelf.
-        profit: sql<number | null>`case when not ${creditNotes.restocked} then ${creditNotes.taxableTotal}
-          when bool_and(${creditNoteLines.cost} is not null)
-          then ${creditNotes.taxableTotal} - sum(${creditNoteLines.cost} * ${creditNoteLines.qty}) end`.mapWith((v) =>
-          v == null ? null : Number(v),
-        ),
-      })
-      .from(creditNotes)
-      .innerJoin(creditNoteLines, eq(creditNoteLines.creditNoteId, creditNotes.id))
-      .where(and(eq(creditNotes.status, "final"), eq(creditNotes.refundType, "cash"), inPeriod(creditNotes.date)))
-      .groupBy(creditNotes.id),
-    db
-      .select({ id: payments.id, customerId: payments.customerId, amount: payments.amount })
-      .from(payments)
-      .where(and(eq(payments.status, "final"), inPeriod(payments.date))),
-  ]);
-  const settled = await loadPaymentProfits(
-    db,
-    paid.map((r) => r.customerId),
-  );
-  let profit = 0;
-  let untraced = 0;
-  for (const s of cashSales) {
-    if (s.profit == null) untraced += s.total;
-    else profit += s.profit;
-  }
-  for (const r of cashRefunds) {
-    if (r.profit == null) untraced -= r.total;
-    else profit -= r.profit;
-  }
-  for (const r of paid) {
-    const s = settled.get(r.id);
-    if (!s) untraced += r.amount;
-    else {
-      profit += s.profit;
-      untraced += s.untraced;
-    }
-  }
-  const cash = round2(cashSales.reduce((t, s) => t + s.total, 0) - cashRefunds.reduce((t, r) => t + r.total, 0));
-  const payment = round2(paid.reduce((t, r) => t + r.amount, 0));
-  return {
-    cashSales: cash,
-    payments: payment,
-    received: round2(cash + payment),
-    profit: round2(profit),
-    untraced: round2(Math.max(untraced, 0)),
-  };
-}
-
 /** Everything about money on the Home screen; only for the owner. */
 /** Photo ids of these parts, by part id. */
 async function partPhotos(ids: number[]) {
@@ -309,7 +232,8 @@ async function partPhotos(ids: number[]) {
 
 async function ownerFigures(today: string) {
   const { current, previous } = monthPeriods(today);
-  const [sales, now, before, profitNow, profitBefore, owed, owing, due, money, gst, items, buyers, earned] = await Promise.all([
+  const [sales, now, before, profitNow, profitBefore, owed, owing, due, money, gst, items, buyers, earned, shareExpenses] =
+    await Promise.all([
     salesFigures(today, lastMonths(today, 6)),
     monthFigures(current),
     monthFigures(previous),
@@ -323,6 +247,7 @@ async function ownerFigures(today: string) {
     salesByItem(current, 5000),
     salesByCustomer(current),
     profitReceived(current),
+    loadShareExpenses(),
   ]);
   const gstOf = (t: { cgst: number; sgst: number; igst: number }) => round2(t.cgst + t.sgst + t.igst);
   const topParts = items.items
@@ -339,8 +264,8 @@ async function ownerFigures(today: string) {
       now: { ...now, profit: profitNow.net },
       before: { ...before, profit: profitBefore.net },
     },
-    /** Profit from money received this month, shared half and half between the two partners. */
-    earned: { ...earned, ashi: round2(earned.profit / 2), dad: round2(earned.profit - round2(earned.profit / 2)) },
+    /** Profit from money received this month, shared half and half between the partners, less their expenses. */
+    earned: { ...earned.total, ...shareProfit(earned.total.profit, shareExpenses, current.from, current.to) },
     receivable: {
       total: owed.total,
       customers: owed.rows.length,

@@ -14,6 +14,7 @@ describe("sectionFor", () => {
     expect(sectionFor("/banking/statement")?.label).toBe("Banking");
     expect(sectionFor("/sales/quotes/new")?.label).toBe("Quotes");
     expect(sectionFor("/reports/balance-sheet")?.label).toBe("Reports");
+    expect(sectionFor("/profit-share/new")?.label).toBe("Profit Share");
   });
 
   it("does not mix up sections whose addresses start alike", () => {
