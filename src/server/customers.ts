@@ -66,7 +66,14 @@ export async function searchCustomers(filters: CustomerFilters, limit = CUSTOMER
   const db = getDb();
 
   const [countRows, items] = await db.batch([
-    db.select({ total: count() }).from(customers).where(where),
+    db
+      .select({
+        total: count(),
+        // Money still to come from everyone matching, not just the rows shown.
+        toReceive: sql<number>`coalesce(sum(greatest(${balance}, 0)), 0)`.mapWith(Number),
+      })
+      .from(customers)
+      .where(where),
     db
       .select({
         id: customers.id,
@@ -82,11 +89,16 @@ export async function searchCustomers(filters: CustomerFilters, limit = CUSTOMER
       .from(customers)
       .leftJoin(customerGroups, eq(customerGroups.id, customers.groupId))
       .where(where)
-      .orderBy(sql`lower(${customers.name})`, asc(customers.id))
+      // Who owes the most comes first; settled customers next, then those we owe; A–Z within each amount.
+      .orderBy(sql`${balance} desc`, sql`lower(${customers.name})`, asc(customers.id))
       .limit(Math.min(Math.max(limit, 1), 500)),
   ]);
 
-  return { total: countRows[0]?.total ?? 0, items };
+  return {
+    total: countRows[0]?.total ?? 0,
+    toReceive: Math.round((countRows[0]?.toReceive ?? 0) * 100) / 100,
+    items,
+  };
 }
 
 export type CustomerListItem = Awaited<ReturnType<typeof searchCustomers>>["items"][number];

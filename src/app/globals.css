@@ -125,6 +125,8 @@
   --glow-2: rgb(227 214 255 / 0.75);
   --glow-3: rgb(205 239 226 / 0.7);
   --glow-4: rgb(255 224 204 / 0.65);
+  /* Laid over the top of the glows; see .dark. Light mode keeps its blue start. */
+  --backdrop-top: linear-gradient(transparent, transparent);
   --glass: rgb(255 255 255 / 0.62);
   --glass-hover: rgb(255 255 255 / 0.82);
   --glass-border: rgb(255 255 255 / 0.8);
@@ -176,6 +178,8 @@
   --glow-2: rgb(109 40 217 / 0.4);
   --glow-3: rgb(15 118 110 / 0.4);
   --glow-4: rgb(154 52 18 / 0.35);
+  /* Dark mode starts plain black at the top; the glows fade in below the first screen. */
+  --backdrop-top: linear-gradient(to bottom, var(--canvas) 24rem, transparent 44rem);
   --glass: rgb(32 32 38 / 0.55);
   --glass-hover: rgb(48 48 56 / 0.7);
   --glass-border: rgb(255 255 255 / 0.09);
@@ -200,13 +204,15 @@
  */
 @utility app-backdrop {
   background-image:
+    var(--backdrop-top),
     radial-gradient(40rem 34rem at 0% 0%, var(--glow-1), transparent 70%),
     radial-gradient(36rem 32rem at 100% 25%, var(--glow-2), transparent 70%),
     radial-gradient(40rem 34rem at 35% 55%, var(--glow-3), transparent 70%),
     radial-gradient(36rem 32rem at 100% 78%, var(--glow-4), transparent 70%),
     radial-gradient(40rem 34rem at 0% 100%, var(--glow-1), transparent 70%);
-  background-size: 100% 110rem;
-  background-repeat: repeat-y;
+  /* The top layer spans the whole page once; the five glow layers repeat as one band. */
+  background-size: 100% 100%, 100% 110rem, 100% 110rem, 100% 110rem, 100% 110rem, 100% 110rem;
+  background-repeat: no-repeat, repeat-y, repeat-y, repeat-y, repeat-y, repeat-y;
 }
 /* The top bar and the phone's tab bar: frosted, a little more solid than a card. */
 @utility glass-bar {

@@ -2,6 +2,7 @@ import { PlusIcon, SettingsIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { cn } from "cn";
 
 import { CustomerList, CustomerListSkeleton } from "@/components/customers/customer-list";
 import {
@@ -62,7 +63,7 @@ async function Panel({ searchParams }: { searchParams: Promise<Params> }) {
   if (id === "new") return <NewCustomerPanel backHref={backHref} />;
   if (id == null) {
     return (
-      <p className="hidden rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground md:block">
+      <p className="mt-8 hidden rounded-3xl border border-dashed border-foreground/15 p-8 text-center text-sm text-muted-foreground md:block">
         Select a customer to see their details and balance.
       </p>
     );
@@ -72,27 +73,46 @@ async function Panel({ searchParams }: { searchParams: Promise<Params> }) {
   return <CustomerPanel id={id} backHref={backHref} editHref={customersHref({ ...listParams, id, edit: true })} />;
 }
 
+/** Groups and custom fields are set up once, so they sit quietly: in the header on a laptop, at the bottom on a phone. */
+function SetupLinks({ className }: { className?: string }) {
+  const pill = cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-full");
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>
+      <Link href="/customers/groups" className={pill}>
+        <UsersIcon /> Groups
+      </Link>
+      <Link href="/customers/fields" className={pill}>
+        <SettingsIcon /> Custom fields
+      </Link>
+    </div>
+  );
+}
+
+/** On a phone, everything above the list hides while one customer is open (the panel carries data-customer-panel). */
+const HIDE_WHILE_OPEN = "max-md:group-has-[[data-customer-panel]]/customers:hidden";
+
 export default function CustomersPage({ searchParams }: PageProps<"/customers">) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold max-md:sr-only">Customers</h1>
+    <div className="group/customers flex flex-col gap-6">
+      <div className={cn("flex flex-wrap items-end justify-between gap-x-3 gap-y-4", HIDE_WHILE_OPEN)}>
+        <h1 className="px-1 text-[2.125rem] leading-tight font-bold tracking-tight max-md:sr-only">Customers</h1>
         <div className="flex flex-wrap gap-2 max-md:w-full max-md:*:grow">
-          <Link href="/customers/groups" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <UsersIcon /> Groups
-          </Link>
-          <Link href="/customers/fields" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <SettingsIcon /> Custom fields
-          </Link>
-          <Link href={customersHref({ id: "new" })} scroll={false} className={buttonVariants({ size: "sm" })}>
+          <SetupLinks className="max-md:hidden" />
+          <Link
+            href={customersHref({ id: "new" })}
+            scroll={false}
+            className={cn(buttonVariants({ size: "sm" }), "rounded-full shadow-[0_6px_20px_rgb(0_113_227/0.28)]")}
+          >
             <PlusIcon /> New customer
           </Link>
         </div>
       </div>
-      <Suspense fallback={<div className="h-(--control-h) rounded-lg bg-muted" />}>
-        <Toolbar />
-      </Suspense>
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <div className={HIDE_WHILE_OPEN}>
+        <Suspense fallback={<div className="h-(--control-h) rounded-full bg-muted" />}>
+          <Toolbar />
+        </Suspense>
+      </div>
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <Suspense fallback={<CustomerListSkeleton />}>
           <List searchParams={searchParams} />
         </Suspense>
@@ -100,6 +120,7 @@ export default function CustomersPage({ searchParams }: PageProps<"/customers">)
           <Panel searchParams={searchParams} />
         </Suspense>
       </div>
+      <SetupLinks className={cn("md:hidden *:grow", HIDE_WHILE_OPEN)} />
     </div>
   );
 }

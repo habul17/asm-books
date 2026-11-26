@@ -49,14 +49,21 @@ export function DeleteCustomerButton({ id, active }: { id: number; active: boole
 
   return (
     <>
-      <Button type="button" variant={armed ? "destructive" : "outline"} size="sm" disabled={pending} onClick={onDelete}>
+      <Button
+        type="button"
+        variant={armed ? "destructive" : "outline"}
+        size="sm"
+        disabled={pending}
+        onClick={onDelete}
+        className="rounded-full"
+      >
         <Trash2Icon /> {armed ? "Tap again to delete" : "Delete"}
       </Button>
       {error && (
         <div role="alert" className="flex basis-full flex-col items-start gap-2 text-sm text-destructive">
           <p>{error}</p>
           {canHide && (
-            <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onHide}>
+            <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onHide} className="rounded-full">
               <EyeOffIcon /> Make inactive
             </Button>
           )}

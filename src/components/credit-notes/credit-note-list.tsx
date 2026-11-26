@@ -23,7 +23,7 @@ export async function CreditNoteList({
   if (compact && items.length === 0) return null;
   return (
     <section aria-label="Credit notes" className="flex flex-col gap-2">
-      {compact && title && <h3 className="font-medium">{title}</h3>}
+      {compact && title && <h3 className="px-1 font-semibold">{title}</h3>}
       {!compact && (
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {count === items.length ? `${count} credit note${count === 1 ? "" : "s"}` : `Showing ${items.length} of ${count}`}
@@ -35,14 +35,21 @@ export async function CreditNoteList({
           {filters.query ? `No credit notes match “${filters.query}”.` : "No returns yet."}
         </p>
       ) : (
-        <ul className={cn("flex flex-col divide-y border", compact ? "rounded-lg text-sm" : "rounded-xl")}>
+        <ul
+          className={cn(
+            "flex flex-col divide-y",
+            compact
+              ? "overflow-hidden rounded-2xl border border-foreground/5 bg-white/70 text-sm divide-foreground/[0.07] dark:bg-white/[0.06]"
+              : "rounded-xl border",
+          )}
+        >
           {items.map((note) => (
             <li key={note.id}>
               <Link
                 href={`/credit-notes/${note.id}`}
                 className={cn(
                   "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 hover:bg-muted/60",
-                  compact ? "px-3 py-2" : "px-4 py-3",
+                  "px-4 py-3",
                   note.status === "cancelled" && "opacity-60",
                 )}
               >
