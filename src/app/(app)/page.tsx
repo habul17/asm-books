@@ -1,4 +1,13 @@
-import { BellIcon, ChevronRightIcon, CircleArrowDownIcon, PlusIcon, UserPlusIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  CircleArrowDownIcon,
+  type LucideIcon,
+  PackageIcon,
+  PlusIcon,
+  RepeatIcon,
+  UserPlusIcon,
+  UsersIcon,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -11,7 +20,7 @@ import { CardLink, ShareCard } from "@/components/profit-share/share-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { customersHref } from "@/lib/customers/href";
-import { formatDate, formatMoney, formatQty } from "@/lib/format";
+import { formatMoney, formatQty } from "@/lib/format";
 import { getHomeDashboard, type HomeDashboard } from "@/server/home";
 import { getReminders } from "@/server/reminders";
 
@@ -30,32 +39,60 @@ async function DateLine() {
   return <>{DAY.format(new Date())}</>;
 }
 
-/** What needs attention today; nothing is shown when all is well. */
+interface Reminder {
+  icon: LucideIcon;
+  text: string;
+  value?: string;
+  href: string;
+}
+
+/** What needs attention today, one tappable line each; nothing is shown when all is well. */
 async function Reminders() {
   const { late, lateAmount, lowStock, days, recurring } = await getReminders();
-  const lines = [
-    late && late.length > 0
-      ? `${plural(late.length, "customer")} ${late.length === 1 ? "has" : "have"} not paid for ${plural(days, "day")} or more · ${formatMoney(lateAmount)}`
-      : null,
-    recurring.length > 0
-      ? `${plural(recurring.length, "recurring invoice")} ${recurring.length === 1 ? "is" : "are"} due`
-      : null,
-    lowStock > 0 ? `${plural(lowStock, "part")} ${lowStock === 1 ? "is" : "are"} low on stock` : null,
-  ].filter((line) => line != null);
-  if (lines.length === 0) return null;
+  const items: Reminder[] = [];
+  if (late && late.length > 0) {
+    items.push({
+      icon: UsersIcon,
+      text: `${plural(late.length, "customer")} unpaid for ${days}+ days`,
+      value: formatMoney(lateAmount),
+      href: "/reminders",
+    });
+  }
+  if (recurring.length > 0) {
+    items.push({
+      icon: RepeatIcon,
+      text: `${plural(recurring.length, "recurring invoice")} ${recurring.length === 1 ? "is" : "are"} due`,
+      href: "/reminders",
+    });
+  }
+  if (lowStock > 0) {
+    // The count includes parts that have run out, so say so; the Stock tiles split the two.
+    items.push({
+      icon: PackageIcon,
+      text: `${plural(lowStock, "part")} ${lowStock === 1 ? "is" : "are"} low or out of stock`,
+      href: "/reports/low-stock",
+    });
+  }
+  if (items.length === 0) return null;
   return (
-    <Link
-      href="/reminders"
-      className="flex items-center gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 backdrop-blur-xl transition-colors hover:bg-amber-500/15 sm:px-6"
+    <ul
+      aria-label="Reminders"
+      className="divide-y divide-amber-500/20 overflow-hidden rounded-3xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl"
     >
-      <BellIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm font-medium">
-        {lines.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
-      </span>
-      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-    </Link>
+      {items.map(({ icon: Icon, text, value, href }) => (
+        <li key={text}>
+          <Link
+            href={href}
+            className="flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors hover:bg-amber-500/10 sm:px-6"
+          >
+            <Icon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <span className="min-w-0 flex-1">{text}</span>
+            {value != null && <span className="shrink-0 font-semibold tabular-nums">{value}</span>}
+            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -84,6 +121,17 @@ function Today({ f }: { f: Figures }) {
   );
 }
 
+const SHORT_DAY = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/** A short span of days: "1–26 Oct", or "28 Feb – 3 Mar" when it crosses into another month. */
+function dayRange(from: string, to: string) {
+  const day = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  const [a, b] = [day(from), day(to)];
+  if (from.slice(0, 10) === to.slice(0, 10)) return SHORT_DAY.format(b);
+  if (from.slice(0, 7) === to.slice(0, 7)) return `${a.getUTCDate()}–${SHORT_DAY.format(b)}`;
+  return `${SHORT_DAY.format(a)} – ${SHORT_DAY.format(b)}`;
+}
+
 function ThisMonth({ f }: { f: Figures }) {
   const { now, before, comparedTo } = f.month;
   // Which way is good news: more sales and profit, fewer expenses. Purchases are neither.
@@ -94,7 +142,7 @@ function ThisMonth({ f }: { f: Figures }) {
     { label: "Profit", key: "profit", href: "/reports/profit-and-loss", good: "up" },
   ] as const;
   return (
-    <Section title="This month" note={`Compared with ${formatDate(comparedTo.from)} to ${formatDate(comparedTo.to)}`}>
+    <Section title="This month" note={`Compared with ${dayRange(comparedTo.from, comparedTo.to)}`}>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((t) => (
           <Tile
@@ -273,7 +321,9 @@ function TopLists({ f }: { f: Figures }) {
 
 function OpenOrders({ d }: { d: HomeDashboard }) {
   const { sales, purchase } = d.orders;
-  const figure = (o: { value: number | null }) => (o.value == null ? undefined : formatMoney(o.value));
+  // No ₹0.00 when nothing is open: the note says so instead.
+  const figure = (o: { count: number; value: number | null }) =>
+    o.value == null || o.count === 0 ? undefined : formatMoney(o.value);
   return (
     <Section title="Open orders">
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
@@ -281,7 +331,7 @@ function OpenOrders({ d }: { d: HomeDashboard }) {
           rows={[
             {
               label: "Customer orders",
-              note: `${plural(sales.count, "order")} not billed yet`,
+              note: sales.count === 0 ? "None waiting to be billed" : `${plural(sales.count, "order")} not billed yet`,
               value: figure(sales),
               href: "/sales/orders?status=open",
             },
@@ -291,7 +341,8 @@ function OpenOrders({ d }: { d: HomeDashboard }) {
           rows={[
             {
               label: "Purchase orders",
-              note: `${plural(purchase.count, "order")} not received yet`,
+              note:
+                purchase.count === 0 ? "None waiting to arrive" : `${plural(purchase.count, "order")} not received yet`,
               value: figure(purchase),
               href: "/purchase-orders?status=open",
             },

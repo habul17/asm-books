@@ -68,7 +68,8 @@ const PILL_TONE = {
  * grey when it is neither (`good` left out) or there is nothing to compare.
  */
 export function Change({ now, before, good }: { now: number; before: number; good?: "up" | "down" }) {
-  if (Math.abs(before) < 0.005) return <span className={cn(PILL, PILL_TONE.plain)}>Nothing to compare</span>;
+  // Plain grey words, not a pill: in a new business every tile says this, and four pills would be noise.
+  if (Math.abs(before) < 0.005) return <span className="text-xs text-muted-foreground">Nothing to compare</span>;
   const pct = Math.round(((now - before) / Math.abs(before)) * 100);
   const up = pct >= 0;
   const tone = good == null || pct === 0 ? "plain" : up === (good === "up") ? "good" : "bad";
@@ -93,10 +94,14 @@ export interface Row {
   negative?: boolean;
 }
 
-/** A glass card of tappable rows with the figure on the right, like an iPhone settings screen. */
+/**
+ * A glass card of tappable rows with the figure on the right, like an iPhone settings screen.
+ * It grows to the height of its section, so two cards side by side line up at the bottom.
+ * Labels and notes wrap to a second line rather than being cut off on a phone.
+ */
 export function Rows({ rows, header }: { rows: Row[]; header?: ReactNode }) {
   return (
-    <div className="glass overflow-hidden rounded-3xl">
+    <div className="glass flex-1 overflow-hidden rounded-3xl">
       {header}
       <ul className={cn("divide-y divide-foreground/[0.07]", header != null && "border-t border-foreground/[0.07]")}>
         {rows.map((row, i) => (
@@ -107,8 +112,10 @@ export function Rows({ rows, header }: { rows: Row[]; header?: ReactNode }) {
             >
               {row.icon}
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className={cn("truncate", row.strong && "font-semibold")}>{row.label}</span>
-                {row.note != null && <span className="truncate text-xs text-muted-foreground">{row.note}</span>}
+                <span className={cn("line-clamp-2 break-words", row.strong && "font-semibold")}>{row.label}</span>
+                {row.note != null && (
+                  <span className="line-clamp-2 break-words text-xs text-muted-foreground">{row.note}</span>
+                )}
               </span>
               {row.value != null && (
                 <span
@@ -163,7 +170,7 @@ export function AgingCard({
 }) {
   const shown = buckets.some((b) => b.value > 0);
   return (
-    <Link href={href} className="glass flex flex-col gap-4 rounded-3xl pb-5 transition-colors hover:bg-(--glass-hover)">
+    <Link href={href} className="glass flex flex-1 flex-col gap-4 rounded-3xl pb-5 transition-colors hover:bg-(--glass-hover)">
       <div className="flex items-start justify-between pr-4 sm:pr-6">
         <CardHead
           label="Customers owe you"
@@ -238,9 +245,20 @@ export function MonthChart({
       </div>
       <div className="relative" aria-hidden>
         {max > 0 && (
-          <span className="absolute -top-1 left-0 text-[11px] text-muted-foreground tabular-nums">{shortMoney(max)}</span>
+          // Faint guide lines at the top and halfway, with their amounts in a gutter on the right,
+          // so a bar can be read roughly on a phone, where there is no tooltip.
+          <div className="pointer-events-none absolute inset-x-0 top-4 h-40 sm:h-48">
+            {[1, 0.5].map((part) => (
+              <div key={part} className="absolute inset-x-0" style={{ top: `${(1 - part) * 100}%` }}>
+                <span className="absolute right-11 left-0 border-t border-dashed border-foreground/10" />
+                <span className="absolute right-0 -translate-y-1/2 text-[11px] leading-none text-muted-foreground tabular-nums">
+                  {shortMoney(max * part)}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
-        <div className="grid h-44 grid-cols-6 items-end gap-2 border-b border-foreground/10 pt-4 sm:h-52 sm:gap-4">
+        <div className="mr-11 grid h-44 grid-cols-6 items-end gap-2 border-b border-foreground/10 pt-4 sm:h-52 sm:gap-4">
           {rows.map((r) => (
             <div key={r.month} className="group relative flex h-full items-end justify-center gap-1">
               {SERIES.map((s) => (
@@ -258,7 +276,7 @@ export function MonthChart({
             </div>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-6 gap-2 text-center text-xs text-muted-foreground sm:gap-4">
+        <div className="mt-2 mr-11 grid grid-cols-6 gap-2 text-center text-xs text-muted-foreground sm:gap-4">
           {rows.map((r) => (
             <span key={r.month}>{monthName(r.month)}</span>
           ))}
