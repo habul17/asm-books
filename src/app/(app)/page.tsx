@@ -274,7 +274,7 @@ function Stock({ d }: { d: HomeDashboard }) {
 function Initial({ name }: { name: string }) {
   return (
     <span
-      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint/12 text-sm font-semibold text-tint"
+      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint/10 text-sm font-semibold text-tint"
       aria-hidden
     >
       {name.trim().charAt(0).toUpperCase() || "?"}

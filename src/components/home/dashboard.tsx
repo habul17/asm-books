@@ -251,7 +251,7 @@ export function MonthChart({
             {[1, 0.5].map((part) => (
               <div key={part} className="absolute inset-x-0" style={{ top: `${(1 - part) * 100}%` }}>
                 <span className="absolute right-11 left-0 border-t border-dashed border-foreground/10" />
-                <span className="absolute right-0 -translate-y-1/2 text-[11px] leading-none text-muted-foreground tabular-nums">
+                <span className="absolute right-0 -translate-y-1/2 text-xs leading-none text-muted-foreground tabular-nums">
                   {shortMoney(max * part)}
                 </span>
               </div>

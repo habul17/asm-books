@@ -51,9 +51,9 @@ async function SidebarForViewer() {
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="min-h-svh md:grid md:grid-cols-[16rem_minmax(0,1fr)] print:block print:min-h-0">
-      {/* Soft colours behind the glass, fixed like a phone's wallpaper. */}
-      <div aria-hidden className="app-backdrop pointer-events-none fixed inset-0 -z-10 print:hidden" />
+    <div className="relative min-h-svh md:grid md:grid-cols-[16rem_minmax(0,1fr)] print:block print:min-h-0">
+      {/* Soft colours behind the glass. They scroll with the page, so the shade shifts going down. */}
+      <div aria-hidden className="app-backdrop pointer-events-none absolute inset-0 -z-10 print:hidden" />
 
       <aside className="sticky top-0 hidden h-svh p-3 pr-0 md:flex print:hidden">
         <div className="glass flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto rounded-3xl px-3 py-4">

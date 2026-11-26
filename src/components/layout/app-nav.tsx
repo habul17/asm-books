@@ -15,7 +15,9 @@ const MORE_PATHS = ["/more", "/reminders", "/notes", "/banking", "/profit-share"
 const sideLink = "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors";
 const sideLinkIdle = "hover:bg-white/55 dark:hover:bg-white/[0.07]";
 /** The current page: a raised white pill with blue text, like the selected row in a Mac sidebar. */
-const sideLinkActive = "bg-white text-tint shadow-[0_1px_3px_rgb(15_23_42/0.08)] dark:bg-white/10 dark:shadow-none";
+// In dark mode the words are white (blue on the grey highlight is too faint); the icon stays blue.
+const sideLinkActive =
+  "bg-white text-tint shadow-[0_1px_3px_rgb(15_23_42/0.08)] dark:bg-white/10 dark:text-foreground dark:shadow-none";
 
 /**
  * Desktop sidebar: the built modules, grouped. `pathname` marks the current
@@ -86,7 +88,7 @@ export function BottomTabsView({ pathname }: { pathname: string | null }) {
             href={t.href!}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium text-muted-foreground transition-colors",
+              "flex flex-col items-center gap-0.5 rounded-full py-1.5 text-xs font-medium text-muted-foreground transition-colors",
               active && "font-semibold text-tint",
             )}
           >

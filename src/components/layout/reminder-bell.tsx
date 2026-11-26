@@ -16,8 +16,9 @@ export function ReminderBellView({ count }: { count: number }) {
       className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative shrink-0")}
     >
       <BellIcon />
+      {/* A fixed deep red, not the theme red: dark mode's lighter red is too faint behind white digits. */}
       {count > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-semibold text-white">
+        <span className="absolute -top-1 -right-1 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-[#d70015] px-1 text-[11px] leading-none font-semibold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}
